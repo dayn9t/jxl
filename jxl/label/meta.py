@@ -38,7 +38,7 @@ class ValueCfg:
     """属性值快捷键"""
     color: str
     """属性值颜色"""
-    sign: str = ''
+    sign: str = ""
     """属性值符号表示"""
     conf: float = 2.0
     """默认置信度"""
@@ -70,7 +70,7 @@ class PropMeta:
     """属性值描述"""
     size: Size
     """属性分类器输入尺寸"""
-    color: str = 'WHITE'
+    color: str = "WHITE"
     """属性默认颜色"""
     # thickness :Optional[int])  # 线粗细
     values: List[ValueCfg] = field(default_factory=list)
@@ -82,7 +82,7 @@ class PropMeta:
         for v in self.values:
             if v.id == value_id:
                 return v
-        raise ValueError(f'Invalid value: {value_id}')
+        raise ValueError(f"Invalid value: {value_id}")
 
     def value_cfg_of_key(self, key: int) -> Option[ValueCfg]:
         """获取按键对应的属性值"""
@@ -129,11 +129,11 @@ class FilterCfg:
 
         v = ob.rect().aspect_ratio()
         if not in_range(v, self.aspect_radio):
-            return Err(f'目标纵横比={v}无效')
+            return Err(f"目标纵横比={v}无效")
 
         v = ob.rect().area()
         if not in_range(v, self.area):
-            return Err(f'目标面积={v}无效')
+            return Err(f"目标面积={v}无效")
         return Ok(None)
 
 
@@ -205,7 +205,9 @@ class LabelMeta:
     disable_label_text: bool = False
     """禁用标签文本, FIXME: 和LabelCfg中内容重复?"""
 
-    def cat_meta(self, id_: Optional[int] = None, name: Optional[str] = None) -> CatMeta:
+    def cat_meta(
+        self, id_: Optional[int] = None, name: Optional[str] = None
+    ) -> CatMeta:
         """获取类别配置"""
         if id_ is not None:
             for c in self.categories:
@@ -215,9 +217,11 @@ class LabelMeta:
             for c in self.categories:
                 if c.name == name:
                     return c
-        raise NotImplementedError('程序BUG')
+        raise NotImplementedError("程序BUG")
 
-    def prop_meta(self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None) -> Option[PropMeta]:
+    def prop_meta(
+        self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+    ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)
         type_name = cat.prop_type(name)
@@ -256,20 +260,20 @@ class LabelMeta:
 
 def meta_fix(meta_id: int) -> str:
     """获取指定元数据ID的前缀/后缀, meta_id即sensor_type"""
-    return f'm{meta_id}'
+    return f"m{meta_id}"
 
 
 def find_meta(meta_id: int, folder: StrPath) -> Result[LabelMeta, str]:
     """查找并加载 META"""
     folder = Path(folder)
-    name = 'meta/' + meta_fix(meta_id) + '.json'
+    name = "meta/" + meta_fix(meta_id) + ".json"
     file = find_in_parts(folder, name).expect(f'Meta文件"{name}"未找到, 在"{folder}"')
     # print(f'[Info] Meta file: {file}')
     meta = load_json(file, LabelMeta)
 
     common_values = []
     for p in meta.properties:
-        if p.name == 'common':
+        if p.name == "common":
             common_values = p.values
         else:
             p.values = common_values + p.values

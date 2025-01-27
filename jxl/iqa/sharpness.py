@@ -11,13 +11,13 @@ def calculate_image_sharpness(image_path):
 
 
 def main():
-    folder = '/home/jiang/ws/trash/dates/2023-04-10/image'
-    file = 'n1_31010510200500202_2023-04-10_10-05-07.195.jpg'
+    folder = "/home/jiang/ws/trash/dates/2023-04-10/image"
+    file = "n1_31010510200500202_2023-04-10_10-05-07.195.jpg"
     path = Path(folder, file)
 
     m = calculate_image_sharpness(str(path))
     print(m.shape)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

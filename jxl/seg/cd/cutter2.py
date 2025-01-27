@@ -1,4 +1,5 @@
 """图像序列"""
+
 from pathlib import Path
 from typing import List
 
@@ -13,7 +14,9 @@ from jvi.match.match import ImageMatcher
 class Cutter2:
     """时间序列图像切割, 用以提供图图像场景样本"""
 
-    def __init__(self, dst_dir: Path, sensitivity: int = 50, tile_size: Size = Size(224, 224)):
+    def __init__(
+        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size = Size(224, 224)
+    ):
         self.tile_size = tile_size
         self.threshold = 20 * sensitivity / 50  # 距离阈值
         self.dst_dir = dst_dir
@@ -23,7 +26,7 @@ class Cutter2:
         """检测镜头移动"""
         dist = self.matcher.match(im1, im2)
         dist = round(dist, 2)
-        print('dist:', dist)
+        print("dist:", dist)
         return dist > self.threshold
 
     def _cut_tile(self, ims: List[ImageNda], src_file: Path):
@@ -49,7 +52,7 @@ class Cutter2:
             trace_image(dst_im)
             if self._check_moved(dst_rois[0], dst_rois[1]):
                 name = name_with_parents(src_file, 3)  # 文件名=节点_设备_日期_名称
-                file = stem_append(self.dst_dir / name, f'_{i}')
+                file = stem_append(self.dst_dir / name, f"_{i}")
                 dst_im.save(file)
 
     def cut_files(self, files: list[Path]):
@@ -60,5 +63,5 @@ class Cutter2:
         images = [ImageNda.load(f) for f in files]
 
         for i in range(len(images) - n + 1):
-            ims = images[i:i + n]
+            ims = images[i : i + n]
             self._cut_tile(ims, files[i + n - 1])

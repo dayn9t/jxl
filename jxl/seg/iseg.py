@@ -11,6 +11,7 @@ from jxl.model.types import ModelInfo
 @dataclass(frozen=True)
 class SegOpt:
     """分割器选项"""
+
     input_shape: tuple
     """输入形状"""
     conf_thr: float
@@ -42,7 +43,7 @@ class ISegRes(Protocol):
 class ISeg(ABC):
     """分割器"""
 
-    model_class = 'segment'
+    model_class = "segment"
 
     @classmethod
     def new(cls, info: ModelInfo, model_root: Path):

@@ -1,14 +1,20 @@
 [tool.poetry]
 name = "jxl"
-version = "0.1.0"
+version = "0.3.1"
 description = ""
 authors = ["dayn9t <dayn9t@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "~3.12"
 
 
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+pyinstaller = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

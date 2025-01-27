@@ -12,39 +12,47 @@ from jxl.label.meta import find_meta
 def resize_labels(labels: ImageLabelPairs, folder: Path, meta: LabelMeta) -> int:
     """保存darknet样本标注信息, TODO: meta 可能有更多的用处"""
 
-    labels_dir = remake_subdir(folder, 'labels')
-    images_dir = remake_subdir(folder, 'images')
+    labels_dir = remake_subdir(folder, "labels")
+    images_dir = remake_subdir(folder, "images")
 
-    print('\n开始生成样本(%d)：' % len(labels))
+    print("\n开始生成样本(%d)：" % len(labels))
     total = 0
     for image, label in labels:
         src: ImageNda = ImageNda.load(image)
-        jpg = images_dir / f'{image.stem}.jpg'
-        txt = labels_dir / f'{image.stem}.txt'
+        jpg = images_dir / f"{image.stem}.jpg"
+        txt = labels_dir / f"{image.stem}.txt"
         save_objects(label.objects, txt)
 
-        dst = get_roi_image(src, label.roi().unwrap(), Color.parse(meta.sample.background))
+        dst = get_roi_image(
+            src, label.roi().unwrap(), Color.parse(meta.sample.background)
+        )
         dst.save(jpg)
         total += len(label.objects)
     return total
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='改变样本尺寸程序')
-    parser.add_argument('src_dir', metavar='SRC_DIR', type=Path, help='来源样本标注目录')
-    parser.add_argument('dst_dir', metavar='DST_DIR', type=Path, help='目的样本标注目录')
-    parser.add_argument('meta_id', metavar='META_ID', type=int, help='元数据ID')
-    parser.add_argument('-s', '--size', type=str, default='640x640', help='目标样本图像尺寸')
-    parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
+    parser = argparse.ArgumentParser(description="改变样本尺寸程序")
+    parser.add_argument(
+        "src_dir", metavar="SRC_DIR", type=Path, help="来源样本标注目录"
+    )
+    parser.add_argument(
+        "dst_dir", metavar="DST_DIR", type=Path, help="目的样本标注目录"
+    )
+    parser.add_argument("meta_id", metavar="META_ID", type=int, help="元数据ID")
+    parser.add_argument(
+        "-s", "--size", type=str, default="640x640", help="目标样本图像尺寸"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
-    assert opt.src_dir.is_dir(), f'数据来源目录不存在: {opt.src_dir}'
+    assert opt.src_dir.is_dir(), f"数据来源目录不存在: {opt.src_dir}"
     dst_size = size_parse(opt.size)
-    assert dst_size, f'目标样本图像尺寸无效: {opt.size}'
+    assert dst_size, f"目标样本图像尺寸无效: {opt.size}"
 
     meta = find_meta(opt.meta_id, opt.src_dir).unwrap()
 
-    print(f'加载目录: {opt.src_dir}')
+    print(f"加载目录: {opt.src_dir}")
 
     labels = hop_load_labels(opt.src_dir, opt.meta_id)
 
@@ -57,6 +65,6 @@ def main() -> None:
     print(f"\n样本({total})生成完毕!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # catch_show_err(main, True)
     main()

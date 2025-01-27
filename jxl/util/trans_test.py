@@ -27,30 +27,36 @@ def main() -> None:
     print(np_image)
     print(np_image.shape)
 
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    )
 
     pil_image = fromarray(np_image)
     print(type(pil_image))
 
-    trans1 = transforms.Compose([
-        transforms.Resize((4, 4)),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    trans1 = transforms.Compose(
+        [
+            transforms.Resize((4, 4)),
+            transforms.ToTensor(),
+            normalize,
+        ]
+    )
 
     image1 = trans1(pil_image)
 
-    print('image1:', image1)
+    print("image1:", image1)
 
     print(np.array(image1))
 
     return
 
-    image = image.view(1, 3, self.input_shape[0], self.input_shape[1]).cuda()  # 多GPU可能接受CPU图片
-    print('image2:', type(image), image.shape)
+    image = image.view(
+        1, 3, self.input_shape[0], self.input_shape[1]
+    ).cuda()  # 多GPU可能接受CPU图片
+    print("image2:", type(image), image.shape)
 
-    print('image:', type(image))
-    print('image shape=', image.shape, 'dtype=', image.dtype)
+    print("image:", type(image))
+    print("image shape=", image.shape, "dtype=", image.dtype)
 
     output = self.detect_model(image)
 
@@ -58,5 +64,5 @@ def main() -> None:
     # output *= 100
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

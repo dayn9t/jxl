@@ -65,7 +65,7 @@ class ClassifierRes(Protocol):
         """分类器结果包含对象数量"""
         pass
 
-    def bin(self) -> 'ClassifierRes':
+    def bin(self) -> "ClassifierRes":
         """二值化, 0/非0各一组"""
         probs = self.confidences()
         p0 = probs[0]
@@ -126,13 +126,13 @@ class ClassifierResList(ClassifierRes):
         return len(self.probs)
 
 
-Self = TypeVar("Self", bound='IClassifier')
+Self = TypeVar("Self", bound="IClassifier")
 
 
 class IClassifier(ABC):
     """分类器"""
 
-    model_class = 'classifier'
+    model_class = "classifier"
 
     @classmethod
     def new(cls: Type[Self], info: ModelInfo, model_root: Path) -> Self:

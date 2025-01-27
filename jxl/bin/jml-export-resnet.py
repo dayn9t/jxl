@@ -15,13 +15,13 @@ def export_safetensors() -> None:
     # print(src_data['model'])
     save_file(src_data.state_dict(), dst_path)
 
-    print('Done!')
+    print("Done!")
 
 
 def main() -> None:
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # main()
     export_safetensors()

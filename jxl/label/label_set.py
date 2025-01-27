@@ -5,14 +5,15 @@ from typing import Optional
 
 from jxl.label.info import ImageLabelInfos, ImageLabelPairs
 
-HOP = 'hop'
-DARKNET = 'darknet'
-IMAGENET = 'imagenet'
-KITTI = 'kitti'
+HOP = "hop"
+DARKNET = "darknet"
+IMAGENET = "imagenet"
+KITTI = "kitti"
 
 
 class LabelFormat(IntEnum):
     """标注格式"""
+
     HOP = 1
     """通用对象属性标注格式"""
     IMAGENET = 2
@@ -27,7 +28,7 @@ class LabelFormat(IntEnum):
     """Google标注格式"""
 
     @classmethod
-    def parse(cls, name: str) -> Optional['LabelFormat']:
+    def parse(cls, name: str) -> Optional["LabelFormat"]:
         """解析字符串成枚举, 解析失败则为Null"""
         return cls._member_map_.get(name.upper())
 
@@ -40,14 +41,16 @@ class LabelSet(ABC):
         """检验路径是否是本格式的数据集"""
         return False
 
-    def __init__(self, format_id: LabelFormat, folder: Path, meta_id: int, pattern: str):
+    def __init__(
+        self, format_id: LabelFormat, folder: Path, meta_id: int, pattern: str
+    ):
         self.format_id = format_id
         self.folder = folder
         self.meta_id = meta_id
         self.pattern = pattern
 
     def __str__(self) -> str:
-        return f'LabelFormat(format={self.format_id},meta_id={self.meta_id})'
+        return f"LabelFormat(format={self.format_id},meta_id={self.meta_id})"
 
     @abstractmethod
     def __len__(self) -> int:

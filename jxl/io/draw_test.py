@@ -9,11 +9,11 @@ def show_draw_box():
 
     r = Rect(0.25, 0.25, 0.5, 0.5)
 
-    draw_box(im, r, RED, 'this a label')
+    draw_box(im, r, RED, "this a label")
     draw_class_item(im, ProbValue(2, 0.5))
 
     trace_image(im)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     show_draw_box()

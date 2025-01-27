@@ -15,7 +15,7 @@ from jxl.label.tile import TileRecord, TileObject, load_tiles, TileObjects
 class PropLabeler(RecordViewer):
 
     def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str):
-        super().__init__('labeler-%s-%s' % (cat_name, prop_name), meta.view_size)
+        super().__init__("labeler-%s-%s" % (cat_name, prop_name), meta.view_size)
         self.meta = meta
         self.cat_name = cat_name
         self.prop_name = prop_name
@@ -38,7 +38,7 @@ class PropLabeler(RecordViewer):
         """处理图片切换事件"""
 
         f = Path(self.cur_image_file())  # TODO: 不反应所有文件
-        print('#%d' % index, f)
+        print("#%d" % index, f)
         self.tile_index = 0
 
     def on_key(self, key: int) -> int:
@@ -66,7 +66,7 @@ class PropLabeler(RecordViewer):
         value_cfg = r.unwrap()
         obj = self.cur_object()
         obj.set_prop(self.prop_name, value_cfg.id, value_cfg.conf)
-        print(f'类别属性: {self.prop_name}={value_cfg}')
+        print(f"类别属性: {self.prop_name}={value_cfg}")
         self.tile_index += 1
         self.tile_index %= len(self.record().objects)
         return True
@@ -87,23 +87,31 @@ class PropLabeler(RecordViewer):
     def load(self, rs: TileObjects) -> None:
         """加载数据"""
         view_size = self.meta.view_size
-        tiles = Rect.from_size(view_size).to_tiles(size=self.meta.object_size, need_round=True)
+        tiles = Rect.from_size(view_size).to_tiles(
+            size=self.meta.object_size, need_round=True
+        )
         rects = [r.erode(8) for r in tiles]
         n = len(rects)  # 单页可以显示的区域
-        rs1 = [TileRecord.new(view_size, rects, rs[i: i + n]) for i in range(0, len(rs), n)]
+        rs1 = [
+            TileRecord.new(view_size, rects, rs[i : i + n])
+            for i in range(0, len(rs), n)
+        ]
         self.set_records(rs1)
 
 
 # args: /var/ias/snapshot/shtm/n1/work 2021-04-11 can amount
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description='目标属性标注')
-    parser.add_argument('folder', type=Path, help='图片目录')
-    parser.add_argument('meta_id', type=int, help='元数据ID')
-    parser.add_argument('category', type=str, help='目标类别')
-    parser.add_argument('property', type=str, help='目标属性')
-    parser.add_argument('-e', '--exclude_conf', type=float, default=1.0, help='排除置信度大于该值的对象')
-    parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
+    parser = argparse.ArgumentParser(description="目标属性标注")
+    parser.add_argument("folder", type=Path, help="图片目录")
+    parser.add_argument("meta_id", type=int, help="元数据ID")
+    parser.add_argument("category", type=str, help="目标类别")
+    parser.add_argument("property", type=str, help="目标属性")
+    parser.add_argument(
+        "-e", "--exclude_conf", type=float, default=1.0, help="排除置信度大于该值的对象"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
     meta = find_meta(opt.meta_id, opt.folder).unwrap()
@@ -111,13 +119,13 @@ def main() -> None:
     cat = meta.cat_meta(name=opt.category).id
     rs = load_tiles(opt.folder, opt.meta_id, cat, opt.property, opt.exclude_conf)
     assert len(rs) > 0
-    print('加载对象:', len(rs))
+    print("加载对象:", len(rs))
 
     labeler = PropLabeler(meta, opt.category, opt.property)
     labeler.load(rs)
     labeler.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # catch_show_err(main)
     main()

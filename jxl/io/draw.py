@@ -6,7 +6,9 @@ from jvi.image.image_nda import ImageNda
 from jxl.common import ProbValue
 
 
-def draw_boxi(image: ImageNda, rect: Rect, color: Color, label: str = '', thickness: int = 0) -> None:
+def draw_boxi(
+    image: ImageNda, rect: Rect, color: Color, label: str = "", thickness: int = 0
+) -> None:
     """绘制带标签的矩形框(整数坐标)"""
     # TODO: 移除cv2调用
     bgr = image.data()
@@ -21,17 +23,29 @@ def draw_boxi(image: ImageNda, rect: Rect, color: Color, label: str = '', thickn
         cv2.rectangle(bgr, c1, c2, color.bgr(), -1, cv2.LINE_AA)  # filled
         color = color.inverse()
         # cv2.putText(bgr, label, (c1[0], c1[1] - 2), 0, tl / 3, color, thickness=tf, lineType=cv2.LINE_AA)
-        cv2.putText(bgr, label, (c1[0], c1[1] - 2 + t_size[1] + 3), 0, tl / 3, color.bgr(), thickness=tf,
-                    lineType=cv2.LINE_AA)
+        cv2.putText(
+            bgr,
+            label,
+            (c1[0], c1[1] - 2 + t_size[1] + 3),
+            0,
+            tl / 3,
+            color.bgr(),
+            thickness=tf,
+            lineType=cv2.LINE_AA,
+        )
 
 
-def draw_boxf(bgr: ImageNda, rect: Rect, color: Color, label: str = '', thickness: int = 0) -> None:
+def draw_boxf(
+    bgr: ImageNda, rect: Rect, color: Color, label: str = "", thickness: int = 0
+) -> None:
     """绘制带标签的矩形框(归一化坐标)"""
     rect = rect.absolutize(bgr.size())
     draw_boxi(bgr, rect, color, label, thickness)
 
 
-def draw_box(bgr: ImageNda, rect: Rect, color: Color, label: str = '', thickness: int = 0) -> None:
+def draw_box(
+    bgr: ImageNda, rect: Rect, color: Color, label: str = "", thickness: int = 0
+) -> None:
     """绘制带标签的矩形框"""
     if rect.is_normalized():
         draw_boxf(bgr, rect, color, label, thickness)

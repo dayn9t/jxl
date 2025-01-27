@@ -30,7 +30,7 @@ def random_object_pos(size: Size, size_ob: Size) -> Rect:
         if rect.contains(rect_ob):
             return rect_ob
 
-    raise RuntimeError('random_object_pos failed')
+    raise RuntimeError("random_object_pos failed")
 
 
 def random_blend(objects: ImageNdas, im_bg: ImageNda, fg_mask: ImageNda) -> None:
@@ -57,8 +57,14 @@ def random_blend(objects: ImageNdas, im_bg: ImageNda, fg_mask: ImageNda) -> None
 class ObjectBlender:
     """目标混合器"""
 
-    def __init__(self, multiple: int = 10, ob_count: int = 3, ext: str = '.png',
-                 size: Size = Size(1024, 1024), verbose: bool = False):
+    def __init__(
+        self,
+        multiple: int = 10,
+        ob_count: int = 3,
+        ext: str = ".png",
+        size: Size = Size(1024, 1024),
+        verbose: bool = False,
+    ):
         self._multiple = multiple
         self._ob_num = ob_count
         self._ext = ext
@@ -70,13 +76,15 @@ class ObjectBlender:
         self._im_b = ImageNda(size)
         self._im_label = ImageNda(size, 1)
 
-    def load_objects(self, folder: StrPath, ext: str = '.png') -> int:
+    def load_objects(self, folder: StrPath, ext: str = ".png") -> int:
         self._objects = load_images_in(folder, ext)
         return len(self._objects)
 
-    def _make_sample(self, im1: ImageNda, im2: ImageNda, dst_dir: Path, prefix: str) -> None:
-        assert im1.same_shape_type(im2), '图片尺寸/数据类型必须一致'
-        assert im1.same_shape_type(self._im_a), '图片尺寸/数据类型必须一致'
+    def _make_sample(
+        self, im1: ImageNda, im2: ImageNda, dst_dir: Path, prefix: str
+    ) -> None:
+        assert im1.same_shape_type(im2), "图片尺寸/数据类型必须一致"
+        assert im1.same_shape_type(self._im_a), "图片尺寸/数据类型必须一致"
 
         self._im_label.set_to(0)
 
@@ -87,16 +95,16 @@ class ObjectBlender:
         random_blend(obs, self._im_b, self._im_label)
 
         self._count += 1
-        name = f'{prefix}_{self._count:04}{self._ext}'
+        name = f"{prefix}_{self._count:04}{self._ext}"
 
         m = {
-            dst_dir / 'A': self._im_a,
-            dst_dir / 'B': self._im_b,
-            dst_dir / 'label': self._im_label,
+            dst_dir / "A": self._im_a,
+            dst_dir / "B": self._im_b,
+            dst_dir / "label": self._im_label,
         }
 
         if self._verbose:
-            print(f'#{self._count} save:', dst_dir / 'x' / name)
+            print(f"#{self._count} save:", dst_dir / "x" / name)
 
         for p, im in m.items():
             im.save(p / name)
@@ -109,7 +117,7 @@ class ObjectBlender:
         prefix = Path(src_dir).name
         n = min(len(pairs) - 1, self._multiple)
         for path, im1 in pairs:
-            print(f'draw: {path}')
+            print(f"draw: {path}")
             pairs1 = random_choices(pairs, n, (path, im1))
             for _, im2 in pairs1:
                 self._make_sample(im1, im2, Path(dst_dir), prefix)

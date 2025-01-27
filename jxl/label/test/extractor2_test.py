@@ -13,13 +13,13 @@ ROWS = 3
 
 
 def test_extractor2() -> None:
-    folder = Path('/home/jiang/ws/trash/outside/2022/n1/n')
+    folder = Path("/home/jiang/ws/trash/outside/2022/n1/n")
 
     e = Extractor2(fun=extract_matches, vec_size=COLS * ROWS)
-    m = e.extract_cameras(folder, folder / 'train.csv')
+    m = e.extract_cameras(folder, folder / "train.csv")
 
     s = 0
     for cc in m:
         s += cc.count
-        print(f'cls({cc.cls}), {cc.count})')
-    print(f'total: {s}')
+        print(f"cls({cc.cls}), {cc.count})")
+    print(f"total: {s}")

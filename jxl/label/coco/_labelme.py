@@ -5,7 +5,7 @@ from jcx.text.txt_json import save_json
 from jvi.geo import Size
 from jxl.det.detector import DetectedObject
 
-_class_tab = ['dry_can', 'dry_can_lid', 'refuse_dump', 'wet_can', 'wet_can_lid']
+_class_tab = ["dry_can", "dry_can_lid", "refuse_dump", "wet_can", "wet_can_lid"]
 
 
 def _convert_object(o: DetectedObject, size: Size):
@@ -18,7 +18,7 @@ def _convert_object(o: DetectedObject, size: Size):
         "points": points,
         "group_id": None,
         "shape_type": "polygon",
-        "flags": {}
+        "flags": {},
     }
     return m
 
@@ -34,8 +34,8 @@ def save_labelme_json(msg: SensorMsg, size: Size) -> Path:
         "imagePath": file.name,
         "imageData": None,
         "imageHeight": size.height,
-        "imageWidth": size.width
+        "imageWidth": size.width,
     }
-    json_file = file.with_suffix('.json')
+    json_file = file.with_suffix(".json")
     save_json(m, json_file)
     return json_file

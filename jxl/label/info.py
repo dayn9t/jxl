@@ -31,8 +31,8 @@ ID_PENDING = -1  # 该值待定，需要设置
 CAT_ROI = -9  # ROI对象默认类别
 CAT_PENDING = -1  # ROI对象默认类别
 
-IMG_EXT = '.jpg'  # 图片文件扩展名
-MSG_EXT = '.json'  # 传感器消息扩展名
+IMG_EXT = ".jpg"  # 图片文件扩展名
+MSG_EXT = ".json"  # 传感器消息扩展名
 
 
 @dataclass
@@ -49,30 +49,36 @@ class ObjectLabelInfo(Cloned):
     """属性集合"""
 
     @classmethod
-    def new(cls, id_: int, category: int, confidence: float, polygon: Points,
-            properties: Option[ProbPropertyMap] = Null) -> 'ObjectLabelInfo':
+    def new(
+        cls,
+        id_: int,
+        category: int,
+        confidence: float,
+        polygon: Points,
+        properties: Option[ProbPropertyMap] = Null,
+    ) -> "ObjectLabelInfo":
         """创建标签信息"""
         assert polygon is not None
         return ObjectLabelInfo(
             id=id_,
             prob_class=ProbValue(category, confidence),
             polygon=polygon,
-            properties=properties.unwrap_or({})
+            properties=properties.unwrap_or({}),
         )
 
     @classmethod
-    def new_roi(cls, polygon: Points) -> 'ObjectLabelInfo':
+    def new_roi(cls, polygon: Points) -> "ObjectLabelInfo":
         """创建感兴趣区域"""
         return ObjectLabelInfo.new(ID_ROI, CAT_ROI, 0, polygon)
 
     @classmethod
-    def from_detected(cls, o: DetObject) -> 'ObjectLabelInfo':
+    def from_detected(cls, o: DetObject) -> "ObjectLabelInfo":
         """从检测对象构建标注对象"""
         return ObjectLabelInfo(
             id=o.id,
             prob_class=o.prob_class,
             polygon=deepcopy(o.polygon),
-            properties=o.property_map()
+            properties=o.property_map(),
         )
 
     def draw_on(self, bgr: ImageNda, colors: Colors, line_thickness: int = 1) -> None:
@@ -117,13 +123,17 @@ class ObjectLabelInfo(Cloned):
     def remove_prop(self, name: str) -> None:
         """删除属性值"""
         if name in self.properties:
-            self.properties.pop('act')
+            self.properties.pop("act")
 
     def min_conf(self) -> float:
         """最小置信度"""
         if self.prob_class.value < 0:
             return 1.0
-        p = min(self.properties.values(), default=self.prob_class, key=lambda x: x.confidence)
+        p = min(
+            self.properties.values(),
+            default=self.prob_class,
+            key=lambda x: x.confidence,
+        )
         return min(self.prob_class.confidence, p.confidence)
 
     def move(self, offset: Point) -> None:
@@ -154,9 +164,15 @@ class ImageLabelInfo(Cloned):
     """版本号，用于新旧格式转换"""
 
     @classmethod
-    def new(cls, user_agent: str, objects: ObjectLabelInfos, date: Optional[str] = None,
-            last_modified: Optional[str] = None, sensor: int = 0, host: str = ''
-            ) -> 'ImageLabelInfo':
+    def new(
+        cls,
+        user_agent: str,
+        objects: ObjectLabelInfos,
+        date: Optional[str] = None,
+        last_modified: Optional[str] = None,
+        sensor: int = 0,
+        host: str = "",
+    ) -> "ImageLabelInfo":
         date = date or now_iso_str()
         last_modified = last_modified or date
 
@@ -167,24 +183,26 @@ class ImageLabelInfo(Cloned):
             sensor=sensor,
             last_modified=last_modified,
             date=date,
-            objects=objects
+            objects=objects,
         )
 
     @classmethod
-    def only_roi(cls, user_agent: str = '', sensor: int = 0) -> 'ImageLabelInfo':
+    def only_roi(cls, user_agent: str = "", sensor: int = 0) -> "ImageLabelInfo":
         """生成空的标注信息，只有包括最大化的ROI"""
         roi = ObjectLabelInfo.new_roi(Rect.one().vertexes())
         return ImageLabelInfo.new(user_agent, objects=[roi], sensor=sensor)
 
     @classmethod
-    def from_det_objects(cls, objects: DetObjects, roi: Optional[Points] = None) -> 'ImageLabelInfo':
+    def from_det_objects(
+        cls, objects: DetObjects, roi: Optional[Points] = None
+    ) -> "ImageLabelInfo":
         """从检测器结果构建标注信息"""
         objs = [ObjectLabelInfo.from_detected(o) for o in objects]
 
         if roi:
             ob = ObjectLabelInfo.new_roi(roi)
             objs.insert(0, ob)
-        return ImageLabelInfo.new('detector', objects=objs)
+        return ImageLabelInfo.new("detector", objects=objs)
 
     def roi(self) -> Option[Points]:
         """获取ROI引用"""
@@ -234,7 +252,13 @@ class ImageLabelInfo(Cloned):
                 self.objects.append(o1)
                 id_ += 1
 
-    def draw_on(self, bgr: ImageNda, cfg: LabelMeta, show_conf: bool = True, cat_filter: int = -1) -> None:
+    def draw_on(
+        self,
+        bgr: ImageNda,
+        cfg: LabelMeta,
+        show_conf: bool = True,
+        cat_filter: int = -1,
+    ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制
         for ob in self.objects:
@@ -249,19 +273,19 @@ class ImageLabelInfo(Cloned):
             assert cat_cfg
             color = Color.parse(cat_cfg.color)
             assert color
-            label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else '')
+            label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
             for k, v in ob.properties.items():
                 p = cfg.prop_value_sign(ob.prob_class.value, k, v.value)
                 match p:
                     case Some(v_name):
                         if len(v_name) > 0:
-                            label += ' ' + v_name + (v.conf_str() if show_conf else '')
+                            label += " " + v_name + (v.conf_str() if show_conf else "")
                     case _:
-                        print('WARN: 无效属性', ob.prob_class.value, k, v.value)
+                        print("WARN: 无效属性", ob.prob_class.value, k, v.value)
                     # fmt = ' %s=%d' if type(v) == int else ' %s=%.2f'
                     # label += fmt % (k, v)
             if cfg.label.title_style == 0:
-                label = ''
+                label = ""
             polylines(bgr, ob.polygon, color, 1)
             if cfg.disable_label_text:
                 rectangle(bgr, ob.rect(), color, cfg.label.thickness)
@@ -276,9 +300,9 @@ class ImageLabelInfo(Cloned):
             cat = meta.cat_meta(ob.prob_class.value)
             r = cat.check(ob)
             if r.is_err():
-                logger.info(f'Meta验证失败，原因：{r}, 舍弃: {ob} ')
+                logger.info(f"Meta验证失败，原因：{r}, 舍弃: {ob} ")
             elif not ob.is_roi() and ob.center().outside(roi):
-                logger.info(f'中心超出ROI范围：舍弃: {ob} ')
+                logger.info(f"中心超出ROI范围：舍弃: {ob} ")
             else:
                 objs.append(ob)
         self.objects = objs
@@ -288,7 +312,9 @@ class ImageLabelInfo(Cloned):
         confs = map(lambda o: o.min_conf(), self.objects)
         return min(confs, default=1.0)
 
-    def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> Tuple[Rect, 'ImageLabelInfo']:
+    def crop_by_roi(
+        self, im_size: Size, extend_side: int = 4
+    ) -> Tuple[Rect, "ImageLabelInfo"]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
         rect = self.roi_rect().unwrap()
         assert rect.is_normalized()

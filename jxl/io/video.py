@@ -12,13 +12,16 @@ from pydantic import BaseModel
 
 class CmpVideoMaker(BaseModel):
     """制作图像对比视频制作器"""
+
     repeat = 5
     fps = 0.5
     colors: Colors = COLORS7
     size = Size()
     line_thickness = 2
 
-    def make(self, images: ImageNdas, objects: DetObjects, file: StrPath, roi: Points) -> None:
+    def make(
+        self, images: ImageNdas, objects: DetObjects, file: StrPath, roi: Points
+    ) -> None:
         """制作图像对比视频"""
         images = [im.clone() for im in images]
 
@@ -38,7 +41,7 @@ def demo_maker() -> None:
     r1 = Rect(0.0, 0.0, 0.5, 0.5)
     r2 = Rect(0.5, 0.5, 0.5, 0.5)
     ob = DetObject.new(0, 1.0, r1)
-    maker.make([image] * 7, [ob], '/tmp/a_maker.mp4', r2.vertexes())
+    maker.make([image] * 7, [ob], "/tmp/a_maker.mp4", r2.vertexes())
 
 
 if __name__ == "__main__":

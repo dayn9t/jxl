@@ -45,10 +45,10 @@ def a_test() -> None:
     opt1 = DetOpt((640, 640), 0.5, 0.5)
     opt2 = DetOpt((640, 640), 0.6, 0.5)
 
-    folder = '/opt/ias/model/work/disaster/fire_smoke/'
-    file = folder + 'weights.pt'
-    info1 = ModelInfo('y5_detector', file, opt1)
-    info2 = ModelInfo('y5_detector', file, opt2)
+    folder = "/opt/ias/model/work/disaster/fire_smoke/"
+    file = folder + "weights.pt"
+    info1 = ModelInfo("y5_detector", file, opt1)
+    info2 = ModelInfo("y5_detector", file, opt2)
 
     pool = ModelPool()
 
@@ -60,5 +60,5 @@ def a_test() -> None:
     print(len(pool))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     a_test()

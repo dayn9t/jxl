@@ -18,14 +18,14 @@ def show_random_object_pos():
 
 
 def demo_blender():
-    src_dir = '/home/jiang/ws/scene/square/1'
-    dst_dir = '/home/jiang/ws/scene/dst1'
-    ob_dir = '/home/jiang/ws/scene/objects/'
+    src_dir = "/home/jiang/ws/scene/square/1"
+    dst_dir = "/home/jiang/ws/scene/dst1"
+    ob_dir = "/home/jiang/ws/scene/objects/"
 
     blender = ObjectBlender(2)
 
     n = blender.load_objects(ob_dir)
-    print('load objects:', n)
+    print("load objects:", n)
     blender.make_samples(src_dir, dst_dir)
 
 

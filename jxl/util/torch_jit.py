@@ -13,4 +13,4 @@ import torch.jit
 def disable_jit() -> None:
     torch.jit.script_method = script_method
     torch.jit.script = script
-    print('Disable torch JIT')
+    print("Disable torch JIT")

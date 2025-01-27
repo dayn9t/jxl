@@ -40,18 +40,23 @@ class YoloResU8(DetRes):
 class DetectorY8(IDetector):
     """目标检测器"""
 
-    model_class = 'detector_y8'
+    model_class = "detector_y8"
 
-    def __init__(self, model_path: Path, opt: DetOpt, device_name: str = ''):
+    def __init__(self, model_path: Path, opt: DetOpt, device_name: str = ""):
         super().__init__(model_path, opt, device_name)
 
-        self._model = YOLO(model_path, task='detect')
+        self._model = YOLO(model_path, task="detect")
 
     def __call__(self, image: ImageNda) -> YoloResU8:
         """检测目标"""
         # data = image.data()[:, :, ::-1]  # BGR => RGB
         data = image.data()
-        rs = self._model(data, conf=self._opt.conf_thr, iou=self._opt.iou_thr, verbose=self._opt.verbose)
+        rs = self._model(
+            data,
+            conf=self._opt.conf_thr,
+            iou=self._opt.iou_thr,
+            verbose=self._opt.verbose,
+        )
         assert isinstance(rs, list)
         assert len(rs) == 1
         assert isinstance(rs[0], Results)

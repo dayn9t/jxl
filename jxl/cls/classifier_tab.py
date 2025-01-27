@@ -1,7 +1,12 @@
 from pathlib import Path
 
 from autogluon.tabular import TabularPredictor
-from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
+from jxl.cls.classifier import (
+    ClassifierRes,
+    IClassifier,
+    ClassifierOpt,
+    ClassifierResList,
+)
 from jxl.label.extractor import mat_to_df
 from pandas import DataFrame
 
@@ -9,9 +14,9 @@ from pandas import DataFrame
 class ClassifierTab(IClassifier):
     """表格数据分类器"""
 
-    model_class = 'tabular'
+    model_class = "tabular"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ''):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
         super().__init__(model_path, opt, device_name)
 
         self._model = TabularPredictor.load(str(model_path))

@@ -35,12 +35,12 @@ class ClassifierResY8(ClassifierRes):
 class ClassifierY8(IClassifier):
     """图片分类器"""
 
-    model_class = 'image_net2'
+    model_class = "image_net2"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ''):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
         super().__init__(model_path, opt, device_name)
 
-        self._model = YOLO(model_path, task='classify')
+        self._model = YOLO(model_path, task="classify")
         # opt 用不到, 也许可以考虑验证
         assert len(self._model.names) == opt.num_classes
         t = self._model.transforms.transforms[0]
@@ -68,16 +68,16 @@ class ClassifierY8(IClassifier):
 
 def main() -> None:
     opt = ClassifierOpt((224, 224), 1000)
-    path = Path('yolov8n-cls.pt')
-    image: ImageNda = ImageNda.load('../../jvi/static/lena.jpg')
+    path = Path("yolov8n-cls.pt")
+    image: ImageNda = ImageNda.load("../../jvi/static/lena.jpg")
     # image = ImageNda.load('bus.jpg')
 
-    model = ClassifierY8(path, opt, 'cuda')
+    model = ClassifierY8(path, opt, "cuda")
     res = model(image)
 
     print(model)
     print(res.top(), res.confidences())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

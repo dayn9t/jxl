@@ -36,9 +36,18 @@ class LabelRecord(PImageEntry):
         """把记录绘制在画板上"""
         self.info.draw_on(canvas, self.meta)
         time = iso_to_local(self.info.last_modified)
-        label = f'modified={time}  image={self.image}'
+        label = f"modified={time}  image={self.image}"
         color = LIME
-        cv2.putText(canvas.data(), label, (8, 16), 0, 0.5, color.bgr(), thickness=1, lineType=cv2.LINE_AA)
+        cv2.putText(
+            canvas.data(),
+            label,
+            (8, 16),
+            0,
+            0.5,
+            color.bgr(),
+            thickness=1,
+            lineType=cv2.LINE_AA,
+        )
 
 
 LabelRecords: TypeAlias = list[LabelRecord]

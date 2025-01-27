@@ -16,14 +16,14 @@ from torchvision import datasets
 
 class SiameseNetwork(nn.Module):
     """
-        Siamese network for image similarity estimation.
-        The network is composed of two identical networks, one for each input.
-        The output of each network is concatenated and passed to a linear layer.
-        The output of the linear layer passed through a sigmoid function.
-        `"FaceNet" <https://arxiv.org/pdf/1503.03832.pdf>`_ is a variant of the Siamese network.
-        This implementation varies from FaceNet as we use the `ResNet-18` model from
-        `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_ as our feature extractor.
-        In addition, we aren't using `TripletLoss` as the MNIST dataset is simple, so `BCELoss` can do the trick.
+    Siamese network for image similarity estimation.
+    The network is composed of two identical networks, one for each input.
+    The output of each network is concatenated and passed to a linear layer.
+    The output of the linear layer passed through a sigmoid function.
+    `"FaceNet" <https://arxiv.org/pdf/1503.03832.pdf>`_ is a variant of the Siamese network.
+    This implementation varies from FaceNet as we use the `ResNet-18` model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_ as our feature extractor.
+    In addition, we aren't using `TripletLoss` as the MNIST dataset is simple, so `BCELoss` can do the trick.
     """
 
     def __init__(self):
@@ -34,7 +34,9 @@ class SiameseNetwork(nn.Module):
         # over-write the first conv layer to be able to read MNIST images
         # as resnet18 reads (3,x,x) where 3 is RGB channels
         # whereas MNIST has (1,x,x) where 1 is a gray-scale channel
-        self.resnet.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        self.resnet.conv1 = nn.Conv2d(
+            1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+        )
         self.fc_in_features = self.resnet.fc.in_features
 
         # remove the last layer of resnet18 (linear layer which is before avgpool layer)
@@ -99,12 +101,12 @@ class APP_MATCHER(Dataset):
 
     def group_examples(self):
         """
-            To ease the accessibility of data based on the class, we will use `group_examples` to group
-            examples based on class.
+        To ease the accessibility of data based on the class, we will use `group_examples` to group
+        examples based on class.
 
-            Every key in `grouped_examples` corresponds to a class in MNIST dataset. For every key in
-            `grouped_examples`, every value will conform to all of the indices for the MNIST
-            dataset examples that correspond to that key.
+        Every key in `grouped_examples` corresponds to a class in MNIST dataset. For every key in
+        `grouped_examples`, every value will conform to all of the indices for the MNIST
+        dataset examples that correspond to that key.
         """
 
         # get the targets from MNIST dataset
@@ -120,17 +122,17 @@ class APP_MATCHER(Dataset):
 
     def __getitem__(self, index):
         """
-            For every example, we will select two images. There are two cases,
-            positive and negative examples. For positive examples, we will have two
-            images from the same class. For negative examples, we will have two images
-            from different classes.
+        For every example, we will select two images. There are two cases,
+        positive and negative examples. For positive examples, we will have two
+        images from the same class. For negative examples, we will have two images
+        from different classes.
 
-            Given an index, if the index is even, we will pick the second image from the same class,
-            but it won't be the same image we chose for the first class. This is used to ensure the positive
-            example isn't trivial as the network would easily distinguish the similarity between same images. However,
-            if the network were given two different images from the same class, the network will need to learn
-            the similarity between two different images representing the same class. If the index is odd, we will
-            pick the second image from a different class than the first image.
+        Given an index, if the index is even, we will pick the second image from the same class,
+        but it won't be the same image we chose for the first class. This is used to ensure the positive
+        example isn't trivial as the network would easily distinguish the similarity between same images. However,
+        if the network were given two different images from the same class, the network will need to learn
+        the similarity between two different images representing the same class. If the index is odd, we will
+        pick the second image from a different class than the first image.
         """
 
         # pick some random class for the first image
@@ -138,7 +140,9 @@ class APP_MATCHER(Dataset):
 
         # pick a random index for the first image in the grouped indices based of the label
         # of the class
-        random_index_1 = random.randint(0, self.grouped_examples[selected_class].shape[0] - 1)
+        random_index_1 = random.randint(
+            0, self.grouped_examples[selected_class].shape[0] - 1
+        )
 
         # pick the index to get the first image
         index_1 = self.grouped_examples[selected_class][random_index_1]
@@ -149,11 +153,15 @@ class APP_MATCHER(Dataset):
         # same class
         if index % 2 == 0:
             # pick a random index for the second image
-            random_index_2 = random.randint(0, self.grouped_examples[selected_class].shape[0] - 1)
+            random_index_2 = random.randint(
+                0, self.grouped_examples[selected_class].shape[0] - 1
+            )
 
             # ensure that the index of the second image isn't the same as the first image
             while random_index_2 == random_index_1:
-                random_index_2 = random.randint(0, self.grouped_examples[selected_class].shape[0] - 1)
+                random_index_2 = random.randint(
+                    0, self.grouped_examples[selected_class].shape[0] - 1
+                )
 
             # pick the index to get the second image
             index_2 = self.grouped_examples[selected_class][random_index_2]
@@ -175,7 +183,9 @@ class APP_MATCHER(Dataset):
 
             # pick a random index for the second image in the grouped indices based of the label
             # of the class
-            random_index_2 = random.randint(0, self.grouped_examples[other_selected_class].shape[0] - 1)
+            random_index_2 = random.randint(
+                0, self.grouped_examples[other_selected_class].shape[0] - 1
+            )
 
             # pick the index to get the second image
             index_2 = self.grouped_examples[other_selected_class][random_index_2]
@@ -189,24 +199,40 @@ class APP_MATCHER(Dataset):
         return image_1, image_2, target
 
 
-def train(args: Namespace, model: SiameseNetwork, device: Device, train_loader: DataLoader, optimizer: Adadelta,
-          epoch: int) -> None:
+def train(
+    args: Namespace,
+    model: SiameseNetwork,
+    device: Device,
+    train_loader: DataLoader,
+    optimizer: Adadelta,
+    epoch: int,
+) -> None:
     model.train()
 
     criterion = nn.BCELoss()  # 用于二分类人物
     # criterion = nn.TripletMarginLoss()  # TripletLoss主要用于训练差异性小的样本，比如人脸
 
     for batch_idx, (images_1, images_2, targets) in enumerate(train_loader):
-        images_1, images_2, targets = images_1.to(device), images_2.to(device), targets.to(device)
+        images_1, images_2, targets = (
+            images_1.to(device),
+            images_2.to(device),
+            targets.to(device),
+        )
         optimizer.zero_grad()
         outputs = model(images_1, images_2).squeeze()
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(images_1), len(train_loader.dataset),
-                       100. * batch_idx / len(train_loader), loss.item()))
+            print(
+                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                    epoch,
+                    batch_idx * len(images_1),
+                    len(train_loader.dataset),
+                    100.0 * batch_idx / len(train_loader),
+                    loss.item(),
+                )
+            )
             if args.dry_run:
                 break
 
@@ -218,11 +244,17 @@ def atest(model: SiameseNetwork, device: Device, test_loader: DataLoader) -> Non
     criterion = nn.BCELoss()
 
     with torch.no_grad():
-        for (images_1, images_2, targets) in test_loader:
-            images_1, images_2, targets = images_1.to(device), images_2.to(device), targets.to(device)
+        for images_1, images_2, targets in test_loader:
+            images_1, images_2, targets = (
+                images_1.to(device),
+                images_2.to(device),
+                targets.to(device),
+            )
             outputs = model(images_1, images_2).squeeze()
             test_loss += criterion(outputs, targets).sum().item()  # sum up batch loss
-            pred = torch.where(outputs > 0.5, 1, 0)  # get the index of the max log-probability
+            pred = torch.where(
+                outputs > 0.5, 1, 0
+            )  # get the index of the max log-probability
             correct += pred.eq(targets.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
@@ -230,36 +262,85 @@ def atest(model: SiameseNetwork, device: Device, test_loader: DataLoader) -> Non
     # for the 1st epoch, the average loss is 0.0001 and the accuracy 97-98%
     # using default settings. After completing the 10th epoch, the average
     # loss is 0.0000 and the accuracy 99.5-100% using default settings.
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print(
+        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+            test_loss,
+            correct,
+            len(test_loader.dataset),
+            100.0 * correct / len(test_loader.dataset),
+        )
+    )
 
 
 def main() -> None:
     # Training settings
-    parser = ArgumentParser(description='PyTorch Siamese network Example')
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-                        help='input batch size for training (default: 64)')
-    parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
-                        help='input batch size for testing (default: 1000)')
-    parser.add_argument('--epochs', type=int, default=2, metavar='N',
-                        help='number of epochs to train (default: 14)')
-    parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
-                        help='learning rate (default: 1.0)')
-    parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
-                        help='Learning rate step gamma (default: 0.7)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
-    parser.add_argument('--no-mps', action='store_true', default=False,
-                        help='disables macOS GPU training')
-    parser.add_argument('--dry-run', action='store_true', default=False,
-                        help='quickly check a single pass')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')
-    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
-                        help='how many batches to wait before logging training status')
-    parser.add_argument('--save-model', action='store_true', default=False,
-                        help='For Saving the current Model')
+    parser = ArgumentParser(description="PyTorch Siamese network Example")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=64,
+        metavar="N",
+        help="input batch size for training (default: 64)",
+    )
+    parser.add_argument(
+        "--test-batch-size",
+        type=int,
+        default=1000,
+        metavar="N",
+        help="input batch size for testing (default: 1000)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=2,
+        metavar="N",
+        help="number of epochs to train (default: 14)",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=1.0,
+        metavar="LR",
+        help="learning rate (default: 1.0)",
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=0.7,
+        metavar="M",
+        help="Learning rate step gamma (default: 0.7)",
+    )
+    parser.add_argument(
+        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
+    )
+    parser.add_argument(
+        "--no-mps",
+        action="store_true",
+        default=False,
+        help="disables macOS GPU training",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="quickly check a single pass",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
+    )
+    parser.add_argument(
+        "--log-interval",
+        type=int,
+        default=10,
+        metavar="N",
+        help="how many batches to wait before logging training status",
+    )
+    parser.add_argument(
+        "--save-model",
+        action="store_true",
+        default=False,
+        help="For Saving the current Model",
+    )
     args = parser.parse_args()
 
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -274,17 +355,15 @@ def main() -> None:
     else:
         device = torch.device("cpu")
 
-    train_kwargs = {'batch_size': args.batch_size}
-    test_kwargs = {'batch_size': args.test_batch_size}
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
     if use_cuda:
-        cuda_kwargs = {'num_workers': 1,
-                       'pin_memory': True,
-                       'shuffle': True}
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    train_dataset = APP_MATCHER('../../data', train=True, download=True)
-    test_dataset = APP_MATCHER('../../data', train=False)
+    train_dataset = APP_MATCHER("../../data", train=True, download=True)
+    test_dataset = APP_MATCHER("../../data", train=False)
     train_loader = torch.utils.data.DataLoader(train_dataset, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(test_dataset, **test_kwargs)
 
@@ -301,12 +380,12 @@ def main() -> None:
         torch.save(model.state_dict(), "siamese_network.pt")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     TODO:
     - 修改Input channel 适应 RGB, 修改Input size 适应 320x240
     - 修改 loss, [PyTorch TripletMarginLoss(三元损失)](https://blog.csdn.net/qq_32523711/article/details/103817338)
       - 训练方法: https://www.kaggle.com/code/hirotaka0122/triplet-loss-with-pytorch/notebook
-    - 实现 DataLoader, 从同camera load 正例, 不同camera反例 
+    - 实现 DataLoader, 从同camera load 正例, 不同camera反例
     """
     main()

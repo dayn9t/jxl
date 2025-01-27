@@ -17,17 +17,17 @@ from numpy import ndarray
 class LabelViewer(ImageViewer, ABC):
 
     def __init__(self, size: Size):
-        super().__init__('LabelViewer', size)
+        super().__init__("LabelViewer", size)
         self.labels = []
 
     def on_change_background(self, image, file):
-        print('#%d' % self._index, file)
+        print("#%d" % self._index, file)
 
         label_file = img2label(file)
-        print('label_file:', label_file)
+        print("label_file:", label_file)
         self.labels = load_labels(label_file)
         for label in self.labels:
-            print('label:', label)
+            print("label:", label)
 
     def on_draw(self, canvas: ndarray, _pos: Point):
         for label in self.labels:
@@ -45,14 +45,21 @@ class LabelViewer(ImageViewer, ABC):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='COCO标注查看')
-    parser.add_argument('coco_file', metavar='COCO_FILE', type=str, help='COCO格式文件')
-    parser.add_argument('-s', '--start_index', default=0, metavar='START_INDEX', type=int, help='样本起始索引')
-    parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
+    parser = argparse.ArgumentParser(description="COCO标注查看")
+    parser.add_argument("coco_file", metavar="COCO_FILE", type=str, help="COCO格式文件")
+    parser.add_argument(
+        "-s",
+        "--start_index",
+        default=0,
+        metavar="START_INDEX",
+        type=int,
+        help="样本起始索引",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
 
     opt = parser.parse_args()
-    if os.path.splitext(opt.coco_file)[-1] == '':
-        opt.coco_file += '.json'
+    if os.path.splitext(opt.coco_file)[-1] == "":
+        opt.coco_file += ".json"
 
     opt.coco_file = os.path.abspath(opt.coco_file)
 
@@ -64,5 +71,5 @@ def main():
                 break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,16 +1,21 @@
 from pathlib import Path
 
 import numpy as np
-from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
+from jxl.cls.classifier import (
+    ClassifierRes,
+    IClassifier,
+    ClassifierOpt,
+    ClassifierResList,
+)
 from joblib import load
 
 
 class ClassifierOd(IClassifier):
     """异常检测分类器"""
 
-    model_class = 'outlier'
+    model_class = "outlier"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ''):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
         super().__init__(model_path, opt, device_name)
 
         self._model = load(str(model_path))

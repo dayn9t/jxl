@@ -63,6 +63,7 @@ def interference(_im1: ImageNda) -> float:
 
 class TileFeatures(BaseModel):
     """图像瓦片特征集合"""
+
     rect: Rect
     """所在图像区域"""
     sharpness_vec: list[float]
@@ -71,6 +72,7 @@ class TileFeatures(BaseModel):
 
 class ImageFeatures(BaseModel):
     """图像特征集合"""
+
     tiles: list[TileFeatures]
     """图像分块特征(n,)"""
     match_vec: list[float]
@@ -106,15 +108,10 @@ class DiagExtractor:
             resize_roi(image2, r, self.tile_size, tile2)
             # trace_images([tile1, tile2])
 
-            tile = TileFeatures(
-                rect=r,
-                sharpness_vec=sharpness(tile1)
-            )
+            tile = TileFeatures(rect=r, sharpness_vec=sharpness(tile1))
             tiles.append(tile)
             match_vec.append(match(tile1, tile2))
 
         return ImageFeatures(
-            tiles=tiles,
-            match_vec=match_vec,
-            chroma_vec=chroma(image1)
+            tiles=tiles, match_vec=match_vec, chroma_vec=chroma(image1)
         )

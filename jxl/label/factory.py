@@ -13,7 +13,9 @@ _class_map = {
 }
 
 
-def open_label_set(folder: Path, label_format: LabelFormat, meta_id: int, pattern: str) -> Result[LabelSet, str]:
+def open_label_set(
+    folder: Path, label_format: LabelFormat, meta_id: int, pattern: str
+) -> Result[LabelSet, str]:
     """打开标注数据集合"""
 
     fmt_cls = guess_format_cls(folder, label_format, meta_id)

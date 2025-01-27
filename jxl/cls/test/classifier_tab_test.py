@@ -7,16 +7,16 @@ from jxl.cls.classifier_tab import *
 def main(test_model: int = 1) -> None:
     from jxl.iqa.diag_extractor import sharpness, chroma
 
-    model_dir = Path('/opt/ias/project/shtm/model/iqa')
+    model_dir = Path("/opt/ias/project/shtm/model/iqa")
 
     if test_model == 1:
-        model_path = model_dir / 'clearness'
-        image_dir = Path('/home/jiang/ws/diagnosis/clearness/samples/2')
+        model_path = model_dir / "clearness"
+        image_dir = Path("/home/jiang/ws/diagnosis/clearness/samples/2")
         fun = sharpness
         opt = ClassifierOpt((256,), 3)
     else:
-        model_path = model_dir / 'chroma'
-        image_dir = Path('/home/jiang/ws/diagnosis/chroma/samples/1')
+        model_path = model_dir / "chroma"
+        image_dir = Path("/home/jiang/ws/diagnosis/chroma/samples/1")
         fun = chroma
         opt = ClassifierOpt((256,), 2)
 
@@ -32,5 +32,5 @@ def main(test_model: int = 1) -> None:
             break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

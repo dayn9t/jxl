@@ -26,6 +26,7 @@ class RectObject(Protocol):
 
 class IouTracker(BaseModel):
     """交并比跟踪器, 不处理遮挡"""
+
     iou_thr: float = 0.5
     """认定两个Rect是同一目标的IOU阈值"""
     objects: list[Any] = []
@@ -88,7 +89,10 @@ def test_tracker() -> None:
     assert tracker.objects[0].id == 1
 
     # 3.一个旧偏移目标, 一个新目标
-    obs = [DetObject.new(0, 1, rect=Rect(0.1, 0.1, 1, 1)), DetObject.new(0, 1, rect=Rect(0.5, 0.5, 1, 1))]
+    obs = [
+        DetObject.new(0, 1, rect=Rect(0.1, 0.1, 1, 1)),
+        DetObject.new(0, 1, rect=Rect(0.5, 0.5, 1, 1)),
+    ]
 
     tracker.track(obs, id_counter)
     assert len(tracker.objects) == 2

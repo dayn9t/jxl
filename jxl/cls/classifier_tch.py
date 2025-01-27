@@ -19,6 +19,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 
 @dataclass
 class ClassifierTchRes(ClassifierRes):
     """图片分类器结果"""
+
     output: Any
 
     def top(self) -> ProbValue:
@@ -37,9 +38,9 @@ class ClassifierTchRes(ClassifierRes):
 class ClassifierTch(IClassifier):
     """图片分类器"""
 
-    model_class = 'image_net'
+    model_class = "image_net"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ''):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
         super().__init__(model_path, opt, device_name)
 
         if opt.data_format == ModelFormat.FULL_MODEL:
@@ -72,7 +73,7 @@ class ClassifierTch(IClassifier):
         return self.model.__str__()
 
     def num_parameters(self) -> int:
-        """ TODO: 用途？"""
+        """TODO: 用途？"""
         return sum(torch.numel(parameter) for parameter in self.model.parameters())
 
     def __call__(self, img_bgr: ImageNda) -> ClassifierTchRes:
@@ -83,7 +84,9 @@ class ClassifierTch(IClassifier):
         # print('img:', type(img))
         img_tensor: Tensor = self.trans(img)
         assert img_tensor.shape == torch.Size([3, 224, 224])
-        img_tensor = img_tensor.view(1, 3, self.input_shape[0], self.input_shape[1]).cuda()  # 多GPU可能接受CPU图片
+        img_tensor = img_tensor.view(
+            1, 3, self.input_shape[0], self.input_shape[1]
+        ).cuda()  # 多GPU可能接受CPU图片
         assert img_tensor.shape == torch.Size([1, 3, 224, 224])
 
         # print('image:', type(img))
@@ -96,5 +99,5 @@ class ClassifierTch(IClassifier):
 
     def save(self, file: Path) -> None:
         """必须在至少一次推理后保存，格式.pth"""
-        print('model save to:', file)
+        print("model save to:", file)
         torch.save(self.model, file)

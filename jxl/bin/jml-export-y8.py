@@ -53,14 +53,14 @@ def export_safetensors() -> None:
     src_data = torch.load(src_path)
 
     # print(src_data['model'])
-    src_data = src_data['model'].state_dict().items()
+    src_data = src_data["model"].state_dict().items()
     src_data = dict(src_data)
     show(src_data, "src:")
     dst_data = {rename(k): t for k, t in src_data.items()}
     # print(src_data["model"])
     save_file(dst_data, dst_path)
     show(dst_data, "dst:")
-    print('Done!')
+    print("Done!")
 
 
 """
@@ -102,6 +102,6 @@ def main() -> None:
     print('Done!')
 """
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # main()
     export_safetensors()

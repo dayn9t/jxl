@@ -16,16 +16,14 @@ from mmseg.utils import setup_multi_processes
 from opencd import DIEncoderDecoder
 from torch import Tensor
 
-_models = {
-    'changer_r18': 'configs/changer_ex_r18_512x512_40k_levircd.py'
-}
+_models = {"changer_r18": "configs/changer_ex_r18_512x512_40k_levircd.py"}
 
 
 def make_cfg(cfg_file: Path, gpu_ids: list[int]) -> Config:
     """制作CFG"""
     cfg = Config.fromfile(cfg_file)
     setup_multi_processes(cfg)
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
     cfg.model.pretrained = None
     cfg.data.test.test_mode = True
@@ -36,16 +34,16 @@ def make_cfg(cfg_file: Path, gpu_ids: list[int]) -> Config:
 
 def make_model(cfg: Config, device: str, model_file: Path) -> MMDataParallel:
     """制作模型"""
-    model = build_segmentor(cfg.model, test_cfg=cfg.get('test_cfg'))
+    model = build_segmentor(cfg.model, test_cfg=cfg.get("test_cfg"))
     assert isinstance(model, DIEncoderDecoder)
 
-    checkpoint: dict = load_checkpoint(model, str(model_file), map_location='cpu')
+    checkpoint: dict = load_checkpoint(model, str(model_file), map_location="cpu")
     assert isinstance(checkpoint, dict)
-    meta = checkpoint.get('meta', {})
+    meta = checkpoint.get("meta", {})
 
-    assert 'CLASSES' in meta and 'PALETTE' in meta
-    model.CLASSES = meta['CLASSES']
-    model.PALETTE = meta['PALETTE']
+    assert "CLASSES" in meta and "PALETTE" in meta
+    model.CLASSES = meta["CLASSES"]
+    model.PALETTE = meta["PALETTE"]
     # clean gpu memory when starting a new evaluation.
     torch.cuda.empty_cache()
     cfg.device = device
@@ -62,21 +60,14 @@ def make_model(cfg: Config, device: str, model_file: Path) -> MMDataParallel:
 def make_pipline(img_norm_cfg: ConfigDict, shape: tuple[int, int]) -> Compose:
     """构建图像处理管道"""
     pipline_cfg = [
+        {"type": "MultiImgResize", "img_scale": shape, "keep_ratio": True},
         {
-            'type': 'MultiImgResize',
-            'img_scale': shape,
-            'keep_ratio': True
+            "type": "MultiImgNormalize",
+            "mean": img_norm_cfg["mean"],
+            "std": img_norm_cfg["std"],
+            "to_rgb": img_norm_cfg["to_rgb"],
         },
-        {
-            'type': 'MultiImgNormalize',
-            'mean': img_norm_cfg['mean'],
-            'std': img_norm_cfg['std'],
-            'to_rgb': img_norm_cfg['to_rgb'],
-        },
-        {
-            'type': 'MultiImgImageToTensor',
-            'keys': ['img']
-        }
+        {"type": "MultiImgImageToTensor", "keys": ["img"]},
     ]
     return Compose(pipline_cfg)
 
@@ -84,28 +75,28 @@ def make_pipline(img_norm_cfg: ConfigDict, shape: tuple[int, int]) -> Compose:
 class OpenCD(ISeg):
     """OpenCD Change Detector"""
 
-    model_class = 'open_cd'
+    model_class = "open_cd"
 
-    def __init__(self, model_path: Path, opt: SegOpt, device: str = 'cuda'):
+    def __init__(self, model_path: Path, opt: SegOpt, device: str = "cuda"):
         super().__init__(model_path, opt, device)
 
         # cfg_file = Path(__file__).parent / _models['changer_r18']
-        cfg_file = model_path.with_suffix('.py')
+        cfg_file = model_path.with_suffix(".py")
 
         gpu_ids = [0]  # TODO:
 
         cfg = make_cfg(cfg_file, gpu_ids)
         self._model = make_model(cfg, device, model_path)
 
-        self._shape = cfg['test_pipeline'][1]['img_scale']  # TODO: ?
-        self._pipline = make_pipline(cfg['img_norm_cfg'], self._shape)
+        self._shape = cfg["test_pipeline"][1]["img_scale"]  # TODO: ?
+        self._pipline = make_pipline(cfg["img_norm_cfg"], self._shape)
 
         shape3c = (*self._shape, 3)
         self._meta = {
-            'ori_shape': shape3c,
-            'img_shape': shape3c,
-            'pad_shape': shape3c,
-            'flip': False,
+            "ori_shape": shape3c,
+            "img_shape": shape3c,
+            "pad_shape": shape3c,
+            "flip": False,
         }
 
     def forward_np(self, images: list[np.ndarray]) -> np.ndarray:
@@ -113,14 +104,16 @@ class OpenCD(ISeg):
         assert isinstance(images, list)
         assert len(images) == 2
 
-        data_in: dict = self._pipline({'img': images})
+        data_in: dict = self._pipline({"img": images})
 
-        tensor: Tensor = data_in['img'].unsqueeze(0)  # type: ignore
+        tensor: Tensor = data_in["img"].unsqueeze(0)  # type: ignore
         assert isinstance(tensor, Tensor)
         assert tensor.shape == torch.Size([1, 6, *self._shape])
 
         with torch.no_grad():
-            result: list[np.ndarray] = self._model.forward([tensor], [[self._meta]], return_loss=False)
+            result: list[np.ndarray] = self._model.forward(
+                [tensor], [[self._meta]], return_loss=False
+            )
             assert len(result) == 1
             assert isinstance(result[0], np.ndarray)
             r0 = result[0].astype(np.uint8) * 255

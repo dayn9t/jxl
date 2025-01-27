@@ -3,9 +3,9 @@ from onnx.optimizer import optimize
 
 
 def main() -> None:
-    folder = '/opt/ias/project/shtm/model/cabin2/'
-    src = '2024-01-30_cabin.onnx'
-    dst = '2024-01-30_cabin_opt.onnx'
+    folder = "/opt/ias/project/shtm/model/cabin2/"
+    src = "2024-01-30_cabin.onnx"
+    dst = "2024-01-30_cabin_opt.onnx"
     # 加载ONNX模型
     model = onnx.load(folder + src)
 
@@ -17,5 +17,5 @@ def main() -> None:
     onnx.save(model, folder + src)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

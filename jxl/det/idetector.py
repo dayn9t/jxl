@@ -17,6 +17,7 @@ from jxl.model.types import ModelInfo
 @dataclass(frozen=True)
 class DetOpt:
     """检测器选项"""
+
     input_shape: tuple
     """输入形状"""
     conf_thr: float
@@ -45,8 +46,13 @@ class DetObject:
     """属性集合"""
 
     @staticmethod
-    def new(class_index: int, confidence: float, rect: Optional[Rect] = None,
-            polygon: Optional[Points] = None, id_: int = 0) -> 'DetObject':
+    def new(
+        class_index: int,
+        confidence: float,
+        rect: Optional[Rect] = None,
+        polygon: Optional[Points] = None,
+        id_: int = 0,
+    ) -> "DetObject":
         """创建基本的检测目标"""
         if polygon is None:
             assert rect
@@ -74,7 +80,7 @@ class DetObject:
         Lict(self.properties)[name] = prob_class
 
     def property_map(self) -> ProbPropertyMap:
-        """"获取属性字典"""
+        """ "获取属性字典"""
         return Lict(self.properties).to_dict()
 
 
@@ -88,20 +94,22 @@ def coord_trans_n(objects: DetObjects, dst_cs: Size, offset: Point = Point()) ->
         ob.polygon = array_normalize(ob.polygon, dst_cs, offset)
 
 
-def draw_objects(bgr: ImageNda, objects: DetObjects, thickness: int = 2, no_label: bool = False) -> None:
+def draw_objects(
+    bgr: ImageNda, objects: DetObjects, thickness: int = 2, no_label: bool = False
+) -> None:
     """绘制检测条目"""
     for o in objects:
         color = COLORS7[o.prob_class.value]
-        label = ''
+        label = ""
         if not no_label:
             label = str(int(o.prob_class.confidence * 100))
             for name, pv in Lict(o.properties).items():
                 if pv.value or pv.confidence < 0.8:
-                    fmt = ' %s=%d' if isinstance(pv.value, int) else ' %s=%.2f'
+                    fmt = " %s=%d" if isinstance(pv.value, int) else " %s=%.2f"
                     label += fmt % (name, pv.value)
                     # print(p.confidence)
                     if pv.confidence < 0.8:
-                        label += '(%d)' % int(pv.confidence * 100)
+                        label += "(%d)" % int(pv.confidence * 100)
         draw_box(bgr, o.rect(), color, label, thickness)
 
 
@@ -112,7 +120,9 @@ class DetRes(ABC):
     """检测器返回结果"""
 
     @abstractmethod
-    def draw(self, image: DetOpt, colors: Colors, names: Optional[Strings] = None) -> None:
+    def draw(
+        self, image: DetOpt, colors: Colors, names: Optional[Strings] = None
+    ) -> None:
         """绘制检测结果"""
         pass
 
@@ -132,13 +142,13 @@ class DetRes(ABC):
         return min(confs)
 
 
-Self = TypeVar("Self", bound='IDetector')
+Self = TypeVar("Self", bound="IDetector")
 
 
 class IDetector(ABC):
     """目标检测器"""
 
-    model_class = 'detector'
+    model_class = "detector"
 
     @classmethod
     def new(cls: Type[Self], info: ModelInfo, model_root: Path) -> Self:

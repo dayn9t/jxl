@@ -69,20 +69,34 @@ KittiLabelInfos = List[KittiLabelInfo]
 
 def load_kitti(file: StrPath) -> Result[KittiLabelInfos, Any]:
     """加载KITTI标注信息"""
-    with open(file, 'rt') as f:
+    with open(file, "rt") as f:
         rows = csv.reader(f, delimiter=" ")
         infos = [
             KittiLabelInfo(
-                r[0], float(r[1]), int(r[2]), float(r[3]), float(r[4]), float(r[5]), float(r[6]), float(r[7]),
-                float(r[8]), float(r[9]), float(r[10]), float(r[11]), float(r[12]), float(r[13]), float(r[14])
-            ) for r in rows
+                r[0],
+                float(r[1]),
+                int(r[2]),
+                float(r[3]),
+                float(r[4]),
+                float(r[5]),
+                float(r[6]),
+                float(r[7]),
+                float(r[8]),
+                float(r[9]),
+                float(r[10]),
+                float(r[11]),
+                float(r[12]),
+                float(r[13]),
+                float(r[14]),
+            )
+            for r in rows
         ]
     return Ok(infos)
 
 
 def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, Any]:
     """加载KITTI标注信息"""
-    with open(txt_file, 'w') as fp:
+    with open(txt_file, "w") as fp:
         writer = csv.writer(fp, delimiter=" ")
         for o in infos:
             writer.writerow(astuple(o))
@@ -96,7 +110,7 @@ def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> ObjectLabelInfo
         id=-1,
         prob_class=ProbValue(category, 1.0),
         polygon=kitti.bbox.vertexes(),
-        properties={}
+        properties={},
     )
 
 
@@ -108,7 +122,9 @@ def to_kitti(info: ObjectLabelInfo, label_names: List[str]) -> KittiLabelInfo:
     return k
 
 
-def import_kitti(file: StrPath, label_names: List[str]) -> Result[ObjectLabelInfos, Any]:
+def import_kitti(
+    file: StrPath, label_names: List[str]
+) -> Result[ObjectLabelInfos, Any]:
     """导入KITTI标注文件"""
     r = load_kitti(file)
     if r.is_err():
@@ -117,7 +133,9 @@ def import_kitti(file: StrPath, label_names: List[str]) -> Result[ObjectLabelInf
     return Ok(infos)
 
 
-def export_kitti(infos: ObjectLabelInfos, file: StrPath, label_names: List[str]) -> Result[bool, Any]:
+def export_kitti(
+    infos: ObjectLabelInfos, file: StrPath, label_names: List[str]
+) -> Result[bool, Any]:
     """导出KITTI标注文件"""
     ks = [to_kitti(info, label_names) for info in infos]
     return save_kitti(ks, file)
@@ -135,6 +153,6 @@ def labels_test() -> None:
     print(infos0 == infos1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # file_test()
     labels_test()

@@ -19,25 +19,32 @@ from jxl.det.yolo.detector_y8 import DetectorY8
 
 # params:/home/jiang/ws/trash/cans/model_dir/can.pt /var/ias/snapshot/shtm/n1/work/2040600111/2021-04-18
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Yolo5检测器')
-    parser.add_argument('model', type=Path, help='模型文件路径')
-    parser.add_argument('src_dir', type=Path, help='图像来源目录')
-    parser.add_argument('-c', '--conf_thres', type=float, default=0.1, help='置信度阈值')
-    parser.add_argument('-i', '--iou_thres', type=float, default=0.7, help='非极大值抑制重叠率阈值')
-    parser.add_argument('-p', '--max_prob', type=float, default=1.99, help='概率上限')
-    parser.add_argument('-w', '--wait', type=float, default=0, help='等待的秒数')
-    parser.add_argument('-s', '--img_size', type=int, default=640, help='输入图像尺寸')
-    parser.add_argument('-o', '--output_size', type=str, default='HD', help='输出图像尺寸')
-    parser.add_argument('-d', '--dst_dir', type=Path, default=None, help='图像目标目录')
-    parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
+    parser = argparse.ArgumentParser(description="Yolo5检测器")
+    parser.add_argument("model", type=Path, help="模型文件路径")
+    parser.add_argument("src_dir", type=Path, help="图像来源目录")
+    parser.add_argument(
+        "-c", "--conf_thres", type=float, default=0.1, help="置信度阈值"
+    )
+    parser.add_argument(
+        "-i", "--iou_thres", type=float, default=0.7, help="非极大值抑制重叠率阈值"
+    )
+    parser.add_argument("-p", "--max_prob", type=float, default=1.99, help="概率上限")
+    parser.add_argument("-w", "--wait", type=float, default=0, help="等待的秒数")
+    parser.add_argument("-s", "--img_size", type=int, default=640, help="输入图像尺寸")
+    parser.add_argument(
+        "-o", "--output_size", type=str, default="HD", help="输出图像尺寸"
+    )
+    parser.add_argument("-d", "--dst_dir", type=Path, default=None, help="图像目标目录")
+    parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
     out_size = size_parse(opt.output_size)
-    print(f'\nOPT: conf_thres={opt.conf_thres} iou_thres={opt.iou_thres}\n')
-    print(f'\nOutput: size={out_size}\n')
+    print(f"\nOPT: conf_thres={opt.conf_thres} iou_thres={opt.iou_thres}\n")
+    print(f"\nOutput: size={out_size}\n")
 
-    files = find(opt.src_dir, '.jpg')
+    files = find(opt.src_dir, ".jpg")
     if not files:
         print("没有搜索到指定的文件")
         sys.exit(0)
@@ -51,20 +58,20 @@ def main():
     for file in files:
         image_in = ImageNda.load(str(file))  # BGR
         resize(image_in, image_out)
-        print('  ', file)
+        print("  ", file)
 
         det = detector(image_in)
 
         if len(det) > 0:
             if det.min_prob() > opt.max_prob:
                 continue
-            '''print('objects:')
+            """print('objects:')
             for o in det.objects():
-                print(o)'''
+                print(o)"""
             draw_objects(image_out, det.objects())
         else:
-            print('Invalid det')
-        text = f'Model: {opt.model.stem}'
+            print("Invalid det")
+        text = f"Model: {opt.model.stem}"
         put_text(image_out, text, Point(32, 32), LIME, thickness=2, scale=1)
 
         if isinstance(opt.dst_dir, Path):
@@ -78,5 +85,5 @@ def main():
         cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

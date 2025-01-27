@@ -11,7 +11,12 @@ from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import resize
 from jxl.io.draw import draw_boxi
-from jxl.label.hop import hop_save_label, load_label_records, LabelFilter, hop_load_label
+from jxl.label.hop import (
+    hop_save_label,
+    load_label_records,
+    LabelFilter,
+    hop_load_label,
+)
 from jxl.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue
 from jxl.label.meta import PropMeta
 from rustshed import Option, Null, Some
@@ -48,7 +53,9 @@ class TileObject:
         dst = canvas.roi(self.dst_rect)
         resize(self.image.unwrap(), dst)
 
-    def draw_label(self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta) -> None:
+    def draw_label(
+        self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
+    ) -> None:
         """绘制标注信息"""
         p = self.obj.prop(prop)
         value = prop_meta.value_meta(p.value)
@@ -63,7 +70,7 @@ class TileObject:
         """设置属性值"""
         self.obj.set_prop(name, value, conf)
         f = hop_save_label(self.root, self.path, self.meta_id)
-        print('设置属性, 保存:', f)
+        print("设置属性, 保存:", f)
 
     def exclude_prop_if(self, prop: str, conf_thr: float) -> None:
         """将属性设置为排除, 当该属性置信度超过阈值"""
@@ -86,7 +93,7 @@ class TileRecord:
     """瓦片对象"""
 
     @classmethod
-    def new(cls, size: Size, rects: Rects, objects: TileObjects) -> 'TileRecord':
+    def new(cls, size: Size, rects: Rects, objects: TileObjects) -> "TileRecord":
         """创建对象"""
         i = 0
         for o in objects:
@@ -110,11 +117,13 @@ class TileRecord:
         pass
 
 
-def load_tiles(src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float) -> TileObjects:
+def load_tiles(
+    src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float
+) -> TileObjects:
     """加载瓦片对象"""
     rs = load_label_records(src_dir, meta_id, LabelFilter.LABELED)
     assert len(rs) > 0
-    print('加载图片:', len(rs))
+    print("加载图片:", len(rs))
 
     tiles = []
     for r in rs:

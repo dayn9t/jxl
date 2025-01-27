@@ -8,6 +8,7 @@ from torchsummary import summary  # type: ignore
 @dataclass(frozen=True)
 class ConfFile1:
     """分类器器选项"""
+
     conf: float
     """置信度"""
     file: Path

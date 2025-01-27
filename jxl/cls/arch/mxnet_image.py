@@ -1,2 +1,1 @@
-
-model_dir = '/opt/ias/model/mxnet/'
+model_dir = "/opt/ias/model/mxnet/"
