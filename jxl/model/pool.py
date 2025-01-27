@@ -1,8 +1,8 @@
 from typing import Iterable
 
 from ias.app.afs import afs
-from jml.det.idetector import DetOpt
-from jml.model.types import ModelInfo
+from jxl.det.idetector import DetOpt
+from jxl.model.types import ModelInfo
 
 
 class ModelPool:

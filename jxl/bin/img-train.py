@@ -27,7 +27,7 @@ import torchvision.transforms as transforms  # type: ignore
 
 from jcx.m.average_meter import AverageMeter
 from jcx.ui.progress_meter import ProgressMeter
-from jml.cls.arch import torch_image
+from jxl.cls.arch import torch_image
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")

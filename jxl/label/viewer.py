@@ -8,8 +8,8 @@ from jiv.drawing.color import LIME
 from jiv.geo.point2d import Point
 from jiv.gui.record_viewer import PImageEntry
 from jiv.image.image_nda import ImageNda
-from jml.label.info import ImageLabelInfo
-from jml.label.meta import LabelMeta
+from jxl.label.info import ImageLabelInfo
+from jxl.label.meta import LabelMeta
 
 
 @dataclass

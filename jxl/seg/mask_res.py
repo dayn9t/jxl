@@ -1,8 +1,8 @@
 from jiv.image.image_nda import ImageNda
 from jiv.image.struct import find_polygons
-from jml.common import ProbValue
-from jml.det.idetector import DetObjects, DetObject
-from jml.seg.iseg import ISegRes
+from jxl.common import ProbValue
+from jxl.det.idetector import DetObjects, DetObject
+from jxl.seg.iseg import ISegRes
 
 
 class MaskRes(ISegRes):

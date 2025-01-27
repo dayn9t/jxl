@@ -1,7 +1,7 @@
 import cv2  # type: ignore
 from jcx.sys.fs import files_in
-from jml.det.idetector import draw_objects
-from jml.det.yolo.detector_y8 import *
+from jxl.det.idetector import draw_objects
+from jxl.det.yolo.detector_y8 import *
 
 
 def a_test() -> None:

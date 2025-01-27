@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-from jml.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
+from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
 from joblib import load
 
 

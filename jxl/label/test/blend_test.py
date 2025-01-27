@@ -4,7 +4,7 @@ from jiv.drawing.color import random_color
 from jiv.drawing.shape import rectangle
 from jiv.image.image_nda import ImageNda
 from jiv.image.trace import trace_image
-from jml.label.blend import *
+from jxl.label.blend import *
 
 
 def show_random_object_pos():

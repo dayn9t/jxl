@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from jml.label.coco import DataCoco
+from jxl.label.coco import DataCoco
 
 
 def main():

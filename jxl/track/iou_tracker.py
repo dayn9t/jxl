@@ -66,7 +66,7 @@ def test_iou() -> None:
 
 
 def test_tracker() -> None:
-    from jml.det.idetector import DetObject
+    from jxl.det.idetector import DetObject
 
     tracker = IouTracker()
     id_counter = iter([1, 2, 3, 4, 5])

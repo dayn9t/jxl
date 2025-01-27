@@ -13,8 +13,8 @@ from jiv.geo.point2d import Point
 from jiv.geo.size2d import size_parse
 from jiv.image.image_nda import ImageNda
 from jiv.image.proc import resize
-from jml.det.idetector import DetOpt, draw_objects
-from jml.det.yolo.detector_y8 import DetectorY8
+from jxl.det.idetector import DetOpt, draw_objects
+from jxl.det.yolo.detector_y8 import DetectorY8
 
 
 # params:/home/jiang/ws/trash/cans/model_dir/can.pt /var/ias/snapshot/shtm/n1/work/2040600111/2021-04-18

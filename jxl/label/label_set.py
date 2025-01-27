@@ -3,7 +3,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Optional
 
-from jml.label.info import ImageLabelInfos, ImageLabelPairs
+from jxl.label.info import ImageLabelInfos, ImageLabelPairs
 
 HOP = 'hop'
 DARKNET = 'darknet'

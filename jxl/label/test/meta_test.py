@@ -1,5 +1,5 @@
 from jcx.text.txt_json import try_load_json
-from jml.label.meta import *
+from jxl.label.meta import *
 
 
 def test_meta_format():

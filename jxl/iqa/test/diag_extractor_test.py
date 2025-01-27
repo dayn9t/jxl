@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from jml.iqa.diag_extractor import *
+from jxl.iqa.diag_extractor import *
 
 
 def test_extractor() -> None:

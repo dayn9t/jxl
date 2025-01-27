@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from autogluon.tabular import TabularPredictor
-from jml.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
-from jml.label.extractor import mat_to_df
+from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ClassifierResList
+from jxl.label.extractor import mat_to_df
 from pandas import DataFrame
 
 

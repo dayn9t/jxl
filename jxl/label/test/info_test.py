@@ -1,4 +1,4 @@
-from jml.label.info import *
+from jxl.label.info import *
 
 
 def test_label_info():

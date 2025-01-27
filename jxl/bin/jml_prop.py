@@ -8,8 +8,8 @@ from jiv.geo.point2d import Point
 from jiv.geo.rectangle import Rect
 from jiv.gui.record_viewer import RecordViewer
 from jiv.image.image_nda import ImageNda
-from jml.label.meta import LabelMeta, find_meta
-from jml.label.tile import TileRecord, TileObject, load_tiles, TileObjects
+from jxl.label.meta import LabelMeta, find_meta
+from jxl.label.tile import TileRecord, TileObject, load_tiles, TileObjects
 
 
 class PropLabeler(RecordViewer):

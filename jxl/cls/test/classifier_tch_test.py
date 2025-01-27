@@ -1,6 +1,6 @@
 from jcx.sys.fs import files_in
 from jiv.image.trace import trace_image
-from jml.cls.classifier_tch import *
+from jxl.cls.classifier_tch import *
 
 
 def show_main() -> None:

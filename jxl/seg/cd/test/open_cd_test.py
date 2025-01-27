@@ -4,7 +4,7 @@ from jcx.ui.key import Key
 from jiv.geo.size2d import SIZE_FHD
 from jiv.image.proc import to_color
 from jiv.image.trace import trace_images, close_all_windows
-from jml.seg.cd.open_cd import *
+from jxl.seg.cd.open_cd import *
 
 
 def demo_change_detector() -> None:

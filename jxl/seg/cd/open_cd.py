@@ -3,8 +3,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from jiv.image.image_nda import ImageNda, ImageNdas
-from jml.seg.iseg import ISeg, ISegRes, SegOpt
-from jml.seg.mask_res import MaskRes
+from jxl.seg.iseg import ISeg, ISegRes, SegOpt
+from jxl.seg.mask_res import MaskRes
 from mmcv import Config, ConfigDict
 from mmcv.cnn.utils import revert_sync_batchnorm
 from mmcv.parallel import MMDataParallel

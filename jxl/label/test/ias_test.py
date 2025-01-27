@@ -1,4 +1,4 @@
-from jml.label.ias import *
+from jxl.label.ias import *
 
 
 def image_path_of_label_test():

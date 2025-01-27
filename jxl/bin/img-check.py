@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from jml.cls.dataset_checker import DatasetChecker
+from jxl.cls.dataset_checker import DatasetChecker
 
 
 def main() -> None:

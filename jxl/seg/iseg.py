@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Protocol
 
 from jiv.image.image_nda import ImageNda, ImageNdas
-from jml.det.idetector import DetObjects
-from jml.model.types import ModelInfo
+from jxl.det.idetector import DetObjects
+from jxl.model.types import ModelInfo
 
 
 @dataclass(frozen=True)

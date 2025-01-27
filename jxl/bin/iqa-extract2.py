@@ -3,8 +3,8 @@ from pathlib import Path
 
 import fire
 from jiv.geo.size2d import size_parse
-from jml.iqa.diag_extractor import MatchVec
-from jml.label.extractor2 import Extractor2
+from jxl.iqa.diag_extractor import MatchVec
+from jxl.label.extractor2 import Extractor2
 
 
 def extract_all(cameras_dir: str, cols: int = 5, rows: int = 3, block_size: str = '256x240',

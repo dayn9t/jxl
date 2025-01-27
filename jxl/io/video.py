@@ -6,7 +6,7 @@ from jiv.geo.rectangle import Rect
 from jiv.geo.size2d import Size, SIZE_VGA
 from jiv.image.image_nda import ImageNda, ImageNdas
 from jiv.image.io import save_images
-from jml.det.idetector import DetObjects, DetObject
+from jxl.det.idetector import DetObjects, DetObject
 from pydantic import BaseModel
 
 

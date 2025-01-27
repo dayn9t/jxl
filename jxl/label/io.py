@@ -3,8 +3,8 @@ from pathlib import Path
 from jcx.sys.fs import StrPath, with_parent, remake_dir, files_in, make_parents
 from jcx.text.txt_json import load_json
 from jiv.image.image_nda import ImageNda
-from jml.label.info import ImageLabelInfo, ImageLabelInfos, IMG_EXT, ImageLabelPairs
-from jml.label.meta import meta_fix
+from jxl.label.info import ImageLabelInfo, ImageLabelInfos, IMG_EXT, ImageLabelPairs
+from jxl.label.meta import meta_fix
 
 
 def label_tail(meta_id: int, ext: str) -> str:

@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any, TypeVar, Type, Protocol
 
 import numpy as np
-from jml.label.info import ProbValue
-from jml.model.types import ModelInfo
+from jxl.label.info import ProbValue
+from jxl.model.types import ModelInfo
 from pydantic import BaseModel
 
 

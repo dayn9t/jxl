@@ -4,9 +4,9 @@ import argparse
 from pathlib import Path
 
 from jiv.geo.size2d import size_parse
-from jml.label.darknet import darknet_dump_labels
-from jml.label.hop import hop_load_labels
-from jml.label.meta import find_meta
+from jxl.label.darknet import darknet_dump_labels
+from jxl.label.hop import hop_load_labels
+from jxl.label.meta import find_meta
 
 
 def resize_labels(labels: ImageLabelPairs, folder: Path, meta: LabelMeta) -> int:

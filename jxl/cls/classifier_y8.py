@@ -3,8 +3,8 @@ from pathlib import Path
 
 import torch
 from jiv.image.image_nda import ImageNda
-from jml.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt
-from jml.label.info import ProbValue
+from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt
+from jxl.label.info import ProbValue
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 

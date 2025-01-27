@@ -9,9 +9,9 @@ import torch
 from jcx.ui.key import Key
 from jiv.image.image_nda import ImageNda
 from jiv.image.trace import trace_image
-from jml.cls.classifier import ClassifierOpt
-from jml.cls.classifier_tch import ClassifierTch
-from jml.io.draw import draw_class_item
+from jxl.cls.classifier import ClassifierOpt
+from jxl.cls.classifier_tch import ClassifierTch
+from jxl.io.draw import draw_class_item
 
 
 def main():

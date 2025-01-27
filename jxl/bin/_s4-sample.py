@@ -3,8 +3,8 @@
 import argparse
 from pathlib import Path
 
-from jml.label.hop import hop_load_labels
-from jml.label.io import dump_label_prop_demo
+from jxl.label.hop import hop_load_labels
+from jxl.label.io import dump_label_prop_demo
 
 
 def main() -> None:

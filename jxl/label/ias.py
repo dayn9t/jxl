@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from jcx.sys.fs import StrPath
-from jml.label.io import label_path_of
+from jxl.label.io import label_path_of
 
 """IAS文件系统相关内容, 不设计具体格式"""
 

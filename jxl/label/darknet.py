@@ -6,10 +6,10 @@ from jiv.drawing.color import Color
 from jiv.geo.rectangle import Rect
 from jiv.image.image_nda import ImageNda
 from jiv.image.proc import get_roi_image
-from jml.common import ProbValue
-from jml.label.info import ImageLabelInfos, ImageLabelPairs, ImageLabelInfo, ObjectLabelInfos, ObjectLabelInfo
-from jml.label.label_set import LabelSet, LabelFormat
-from jml.label.meta import LabelMeta
+from jxl.common import ProbValue
+from jxl.label.info import ImageLabelInfos, ImageLabelPairs, ImageLabelInfo, ObjectLabelInfos, ObjectLabelInfo
+from jxl.label.label_set import LabelSet, LabelFormat
+from jxl.label.meta import LabelMeta
 
 DARKNET_EXT = '.txt'  # 标注文件扩展名
 

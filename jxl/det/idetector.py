@@ -9,9 +9,9 @@ from jiv.geo.point2d import Points, Point, array_normalize
 from jiv.geo.rectangle import Rect
 from jiv.geo.size2d import Size
 from jiv.image.image_nda import ImageNda
-from jml.common import ProbValue, ProbProperties, ProbPropertyMap
-from jml.io.draw import draw_box
-from jml.model.types import ModelInfo
+from jxl.common import ProbValue, ProbProperties, ProbPropertyMap
+from jxl.io.draw import draw_box
+from jxl.model.types import ModelInfo
 
 
 @dataclass(frozen=True)

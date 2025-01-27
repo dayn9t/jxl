@@ -1,4 +1,4 @@
-from jml.label.label_set import *
+from jxl.label.label_set import *
 
 
 def test_label_format():

@@ -1,11 +1,11 @@
 from jcx.ui.key import Key
 from jiv.image.io import load_images_in
 from jiv.image.trace import trace_image
-from jml.cls.classifier_tab import *
+from jxl.cls.classifier_tab import *
 
 
 def main(test_model: int = 1) -> None:
-    from jml.iqa.diag_extractor import sharpness, chroma
+    from jxl.iqa.diag_extractor import sharpness, chroma
 
     model_dir = Path('/opt/ias/project/shtm/model/iqa')
 

@@ -3,10 +3,10 @@
 import argparse
 from pathlib import Path
 
-from jml.label.darknet import darknet_dump_labels
-from jml.label.hop import hop_load_labels
-from jml.label.io import dump_label_prop
-from jml.label.meta import find_meta
+from jxl.label.darknet import darknet_dump_labels
+from jxl.label.hop import hop_load_labels
+from jxl.label.io import dump_label_prop
+from jxl.label.meta import find_meta
 
 
 def main() -> None:

@@ -14,10 +14,10 @@ from jiv.geo.size2d import Size
 from jiv.geo.trans import points_ncs_trans_in_win
 from jiv.image.image_nda import ImageNda
 from jiv.image.util import make_roi_surround_color
-from jml.common import ProbValue, ProbPropertyMap
-from jml.det.idetector import DetObject, DetObjects
-from jml.io.draw import draw_boxf
-from jml.label.meta import LabelMeta
+from jxl.common import ProbValue, ProbPropertyMap
+from jxl.det.idetector import DetObject, DetObjects
+from jxl.io.draw import draw_boxf
+from jxl.label.meta import LabelMeta
 from loguru import logger
 from rustshed import Option, Some, Null
 

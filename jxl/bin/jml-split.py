@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from jcx.util.err import catch_show_err
-from jml.cls.dataset import dataset_split
+from jxl.cls.dataset import dataset_split
 
 
 # 参考：https://zhuanlan.zhihu.com/p/48976706　分层采样的方式分割数据集

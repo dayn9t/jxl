@@ -1,7 +1,7 @@
 from typing import Any
 
 from jcx.sys.fs import last_parts
-from jml.label.extractor import *
+from jxl.label.extractor import *
 from loguru import logger
 from pandas import DataFrame, concat
 from pydantic import BaseModel

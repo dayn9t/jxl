@@ -6,11 +6,11 @@ from typing import Optional, TypeAlias
 from jcx.sys.fs import with_parent, StrPath, files_in
 from jcx.text.txt_json import load_json, save_json, try_load_json
 from jiv.gui.record_viewer import FileRecord
-from jml.label.ias import ias_label_path_of
-from jml.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
-from jml.label.io import label_path_of
-from jml.label.label_set import LabelSet, LabelFormat, HOP
-from jml.label.meta import meta_fix
+from jxl.label.ias import ias_label_path_of
+from jxl.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
+from jxl.label.io import label_path_of
+from jxl.label.label_set import LabelSet, LabelFormat, HOP
+from jxl.label.meta import meta_fix
 from rustshed import Option
 
 HOP_EXT = '.json'  # 标注文件扩展名
@@ -74,7 +74,7 @@ def get_label(image_file: Path, meta_id: int) -> ImageLabelInfo:
     cur_label = hop_load_label(image_file, meta_id)
     if cur_label.is_null():
         cur_label = import_label(image_file, meta_id)
-    return cur_label.unwrap_or(ImageLabelInfo.only_roi('jml_label'))
+    return cur_label.unwrap_or(ImageLabelInfo.only_roi('jxl_label'))
 
 
 @dataclass

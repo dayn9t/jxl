@@ -1,5 +1,5 @@
 from jiv.gui.record_viewer import RecordViewer
-from jml.label.tile import *
+from jxl.label.tile import *
 
 
 def load_tiles_test():

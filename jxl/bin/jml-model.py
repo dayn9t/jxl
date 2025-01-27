@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from jml.model.util import show_model
+from jxl.model.util import show_model
 
 
 def main():

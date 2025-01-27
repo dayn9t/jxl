@@ -1,4 +1,4 @@
-from jml.det.idetector import *
+from jxl.det.idetector import *
 
 
 def test_detected_object():

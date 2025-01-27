@@ -1,7 +1,7 @@
 from random import random
 
-from jml.iqa.diag_extractor import sharpness
-from jml.label.extractor import *
+from jxl.iqa.diag_extractor import sharpness
+from jxl.label.extractor import *
 from pandas._testing import assert_frame_equal  # type: ignore
 
 

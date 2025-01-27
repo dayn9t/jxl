@@ -1,4 +1,4 @@
-from jml.cls.arch.torch_image import *
+from jxl.cls.arch.torch_image import *
 
 
 def load_pth_tar_test():

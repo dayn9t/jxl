@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 
 from jiv.gui.record_viewer import RecordViewer
-from jml.label.factory import open_label_set
-from jml.label.label_set import LabelFormat
-from jml.label.meta import find_meta
-from jml.label.viewer import LabelRecord
+from jxl.label.factory import open_label_set
+from jxl.label.label_set import LabelFormat
+from jxl.label.meta import find_meta
+from jxl.label.viewer import LabelRecord
 
 
 def main() -> int:

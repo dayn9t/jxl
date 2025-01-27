@@ -2,8 +2,8 @@
 from pathlib import Path
 
 import fire
-from jml.iqa.diag_extractor import sharpness, chroma
-from jml.label.extractor import Extractor
+from jxl.iqa.diag_extractor import sharpness, chroma
+from jxl.label.extractor import Extractor
 
 fun_map = {
     'clearness': sharpness,

@@ -10,10 +10,10 @@ from jiv.geo.rectangle import Rect, Rects
 from jiv.geo.size2d import Size
 from jiv.image.image_nda import ImageNda
 from jiv.image.proc import resize
-from jml.io.draw import draw_boxi
-from jml.label.hop import hop_save_label, load_label_records, LabelFilter, hop_load_label
-from jml.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue
-from jml.label.meta import PropMeta
+from jxl.io.draw import draw_boxi
+from jxl.label.hop import hop_save_label, load_label_records, LabelFilter, hop_load_label
+from jxl.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue
+from jxl.label.meta import PropMeta
 from rustshed import Option, Null, Some
 
 

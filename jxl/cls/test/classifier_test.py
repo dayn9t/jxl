@@ -1,4 +1,4 @@
-from jml.cls.classifier import *
+from jxl.cls.classifier import *
 
 
 def test_vote() -> None:

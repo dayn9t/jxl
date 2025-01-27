@@ -10,8 +10,8 @@ from jcx.ui.key import Key
 from jiv.geo.size2d import Size
 from jiv.image.image_nda import ImageNda
 from jiv.image.trace import trace_image, close_all_windows
-from jml.cls.classifier import ClassifierOpt, IClassifier
-from jml.cls.classifier_y8 import ClassifierY8
+from jxl.cls.classifier import ClassifierOpt, IClassifier
+from jxl.cls.classifier_y8 import ClassifierY8
 
 
 @dataclass(frozen=True, order=True)

@@ -1,7 +1,7 @@
 from jiv.drawing.color import RED
 from jiv.geo.size2d import SIZE_VGA
 from jiv.image.trace import trace_image
-from jml.io.draw import *
+from jxl.io.draw import *
 
 
 def show_draw_box():

@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from jiv.geo.size2d import size_parse
-from jml.label.blend import ObjectBlender
+from jxl.label.blend import ObjectBlender
 
 epilog = '''
 Examples:

@@ -13,9 +13,9 @@ from jiv.geo.point2d import Point, Points, closest_point
 from jiv.geo.polygon import Polygon
 from jiv.gui.record_viewer import RecordViewer
 from jiv.image.image_nda import ImageNda
-from jml.label.hop import hop_load_label, import_label, hop_save_label, hop_del_label, load_label_records, LabelFilter
-from jml.label.info import ImageLabelInfo, ObjectLabelInfo, ObjectLabelInfos
-from jml.label.meta import LabelMeta, find_meta
+from jxl.label.hop import hop_load_label, import_label, hop_save_label, hop_del_label, load_label_records, LabelFilter
+from jxl.label.info import ImageLabelInfo, ObjectLabelInfo, ObjectLabelInfos
+from jxl.label.meta import LabelMeta, find_meta
 from rustshed import Option, Null, Some
 
 NEAR_R2: Final[float] = 0.05 ** 2 / 4  # TODO:
@@ -31,7 +31,7 @@ class Labeler(RecordViewer):
         self.verbose = verbose
 
         self.label_meta = meta
-        self.cur_label: ImageLabelInfo = ImageLabelInfo.only_roi('jml_label')  # 当前图片标注信息
+        self.cur_label: ImageLabelInfo = ImageLabelInfo.only_roi('jxl_label')  # 当前图片标注信息
         self.cur_object: Option[ObjectLabelInfo] = Null  # 当前标注对象
         self.cur_vertex: Option[Point] = Null  # 当前标注定点
         self.cur_category = 0
@@ -86,7 +86,7 @@ class Labeler(RecordViewer):
         if cur_label.is_null():
             cur_label = import_label(f, self.meta_id)
             self.labeled = False
-        self.cur_label = cur_label.unwrap_or(ImageLabelInfo.only_roi('jml_label'))
+        self.cur_label = cur_label.unwrap_or(ImageLabelInfo.only_roi('jxl_label'))
         print('  #%d' % index, f, len(self.cur_label.objects) - 1)
 
         if self.locked_roi.is_some():
@@ -185,7 +185,7 @@ class Labeler(RecordViewer):
     def _save_label(self) -> None:
         lab = self.cur_label
         lab.last_modified = now_iso_str()
-        lab.user_agent = 'jml_label'
+        lab.user_agent = 'jxl_label'
         lab.clean(self.label_meta)
         print("save_label", self.cur_image_file(), self.meta_id)
         hop_save_label(lab, self.cur_image_file(), self.meta_id)

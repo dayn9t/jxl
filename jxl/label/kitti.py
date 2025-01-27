@@ -4,7 +4,7 @@ from typing import List, Any
 
 from jcx.sys.fs import StrPath
 from jiv.geo.rectangle import Rect
-from jml.label.info import ObjectLabelInfo, ObjectLabelInfos, ProbValue
+from jxl.label.info import ObjectLabelInfo, ObjectLabelInfos, ProbValue
 from rustshed import Result, Ok
 
 """

@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from jml.label.darknet import DarknetSet
-from jml.label.hop import HopSet
-from jml.label.label_set import LabelSet, LabelFormat
+from jxl.label.darknet import DarknetSet
+from jxl.label.hop import HopSet
+from jxl.label.label_set import LabelSet, LabelFormat
 from rustshed import Result, Err, Ok
 
 _class_map = {
