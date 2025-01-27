@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, TypeAlias
 
 from jcx.sys.fs import with_parent, StrPath, files_in
-from jcx.text.txt_json import load_json, save_json, try_load_json
+from jcx.text.txt_json import load_json, save_json
 from jvi.gui.record_viewer import FileRecord
 from jxl.label.ias import ias_label_path_of
 from jxl.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
@@ -31,7 +31,7 @@ def hop_label_path_of(img_file: StrPath, meta_id: int) -> Path:
 def hop_load_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
     """加载标签"""
     label_file = hop_label_path_of(img_file, meta_id)
-    return try_load_json(label_file, ImageLabelInfo)
+    return load_json(label_file, ImageLabelInfo).ok()
 
 
 def hop_save_label(label: ImageLabelInfo, img_file: StrPath, meta_id: int) -> Path:
@@ -112,7 +112,7 @@ def import_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
     """读取从IAS导入的标签"""
     # label_file = label_path(img_file, meta_id, LBL_EXT)
     msg_file = ias_label_path_of(img_file, meta_id)
-    return try_load_json(msg_file, ImageLabelInfo)
+    return load_json(msg_file, ImageLabelInfo).ok()
 
 
 class HopSet(LabelSet):

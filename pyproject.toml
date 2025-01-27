@@ -7,6 +7,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.12"
+rustshed = "*"
+
+jcx = { path = "/home/jiang/py/jcx" }
+jvi = { path = "/home/jiang/py/jvi" }
+pydantic = "*"
+
 
 
 [tool.poetry.group.test.dependencies]

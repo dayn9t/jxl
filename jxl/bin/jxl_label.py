@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/home/jiang/py/jxl/.venv/bin/python
 
 import argparse
 from copy import deepcopy
@@ -215,7 +215,7 @@ class Labeler(RecordViewer):
         """移动当前节点/ROI"""
         match self.cur_object:
             case Some(ob):
-                d = Point(dx, dy).normalize(self.size())
+                d = Point(x=dx, y=dy).normalize(self.size())
                 # print('对象移动:', d)
                 ob.move(d)
                 self.saved = False
@@ -291,7 +291,7 @@ class Labeler(RecordViewer):
                 if self.cur_vertex.is_some():
                     cross(canvas, self.cur_vertex.unwrap(), 7, YELLOW_GREEN, 3)
                 text += "[e]RemoveObject [r]RectifyPolygon   "
-        put_text(canvas, text, Point(8, 32), LIME, 2)
+        put_text(canvas, text, Point(x=8, y=32), LIME, 2)
 
     def _closest_object(self, cursor: Point) -> Option[ObjectLabelInfo]:
         """获取光标邻域内最接近的对象"""
@@ -367,9 +367,6 @@ class Labeler(RecordViewer):
         self.cur_vertex = Some(cursor)
         self.saved = False
         print("插入顶点:", cursor.absolutize(self.size()))
-
-
-# params: /var/ias/snapshot/shtm/n1/work 2021-04-11
 
 
 def main() -> None:
