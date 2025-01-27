@@ -1,0 +1,144 @@
+from dataclasses import dataclass, field
+from enum import IntEnum
+from pathlib import Path
+from typing import Optional, TypeAlias
+
+from jcx.sys.fs import with_parent, StrPath, files_in
+from jcx.text.txt_json import load_json, save_json, try_load_json
+from jiv.gui.record_viewer import FileRecord
+from jml.label.ias import ias_label_path_of
+from jml.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
+from jml.label.io import label_path_of
+from jml.label.label_set import LabelSet, LabelFormat, HOP
+from jml.label.meta import meta_fix
+from rustshed import Option
+
+HOP_EXT = '.json'  # 标注文件扩展名
+HOP_FIX = 'hop'  # HOP名称前缀/后缀
+
+
+def image_label_path(img_file: Path, meta_id: int, ext: str) -> Path:
+    """获取图像对应的标注文件路径"""
+    file = Path(img_file).with_suffix(ext)
+    return with_parent(file, f'{HOP_FIX}_{meta_fix(meta_id)}')
+
+
+def hop_label_path_of(img_file: StrPath, meta_id: int) -> Path:
+    """获取图像对应的HOP标注文件路径"""
+    return label_path_of(img_file, HOP_FIX, meta_id, HOP_EXT)
+
+
+def hop_load_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
+    """加载标签"""
+    label_file = hop_label_path_of(img_file, meta_id)
+    return try_load_json(label_file, ImageLabelInfo)
+
+
+def hop_save_label(label: ImageLabelInfo, img_file: StrPath, meta_id: int) -> Path:
+    """保存标签"""
+    label_file = hop_label_path_of(img_file, meta_id)
+    save_json(label, label_file)
+    return label_file
+
+
+def hop_del_label(img_file: StrPath, meta_id: int) -> None:
+    label_file = hop_label_path_of(img_file, meta_id)
+    label_file.unlink(True)
+    print('删除标注:', label_file)
+
+
+def hop_load_labels(folder: StrPath, meta_id: int) -> ImageLabelPairs:
+    hs = HopSet(Path(folder), meta_id)
+    return hs.load_pairs()
+
+
+class LabelFilter(IntEnum):
+    ALL = 1  # 所有图片样本
+    EXPORT = 2  # 可导入标注样本
+    LABELED = 3  # 已标注的样本
+
+    def has_label(self, image_file: Path, meta_id: int) -> bool:
+        if self == LabelFilter.ALL:
+            return True
+        if self == LabelFilter.EXPORT:
+            label = ias_label_path_of(image_file, meta_id)
+        elif self == LabelFilter.LABELED:
+            label = hop_label_path_of(image_file, meta_id)
+        else:
+            return False
+        return label.is_file()
+
+
+def get_label(image_file: Path, meta_id: int) -> ImageLabelInfo:
+    """获取图像文件的标注信息"""
+    cur_label = hop_load_label(image_file, meta_id)
+    if cur_label.is_null():
+        cur_label = import_label(image_file, meta_id)
+    return cur_label.unwrap_or(ImageLabelInfo.only_roi('jml_label'))
+
+
+@dataclass
+class LabelRecord(FileRecord):
+    """标注记录"""
+    label: ImageLabelInfo = field(default_factory=ImageLabelInfo.only_roi)
+
+
+LabelRecords: TypeAlias = list[LabelRecord]
+"""文件记录列表"""
+
+
+def load_label_records(folder: StrPath, meta_id: int, label_filter: LabelFilter,
+                       pattern: Optional[str] = None, conf_thr: float = 1.0) -> LabelRecords:
+    """加载目录下的图片信息记录"""
+    pattern = (pattern or '*') + IMG_EXT
+    print('pattern:', pattern)
+    files = sorted(Path(folder, 'image').glob(pattern))
+    rs = []
+    for f in files:
+        if label_filter.has_label(f, meta_id):
+            label = get_label(f, meta_id)
+            if label.min_conf() <= conf_thr:
+                rs.append(LabelRecord(f, label=label))
+    return rs
+
+
+def import_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
+    """读取从IAS导入的标签"""
+    # label_file = label_path(img_file, meta_id, LBL_EXT)
+    msg_file = ias_label_path_of(img_file, meta_id)
+    return try_load_json(msg_file, ImageLabelInfo)
+
+
+class HopSet(LabelSet):
+    """皓维对象与属性标注格式(Howell Object & Properties)"""
+
+    @classmethod
+    def valid_set(cls, folder: Path, meta_id: int) -> bool:
+        """检验路径是否是本格式的数据集"""
+        return Path(folder, f'{HOP}_m{meta_id}').is_dir()
+
+    def __init__(self, folder: Path, meta_id: int, pattern: str = '*'):
+        super().__init__(LabelFormat.HOP, folder, meta_id, pattern)
+
+    def __len__(self) -> int:
+        assert self
+        return 0
+
+    def load_pairs(self) -> ImageLabelPairs:
+        """加载本格式的数据集"""
+        image_dir = Path(self.folder, 'image')
+        label_dir = Path(self.folder, f'hop_m{self.meta_id}')
+        label_files = files_in(label_dir, HOP_EXT)
+
+        pairs = []
+        for label_file in label_files:
+            label = load_json(label_file, ImageLabelInfo)
+            if label:
+                image_file = image_dir / (label_file.stem + IMG_EXT)
+                pairs.append((image_file, label))
+            else:
+                print('WARN: load label fail @', label_file)
+        return pairs
+
+    def save(self, _root: Path) -> None:
+        assert self

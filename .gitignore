@@ -1,0 +1,7 @@
+__pycache__/
+.idea/
+build/
+dist/
+poetry.lock
+*.jpg
+*.png
