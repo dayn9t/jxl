@@ -8,12 +8,12 @@ from typing import Final
 from jcx.sys.fs import files_in
 from jcx.time.dt import now_iso_str
 from jcx.ui.key import Key, Flag
-from jiv.drawing.color import WHITE, YELLOW_GREEN, LIME
-from jiv.drawing.shape import polylines, cross, put_text
-from jiv.geo.point2d import Point, Points, closest_point
-from jiv.geo.polygon import Polygon
-from jiv.gui.record_viewer import RecordViewer
-from jiv.image.image_nda import ImageNda
+from jvi.drawing.color import WHITE, YELLOW_GREEN, LIME
+from jvi.drawing.shape import polylines, cross, put_text
+from jvi.geo.point2d import Point, Points, closest_point
+from jvi.geo.polygon import Polygon
+from jvi.gui.record_viewer import RecordViewer
+from jvi.image.image_nda import ImageNda
 from jxl.label.hop import hop_load_label, import_label, hop_save_label, hop_del_label, load_label_records, LabelFilter
 from jxl.label.info import ImageLabelInfo, ObjectLabelInfo, ObjectLabelInfos
 from jxl.label.meta import LabelMeta, find_meta

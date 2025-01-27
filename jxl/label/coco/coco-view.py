@@ -7,9 +7,9 @@ from jxl.coco.coco import DataCoco, show_label
 
 import argparse
 
-from jiv.drawing.color import rectangle, bgr_color_tab
-from jiv.geo import Point, Size
-from jiv.gui.image_viewer import ImageViewer
+from jvi.drawing.color import rectangle, bgr_color_tab
+from jvi.geo import Point, Size
+from jvi.gui.image_viewer import ImageViewer
 from jxl.det.y5.io import img2label, load_labels
 from numpy import ndarray
 

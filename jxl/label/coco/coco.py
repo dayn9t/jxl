@@ -7,9 +7,9 @@ import cv2
 from jcx.text.txt_json import to_json
 from jcx.ui.key import Key
 from jcx.util.algo import list_index
-from jiv.drawing.color import colors7
-from jiv.geo import Rect
-from jiv.image.util import ndarray_rect
+from jvi.drawing.color import colors7
+from jvi.geo import Rect
+from jvi.image.util import ndarray_rect
 
 
 def rect2pp(r):

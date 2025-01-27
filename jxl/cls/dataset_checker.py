@@ -7,9 +7,9 @@ from typing import List, Optional
 from colorama import Fore, Style
 from jcx.sys.fs import dirs_in, files_in
 from jcx.ui.key import Key
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
-from jiv.image.trace import trace_image, close_all_windows
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
+from jvi.image.trace import trace_image, close_all_windows
 from jxl.cls.classifier import ClassifierOpt, IClassifier
 from jxl.cls.classifier_y8 import ClassifierY8
 

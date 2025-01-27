@@ -1,8 +1,8 @@
 from random import random
 
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import SIZE_QVGA
-from jiv.match.match import ImageMatcher
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import SIZE_QVGA
+from jvi.match.match import ImageMatcher
 from jxl.iqa.diag_extractor import sharpness, DiagExtractor
 from jxl.label.extractor import *
 from jxl.label.extractor2 import Extractor2

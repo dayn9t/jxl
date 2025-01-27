@@ -1,10 +1,10 @@
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
-from jiv.image.proc import resize_roi
-from jiv.image.proc import to_gray, laplacian_edge
-from jiv.image.stat import hist_vector, hue_hist
-from jiv.match.match import ImageMatcher
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
+from jvi.image.proc import resize_roi
+from jvi.image.proc import to_gray, laplacian_edge
+from jvi.image.stat import hist_vector, hue_hist
+from jvi.match.match import ImageMatcher
 from pydantic import BaseModel
 
 DIV_COLS = 5

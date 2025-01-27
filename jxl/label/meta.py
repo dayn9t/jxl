@@ -4,8 +4,8 @@ from typing import List, Optional
 
 from jcx.sys.fs import StrPath, find_in_parts
 from jcx.text.txt_json import load_json
-from jiv.geo.rectangle import PHasRect
-from jiv.geo.size2d import Size
+from jvi.geo.rectangle import PHasRect
+from jvi.geo.size2d import Size
 from rustshed import Result, Ok, Err, Option, Some, Null
 
 

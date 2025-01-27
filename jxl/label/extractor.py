@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable
 
 from jcx.sys.fs import files_in, dirs_in
-from jiv.image.image_nda import ImageNda
+from jvi.image.image_nda import ImageNda
 from pandas import DataFrame, concat
 from pydantic import BaseModel
 

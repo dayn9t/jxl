@@ -1,6 +1,6 @@
 from typing import Protocol, Any, Iterable, Iterator
 
-from jiv.geo.rectangle import Rect
+from jvi.geo.rectangle import Rect
 from pydantic import BaseModel
 
 

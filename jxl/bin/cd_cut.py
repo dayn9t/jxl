@@ -6,10 +6,10 @@ from pathlib import Path
 import cv2  # type: ignore
 from ias.io import pack_source
 from jcx.util.err import mand
-from jiv.geo.point2d import Point
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size, SIZE_FHD, size_parse
-from jiv.image.io import load_image_pairs_in
+from jvi.geo.point2d import Point
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size, SIZE_FHD, size_parse
+from jvi.image.io import load_image_pairs_in
 
 epilog = '''
 Examples:

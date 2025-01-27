@@ -1,9 +1,9 @@
 import cv2
 from jcx.sys.fs import file_names_in
 from jcx.ui.key import Key
-from jiv.geo.size2d import SIZE_FHD
-from jiv.image.proc import to_color
-from jiv.image.trace import trace_images, close_all_windows
+from jvi.geo.size2d import SIZE_FHD
+from jvi.image.proc import to_color
+from jvi.image.trace import trace_images, close_all_windows
 from jxl.seg.cd.open_cd import *
 
 

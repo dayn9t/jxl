@@ -1,9 +1,9 @@
 from random import choices, shuffle
 
-from jiv.drawing.color import random_color
-from jiv.drawing.shape import rectangle
-from jiv.image.image_nda import ImageNda
-from jiv.image.trace import trace_image
+from jvi.drawing.color import random_color
+from jvi.drawing.shape import rectangle
+from jvi.image.image_nda import ImageNda
+from jvi.image.trace import trace_image
 from jxl.label.blend import *
 
 

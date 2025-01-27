@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from jiv.geo.rectangle import Rect
+from jvi.geo.rectangle import Rect
 from jxl.coco.coco import DataCoco
 
 

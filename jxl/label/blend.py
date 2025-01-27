@@ -4,9 +4,9 @@ from random import choices
 from jcx.m.fun import Linear
 from jcx.m.rand import random_choices
 from jcx.sys.fs import StrPath
-from jiv.geo.rectangle import random_point
-from jiv.image.io import load_images_in, load_image_pairs_in
-from jiv.image.proc import *
+from jvi.geo.rectangle import random_point
+from jvi.image.io import load_images_in, load_image_pairs_in
+from jvi.image.proc import *
 
 
 def random_object_pos(size: Size, size_ob: Size) -> Rect:

@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from jiv.geo.size2d import size_parse
+from jvi.geo.size2d import size_parse
 from jxl.label.darknet import darknet_dump_labels
 from jxl.label.hop import hop_load_labels
 from jxl.label.meta import find_meta

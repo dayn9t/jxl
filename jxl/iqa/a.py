@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from jiv.image.image_nda import ImageNda
+from jvi.image.image_nda import ImageNda
 
 
 def estimate_clearness(image: ImageNda, ratio: float) -> int:

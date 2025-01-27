@@ -3,7 +3,7 @@ from dataclasses import dataclass, astuple
 from typing import List, Any
 
 from jcx.sys.fs import StrPath
-from jiv.geo.rectangle import Rect
+from jvi.geo.rectangle import Rect
 from jxl.label.info import ObjectLabelInfo, ObjectLabelInfos, ProbValue
 from rustshed import Result, Ok
 

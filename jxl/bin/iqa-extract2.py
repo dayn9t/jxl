@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import fire
-from jiv.geo.size2d import size_parse
+from jvi.geo.size2d import size_parse
 from jxl.iqa.diag_extractor import MatchVec
 from jxl.label.extractor2 import Extractor2
 

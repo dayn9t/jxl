@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import List
 
 from jcx.sys.fs import StrPath
-from jiv.drawing.color import Color, LIME, GRAY
-from jiv.drawing.shape import rectangle
-from jiv.geo.point2d import Point
-from jiv.geo.rectangle import Rect, Rects
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
-from jiv.image.proc import resize
+from jvi.drawing.color import Color, LIME, GRAY
+from jvi.drawing.shape import rectangle
+from jvi.geo.point2d import Point
+from jvi.geo.rectangle import Rect, Rects
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
+from jvi.image.proc import resize
 from jxl.io.draw import draw_boxi
 from jxl.label.hop import hop_save_label, load_label_records, LabelFilter, hop_load_label
 from jxl.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue

@@ -5,9 +5,9 @@ import fire
 import numpy as np
 import pandas as pd
 from jcx.ui.key import Key
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
-from jiv.image.trace import trace_images, close_all_windows
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
+from jvi.image.trace import trace_images, close_all_windows
 from joblib import dump
 from pandas import DataFrame
 from pyod.models.iforest import IForest

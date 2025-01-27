@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import List
 
 from jcx.sys.fs import name_with_parents, stem_append
-from jiv.geo.rectangle import Rect, Rects
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
-from jiv.image.trace import trace_image
-from jiv.match.match import ImageMatcher
+from jvi.geo.rectangle import Rect, Rects
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
+from jvi.image.trace import trace_image
+from jvi.match.match import ImageMatcher
 
 
 class Cutter2:

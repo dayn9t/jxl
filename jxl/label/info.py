@@ -6,14 +6,14 @@ from typing import List, Optional, TypeAlias, Any, Tuple, Protocol
 from jcx.m.number import align_down
 from jcx.rs.proto import Cloned
 from jcx.time.dt import now_iso_str
-from jiv.drawing.color import Color, Colors
-from jiv.drawing.shape import polylines, rectangle
-from jiv.geo.point2d import Points, Point
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size
-from jiv.geo.trans import points_ncs_trans_in_win
-from jiv.image.image_nda import ImageNda
-from jiv.image.util import make_roi_surround_color
+from jvi.drawing.color import Color, Colors
+from jvi.drawing.shape import polylines, rectangle
+from jvi.geo.point2d import Points, Point
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size
+from jvi.geo.trans import points_ncs_trans_in_win
+from jvi.image.image_nda import ImageNda
+from jvi.image.util import make_roi_surround_color
 from jxl.common import ProbValue, ProbPropertyMap
 from jxl.det.idetector import DetObject, DetObjects
 from jxl.io.draw import draw_boxf

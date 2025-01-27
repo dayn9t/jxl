@@ -1,5 +1,5 @@
 from jcx.sys.fs import files_in
-from jiv.image.trace import trace_image
+from jvi.image.trace import trace_image
 from jxl.cls.classifier_tch import *
 
 

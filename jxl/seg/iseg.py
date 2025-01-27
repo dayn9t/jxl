@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from jiv.image.image_nda import ImageNda, ImageNdas
+from jvi.image.image_nda import ImageNda, ImageNdas
 from jxl.det.idetector import DetObjects
 from jxl.model.types import ModelInfo
 

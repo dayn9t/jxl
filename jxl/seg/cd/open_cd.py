@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from jiv.image.image_nda import ImageNda, ImageNdas
+from jvi.image.image_nda import ImageNda, ImageNdas
 from jxl.seg.iseg import ISeg, ISegRes, SegOpt
 from jxl.seg.mask_res import MaskRes
 from mmcv import Config, ConfigDict

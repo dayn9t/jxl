@@ -1,9 +1,9 @@
 import cv2  # type: ignore
 import torch.nn.functional as functional
 import torchvision.transforms as transforms  # type: ignore
-from jiv.geo.size2d import SIZE_HD
-from jiv.image.image_nda import ImageNda
-from jiv.image.trans import *
+from jvi.geo.size2d import SIZE_HD
+from jvi.image.image_nda import ImageNda
+from jvi.image.trans import *
 
 
 def test_bgr_to_pil() -> None:

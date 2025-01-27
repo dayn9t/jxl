@@ -1,8 +1,8 @@
 import cv2  # type: ignore
 
-from jiv.drawing.color import COLORS7, Color
-from jiv.geo.rectangle import Rect
-from jiv.image.image_nda import ImageNda
+from jvi.drawing.color import COLORS7, Color
+from jvi.geo.rectangle import Rect
+from jvi.image.image_nda import ImageNda
 from jxl.common import ProbValue
 
 

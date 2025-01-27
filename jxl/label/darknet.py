@@ -2,10 +2,10 @@ from pathlib import Path
 
 import numpy as np
 from jcx.sys.fs import files_in, remake_subdir, make_dir
-from jiv.drawing.color import Color
-from jiv.geo.rectangle import Rect
-from jiv.image.image_nda import ImageNda
-from jiv.image.proc import get_roi_image
+from jvi.drawing.color import Color
+from jvi.geo.rectangle import Rect
+from jvi.image.image_nda import ImageNda
+from jvi.image.proc import get_roi_image
 from jxl.common import ProbValue
 from jxl.label.info import ImageLabelInfos, ImageLabelPairs, ImageLabelInfo, ObjectLabelInfos, ObjectLabelInfo
 from jxl.label.label_set import LabelSet, LabelFormat

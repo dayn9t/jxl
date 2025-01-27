@@ -5,7 +5,7 @@ from typing import Optional, TypeAlias
 
 from jcx.sys.fs import with_parent, StrPath, files_in
 from jcx.text.txt_json import load_json, save_json, try_load_json
-from jiv.gui.record_viewer import FileRecord
+from jvi.gui.record_viewer import FileRecord
 from jxl.label.ias import ias_label_path_of
 from jxl.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
 from jxl.label.io import label_path_of

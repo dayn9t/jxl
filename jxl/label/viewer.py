@@ -4,10 +4,10 @@ from typing import TypeAlias
 
 import cv2  # type: ignore
 from jcx.time.dt import iso_to_local
-from jiv.drawing.color import LIME
-from jiv.geo.point2d import Point
-from jiv.gui.record_viewer import PImageEntry
-from jiv.image.image_nda import ImageNda
+from jvi.drawing.color import LIME
+from jvi.geo.point2d import Point
+from jvi.gui.record_viewer import PImageEntry
+from jvi.image.image_nda import ImageNda
 from jxl.label.info import ImageLabelInfo
 from jxl.label.meta import LabelMeta
 

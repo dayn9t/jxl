@@ -7,12 +7,12 @@ from pathlib import Path
 import cv2  # type: ignore
 from jcx.sys.fs import find, stem_append
 from jcx.ui.key import Key
-from jiv.drawing.color import LIME
-from jiv.drawing.shape import put_text
-from jiv.geo.point2d import Point
-from jiv.geo.size2d import size_parse
-from jiv.image.image_nda import ImageNda
-from jiv.image.proc import resize
+from jvi.drawing.color import LIME
+from jvi.drawing.shape import put_text
+from jvi.geo.point2d import Point
+from jvi.geo.size2d import size_parse
+from jvi.image.image_nda import ImageNda
+from jvi.image.proc import resize
 from jxl.det.idetector import DetOpt, draw_objects
 from jxl.det.yolo.detector_y8 import DetectorY8
 

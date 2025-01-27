@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Optional, TypeAlias, TypeVar, Type
 
 from jcx.util.lict import Lict
-from jiv.drawing.color import COLORS7, Colors
-from jiv.geo.point2d import Points, Point, array_normalize
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size
-from jiv.image.image_nda import ImageNda
+from jvi.drawing.color import COLORS7, Colors
+from jvi.geo.point2d import Points, Point, array_normalize
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size
+from jvi.image.image_nda import ImageNda
 from jxl.common import ProbValue, ProbProperties, ProbPropertyMap
 from jxl.io.draw import draw_box
 from jxl.model.types import ModelInfo

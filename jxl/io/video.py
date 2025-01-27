@@ -1,11 +1,11 @@
 from jcx.sys.fs import StrPath
-from jiv.drawing.color import random_color, Colors, COLORS7
-from jiv.drawing.shape import polylines
-from jiv.geo.point2d import Points
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size, SIZE_VGA
-from jiv.image.image_nda import ImageNda, ImageNdas
-from jiv.image.io import save_images
+from jvi.drawing.color import random_color, Colors, COLORS7
+from jvi.drawing.shape import polylines
+from jvi.geo.point2d import Points
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size, SIZE_VGA
+from jvi.image.image_nda import ImageNda, ImageNdas
+from jvi.image.io import save_images
 from jxl.det.idetector import DetObjects, DetObject
 from pydantic import BaseModel
 

@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 import torch
-from jiv.image.image_nda import ImageNda
+from jvi.image.image_nda import ImageNda
 from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt
 from jxl.label.info import ProbValue
 from ultralytics import YOLO
@@ -69,7 +69,7 @@ class ClassifierY8(IClassifier):
 def main() -> None:
     opt = ClassifierOpt((224, 224), 1000)
     path = Path('yolov8n-cls.pt')
-    image: ImageNda = ImageNda.load('../../jiv/static/lena.jpg')
+    image: ImageNda = ImageNda.load('../../jvi/static/lena.jpg')
     # image = ImageNda.load('bus.jpg')
 
     model = ClassifierY8(path, opt, 'cuda')

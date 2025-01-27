@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ias.sensor_type import SensorMsg
 from jcx.text.txt_json import save_json
-from jiv.geo import Size
+from jvi.geo import Size
 from jxl.det.detector import DetectedObject
 
 _class_tab = ['dry_can', 'dry_can_lid', 'refuse_dump', 'wet_can', 'wet_can_lid']

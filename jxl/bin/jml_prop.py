@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 
 from jcx.ui.key import Key
-from jiv.geo.point2d import Point
-from jiv.geo.rectangle import Rect
-from jiv.gui.record_viewer import RecordViewer
-from jiv.image.image_nda import ImageNda
+from jvi.geo.point2d import Point
+from jvi.geo.rectangle import Rect
+from jvi.gui.record_viewer import RecordViewer
+from jvi.image.image_nda import ImageNda
 from jxl.label.meta import LabelMeta, find_meta
 from jxl.label.tile import TileRecord, TileObject, load_tiles, TileObjects
 

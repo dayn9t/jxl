@@ -5,8 +5,8 @@ from pathlib import Path
 
 from jcx.sys.fs import move_file
 from jcx.ui.key import Key
-from jiv.geo.size2d import Size
-from jiv.gui.record_viewer import RecordViewer, load_dir_records
+from jvi.geo.size2d import Size
+from jvi.gui.record_viewer import RecordViewer, load_dir_records
 
 
 class Sorter(RecordViewer):

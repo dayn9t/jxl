@@ -1,4 +1,4 @@
-from jiv.gui.record_viewer import RecordViewer
+from jvi.gui.record_viewer import RecordViewer
 from jxl.label.tile import *
 
 

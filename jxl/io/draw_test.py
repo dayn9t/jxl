@@ -1,6 +1,6 @@
-from jiv.drawing.color import RED
-from jiv.geo.size2d import SIZE_VGA
-from jiv.image.trace import trace_image
+from jvi.drawing.color import RED
+from jvi.geo.size2d import SIZE_VGA
+from jvi.image.trace import trace_image
 from jxl.io.draw import *
 
 

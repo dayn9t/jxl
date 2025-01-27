@@ -1,6 +1,6 @@
 from jcx.ui.key import Key
-from jiv.image.io import load_images_in
-from jiv.image.trace import trace_image
+from jvi.image.io import load_images_in
+from jvi.image.trace import trace_image
 from jxl.cls.classifier_tab import *
 
 

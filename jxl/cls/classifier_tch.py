@@ -5,11 +5,11 @@ from typing import List, Any
 import torch
 import torch.nn.functional as functional
 import torchvision.transforms as transforms  # type: ignore
-from jiv.image.image_nda import ImageNda
+from jvi.image.image_nda import ImageNda
 from jxl.cls.arch.torch_image import load_pth_tar
 from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ModelFormat
 from jxl.label.info import ProbValue
-from jiv.image.trans import bgr_to_pil, PilImage
+from jvi.image.trans import bgr_to_pil, PilImage
 from torch import Tensor
 from torchsummary import summary  # type: ignore
 

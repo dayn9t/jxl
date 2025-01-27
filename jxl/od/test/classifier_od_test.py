@@ -1,10 +1,10 @@
 from itertools import pairwise
 
 from jcx.ui.key import Key
-from jiv.geo.rectangle import Rect
-from jiv.geo.size2d import Size
-from jiv.image.io import load_images_in
-from jiv.image.trace import trace_images, close_all_windows
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size
+from jvi.image.io import load_images_in
+from jvi.image.trace import trace_images, close_all_windows
 from jxl.od.classifier_od import *
 from jxl.iqa.diag_extractor import DiagExtractor, DIV_ROWS, DIV_COLS, DIV_SIZE
 
