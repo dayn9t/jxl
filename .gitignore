@@ -5,3 +5,5 @@ dist/
 poetry.lock
 *.jpg
 *.png
+*.pth
+*.pt
