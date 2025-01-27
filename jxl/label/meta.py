@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
@@ -7,10 +6,10 @@ from jcx.text.txt_json import load_json
 from jvi.geo.rectangle import PHasRect
 from jvi.geo.size2d import Size
 from rustshed import Result, Ok, Err, Option, Some, Null
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class SampleCfg:
+class SampleCfg(BaseModel):
     """采样配置"""
 
     size: Size
@@ -23,8 +22,7 @@ class SampleCfg:
     """属性条目集合"""
 
 
-@dataclass
-class ValueCfg:
+class ValueCfg(BaseModel):
     """属性值配置"""
 
     id: int
@@ -48,8 +46,7 @@ class ValueCfg:
         return self.sign or self.name
 
 
-@dataclass
-class LabelCfg:
+class LabelCfg(BaseModel):
     """标签配置"""
 
     title_style: int
@@ -58,8 +55,7 @@ class LabelCfg:
     """线粗细"""
 
 
-@dataclass
-class PropMeta:
+class PropMeta(BaseModel):
     """属性元数据"""
 
     id: int
@@ -73,7 +69,7 @@ class PropMeta:
     color: str = "WHITE"
     """属性默认颜色"""
     # thickness :Optional[int])  # 线粗细
-    values: List[ValueCfg] = field(default_factory=list)
+    values: List[ValueCfg] = Field(default_factory=list)
     """属性值集合"""
 
     def value_meta(self, value_id: int) -> ValueCfg:
@@ -97,8 +93,7 @@ class PropMeta:
         return Null
 
 
-@dataclass
-class PropVar:
+class PropVar(BaseModel):
     """属性变量"""
 
     name: str
@@ -115,8 +110,7 @@ def in_range(value: float, range: Optional[List[float]]) -> bool:
     return range[0] <= value <= range[1]
 
 
-@dataclass
-class FilterCfg:
+class FilterCfg(BaseModel):
     """目标过滤器配置"""
 
     aspect_radio: Optional[List] = None
@@ -137,8 +131,7 @@ class FilterCfg:
         return Ok(None)
 
 
-@dataclass
-class CatMeta:
+class CatMeta(BaseModel):
     """类别元数据"""
 
     id: int
@@ -174,8 +167,7 @@ class CatMeta:
         return Ok(None) if self.filter is None else self.filter.check(ob)
 
 
-@dataclass
-class LabelMeta:
+class LabelMeta(BaseModel):
     """标签元数据"""
 
     id: int
@@ -269,7 +261,7 @@ def find_meta(meta_id: int, folder: StrPath) -> Result[LabelMeta, str]:
     name = "meta/" + meta_fix(meta_id) + ".json"
     file = find_in_parts(folder, name).expect(f'Meta文件"{name}"未找到, 在"{folder}"')
     # print(f'[Info] Meta file: {file}')
-    meta = load_json(file, LabelMeta)
+    meta = load_json(file, LabelMeta).unwrap()
 
     common_values = []
     for p in meta.properties:

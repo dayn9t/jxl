@@ -1,7 +1,6 @@
 from copy import deepcopy
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, TypeAlias, Any, Tuple, Protocol
+from typing import List, Optional, Tuple, Protocol
 
 from jcx.m.number import align_down
 from jcx.rs.proto import Cloned
@@ -20,8 +19,8 @@ from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta
 from loguru import logger
 from rustshed import Option, Some, Null
+from pydantic import BaseModel
 
-Self: TypeAlias = Any  # TODO: WAIT FOR 3.11
 
 ID_ROI = -9  # ROI对象默认ID
 ID_ERROR = -3  # 该值错误，需要改正
@@ -35,8 +34,7 @@ IMG_EXT = ".jpg"  # 图片文件扩展名
 MSG_EXT = ".json"  # 传感器消息扩展名
 
 
-@dataclass
-class ObjectLabelInfo(Cloned):
+class ObjectLabelInfo(BaseModel):
     """目标标注信息"""
 
     id: int
@@ -45,7 +43,7 @@ class ObjectLabelInfo(Cloned):
     """类别"""
     polygon: Points
     """包含目标的多边形区域"""
-    properties: ProbPropertyMap = field(default_factory=dict)
+    properties: ProbPropertyMap = {}
     """属性集合"""
 
     @classmethod
@@ -143,8 +141,7 @@ class ObjectLabelInfo(Cloned):
 ObjectLabelInfos = List[ObjectLabelInfo]  # 目标标注信息集合
 
 
-@dataclass
-class ImageLabelInfo(Cloned):
+class ImageLabelInfo(BaseModel):
     """图片标注信息"""
 
     # id :int  # 图像ID

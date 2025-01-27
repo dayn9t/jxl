@@ -54,7 +54,7 @@ class TileObject:
         resize(self.image.unwrap(), dst)
 
     def draw_label(
-            self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
+        self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
     ) -> None:
         """绘制标注信息"""
         p = self.obj.prop(prop)
@@ -118,7 +118,7 @@ class TileRecord:
 
 
 def load_tiles(
-        src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float
+    src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float
 ) -> TileObjects:
     """加载瓦片对象"""
     rs = load_label_records(src_dir, meta_id, LabelFilter.LABELED)
