@@ -1,0 +1,156 @@
+{
+	"id": 101,
+	"name": "street",
+	"description": "街面目标检测，及其属性分类",
+	"view_size": {
+		"width": 1536,
+		"height": 864
+	},
+	"object_size": {
+		"width": 256,
+		"height": 288
+	},
+	"sample": {
+		"size": {
+			"width": 640,
+			"height": 640
+		},
+		"background": "#727272",
+		"categories": [],
+		"properties": []
+	},
+	"label": {
+		"title_style": 0,
+		"thickness": 2
+	},
+	"auto_save": true,
+	"model": {
+		"description": "顶级检测器参数，TODO",
+		"size": {
+			"width": 640,
+			"height": 640
+		}
+	},
+	"categories": [
+		{
+			"id": -9,
+			"name": "roi",
+			"description": "感兴趣区域",
+			"keys": "p",
+			"color": "#800080"
+		},
+		{
+			"id": -1,
+			"name": "pending",
+			"description": "种类待定",
+			"keys": "0",
+			"color": "#FFFFFF"
+		},
+		{
+			"id": 0,
+			"name": "sign",
+			"description": "店铺招牌",
+			"keys": "1",
+			"color": "#FF0000",
+			"parent_id": null,
+			"properties": [],
+			"filter": {
+				"aspect_radio": [
+					0.05,
+					20.0
+				]
+			}
+		},
+		{
+			"id": 1,
+			"name": "best",
+			"description": "最佳店铺招牌",
+			"keys": "2",
+			"color": "#00FF00",
+			"parent_id": null,
+			"properties": []
+		}
+	],
+	"properties": [
+		{
+			"id": -1,
+			"name": "common",
+			"description": "各种属性公用值",
+			"size": {
+				"width": 0,
+				"height": 0
+			},
+			"values": [
+				{
+					"id": -3,
+					"name": "error",
+					"description": "检测器错误",
+					"keys": "r",
+					"color": "PINK",
+					"sign": "E",
+					"conf": -2.0
+				},
+				{
+					"id": -2,
+					"name": "exclude",
+					"description": "排除争议样本",
+					"keys": "e",
+					"color": "PURPLE",
+					"sign": "X"
+				},
+				{
+					"id": -1,
+					"name": "pending",
+					"description": "待定",
+					"keys": "q",
+					"color": "WHITE",
+					"sign": "P",
+					"conf": -1.0
+				}
+			]
+		},
+		{
+			"id": 1,
+			"name": "sort",
+			"description": "某种种类",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"values": [
+				{
+					"id": 0,
+					"name": "residuil",
+					"description": "干/其他垃圾/黑/黄",
+					"keys": "1",
+					"color": "#201080",
+					"sign": "D"
+				},
+				{
+					"id": 1,
+					"name": "food",
+					"description": "湿/厨余/棕/绿",
+					"keys": "2",
+					"color": "BROWN",
+					"sign": "W"
+				},
+				{
+					"id": 2,
+					"name": "recyclable",
+					"description": "蓝/可回收",
+					"keys": "3",
+					"color": "#0000FF",
+					"sign": "R"
+				},
+				{
+					"id": 3,
+					"name": "hazardous",
+					"description": "红/有害",
+					"keys": "4",
+					"color": "ORANGE",
+					"sign": "H"
+				}
+			]
+		}
+	]
+}

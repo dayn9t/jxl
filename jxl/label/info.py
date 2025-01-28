@@ -1,9 +1,8 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Tuple, Protocol
+from typing import List, Optional, Tuple, Protocol, Self
 
 from jcx.m.number import align_down
-from jcx.rs.proto import Cloned
 from jcx.time.dt import now_iso_str
 from jvi.drawing.color import Color, Colors
 from jvi.drawing.shape import polylines, rectangle
@@ -20,7 +19,6 @@ from jxl.label.meta import LabelMeta
 from loguru import logger
 from rustshed import Option, Some, Null
 from pydantic import BaseModel
-
 
 ID_ROI = -9  # ROI对象默认ID
 ID_ERROR = -3  # 该值错误，需要改正
@@ -43,17 +41,17 @@ class ObjectLabelInfo(BaseModel):
     """类别"""
     polygon: Points
     """包含目标的多边形区域"""
-    properties: ProbPropertyMap = {}
+    properties: ProbPropertyMap
     """属性集合"""
 
     @classmethod
     def new(
-        cls,
-        id_: int,
-        category: int,
-        confidence: float,
-        polygon: Points,
-        properties: Option[ProbPropertyMap] = Null,
+            cls,
+            id_: int,
+            category: int,
+            confidence: float,
+            polygon: Points,
+            properties: Option[ProbPropertyMap] = Null,
     ) -> "ObjectLabelInfo":
         """创建标签信息"""
         assert polygon is not None
@@ -137,6 +135,9 @@ class ObjectLabelInfo(BaseModel):
     def move(self, offset: Point) -> None:
         self.polygon = [p + offset for p in self.polygon]
 
+    def clone(self) -> Self:
+        return deepcopy(self)
+
 
 ObjectLabelInfos = List[ObjectLabelInfo]  # 目标标注信息集合
 
@@ -162,13 +163,13 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def new(
-        cls,
-        user_agent: str,
-        objects: ObjectLabelInfos,
-        date: Optional[str] = None,
-        last_modified: Optional[str] = None,
-        sensor: int = 0,
-        host: str = "",
+            cls,
+            user_agent: str,
+            objects: ObjectLabelInfos,
+            date: Optional[str] = None,
+            last_modified: Optional[str] = None,
+            sensor: int = 0,
+            host: str = "",
     ) -> "ImageLabelInfo":
         date = date or now_iso_str()
         last_modified = last_modified or date
@@ -191,7 +192,7 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def from_det_objects(
-        cls, objects: DetObjects, roi: Optional[Points] = None
+            cls, objects: DetObjects, roi: Optional[Points] = None
     ) -> "ImageLabelInfo":
         """从检测器结果构建标注信息"""
         objs = [ObjectLabelInfo.from_detected(o) for o in objects]
@@ -250,11 +251,11 @@ class ImageLabelInfo(BaseModel):
                 id_ += 1
 
     def draw_on(
-        self,
-        bgr: ImageNda,
-        cfg: LabelMeta,
-        show_conf: bool = True,
-        cat_filter: int = -1,
+            self,
+            bgr: ImageNda,
+            cfg: LabelMeta,
+            show_conf: bool = True,
+            cat_filter: int = -1,
     ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制
@@ -310,7 +311,7 @@ class ImageLabelInfo(BaseModel):
         return min(confs, default=1.0)
 
     def crop_by_roi(
-        self, im_size: Size, extend_side: int = 4
+            self, im_size: Size, extend_side: int = 4
     ) -> Tuple[Rect, "ImageLabelInfo"]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
         rect = self.roi_rect().unwrap()
@@ -328,6 +329,9 @@ class ImageLabelInfo(BaseModel):
             ob.polygon = points_ncs_trans_in_win(ob.polygon, rect)
 
         return rect, label
+
+    def clone(self) -> Self:
+        return deepcopy(self)
 
 
 ImageLabelInfos = List[ImageLabelInfo]

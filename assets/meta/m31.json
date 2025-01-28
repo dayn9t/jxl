@@ -1,0 +1,333 @@
+{
+	"id": 31,
+	"name": "cabin",
+	"description": "垃圾房内垃圾桶&垃圾检测，及其属性分类",
+	"view_size": {
+		"width": 1536,
+		"height": 864
+	},
+	"object_size": {
+		"width": 256,
+		"height": 288
+	},
+	"sample": {
+		"size": {
+			"width": 640,
+			"height": 640
+		},
+		"background": "#727272",
+		"categories": [],
+		"properties": []
+	},
+	"label": {
+		"title_style": 1,
+		"thickness": 2
+	},
+	"auto_save": true,
+	"model": {
+		"description": "顶级检测器参数，TODO",
+		"size": {
+			"width": 640,
+			"height": 640
+		}
+	},
+	"categories": [
+		{
+			"id": -9,
+			"name": "roi",
+			"description": "感兴趣区域",
+			"keys": "p",
+			"color": "#800080"
+		},
+		{
+			"id": -1,
+			"name": "pending",
+			"description": "种类待定",
+			"keys": "0",
+			"color": "#FFFFFF"
+		},
+		{
+			"id": 0,
+			"name": "opening",
+			"description": "垃圾桶开口",
+			"keys": "1",
+			"color": "#FF0000",
+			"parent_id": 4,
+			"properties": [
+				{
+					"name": "sort",
+					"type": "sort"
+				},
+				{
+					"name": "amount",
+					"type": "amount"
+				},
+				{
+					"name": "illegal",
+					"type": "illegal"
+				}
+			],
+			"filter": {
+				"aspect_radio": [
+					0.25,
+					4.0
+				]
+			}
+		},
+		{
+			"id": 1,
+			"name": "lid",
+			"description": "垃圾桶盖",
+			"keys": "2",
+			"color": "#FFA500",
+			"parent_id": 4,
+			"properties": [
+				{
+					"name": "sort",
+					"type": "sort"
+				},
+				{
+					"name": "side",
+					"type": "side"
+				}
+			]
+		},
+		{
+			"id": 2,
+			"name": "dump",
+			"description": "垃圾堆",
+			"keys": "3",
+			"color": "#FFFF00"
+		},
+		{
+			"id": 3,
+			"name": "person",
+			"description": "人员",
+			"keys": "4",
+			"color": "#00FF00"
+		},
+		{
+			"id": 4,
+			"name": "can",
+			"description": "整个垃圾桶",
+			"keys": "5",
+			"color": "BLUE",
+			"properties": [
+				{
+					"name": "direction",
+					"type": "direction"
+				}
+			]
+		}
+	],
+	"properties": [
+		{
+			"id": -1,
+			"name": "common",
+			"description": "各种属性公用值",
+			"size": {
+				"width": 0,
+				"height": 0
+			},
+			"values": [
+				{
+					"id": -3,
+					"name": "error",
+					"description": "检测器错误",
+					"keys": "r",
+					"color": "PINK",
+					"sign": "E",
+					"conf": -2.0
+				},
+				{
+					"id": -2,
+					"name": "exclude",
+					"description": "排除争议样本",
+					"keys": "e",
+					"color": "PURPLE",
+					"sign": "X"
+				},
+				{
+					"id": -1,
+					"name": "pending",
+					"description": "待定",
+					"keys": "q",
+					"color": "WHITE",
+					"sign": "P",
+					"conf": -1.0
+				}
+			]
+		},
+		{
+			"id": 1,
+			"name": "sort",
+			"description": "垃圾桶/盖类型",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"values": [
+				{
+					"id": 0,
+					"name": "residuil",
+					"description": "干/其他垃圾/黑/黄",
+					"keys": "1",
+					"color": "#201080",
+					"sign": "D"
+				},
+				{
+					"id": 1,
+					"name": "food",
+					"description": "湿/厨余/棕/绿",
+					"keys": "2",
+					"color": "BROWN",
+					"sign": "W"
+				},
+				{
+					"id": 2,
+					"name": "recyclable",
+					"description": "蓝/可回收",
+					"keys": "3",
+					"color": "#0000FF",
+					"sign": "R"
+				},
+				{
+					"id": 3,
+					"name": "hazardous",
+					"description": "红/有害",
+					"keys": "4",
+					"color": "ORANGE",
+					"sign": "H"
+				}
+			]
+		},
+		{
+			"id": 2,
+			"name": "amount",
+			"description": "垃圾桶内垃圾量",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"color": "#00FF00",
+			"values": [
+				{
+					"id": 0,
+					"name": "0/4",
+					"description": "空桶",
+					"keys": "1",
+					"color": "RED",
+					"sign": "0"
+				},
+				{
+					"id": 1,
+					"name": "not_full",
+					"description": "不满",
+					"keys": "2",
+					"color": "ORANGE",
+					"sign": "1"
+				},
+				{
+					"id": 2,
+					"name": "soon_full",
+					"description": "将满",
+					"keys": "3",
+					"color": "YELLOW",
+					"sign": "2"
+				},
+				{
+					"id": 3,
+					"name": "full",
+					"description": "已满",
+					"keys": "4",
+					"color": "GREEN",
+					"sign": "3"
+				}
+			]
+		},
+		{
+			"id": 3,
+			"name": "direction",
+			"description": "垃圾桶朝向",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"color": "#00FF00",
+			"values": [
+				{
+					"id": 0,
+					"name": "front",
+					"description": "正面",
+					"keys": "1",
+					"color": "RED",
+					"sign": "FR"
+				},
+				{
+					"id": 1,
+					"name": "non_front",
+					"description": "非正面",
+					"keys": "2",
+					"color": "ORANGE",
+					"sign": "NF"
+				}
+			]
+		},
+		{
+			"id": 4,
+			"name": "illegal",
+			"description": "是否存在违规投放垃圾",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"color": "#00FF00",
+			"values": [
+				{
+					"id": 0,
+					"name": "no",
+					"description": "无违规投放垃圾",
+					"keys": "1",
+					"color": "RED",
+					"sign": "n"
+				},
+				{
+					"id": 1,
+					"name": "yes",
+					"description": "有违规投放垃圾",
+					"keys": "2",
+					"color": "RED",
+					"sign": "y"
+				}
+			]
+		},
+		{
+			"id": 4,
+			"name": "side",
+			"description": "垃圾箱的正/反面分类",
+			"size": {
+				"width": 224,
+				"height": 224
+			},
+			"color": "#00FF00",
+			"values": [
+				{
+					"id": 0,
+					"name": "front",
+					"description": "垃圾桶盖正面",
+					"keys": "1",
+					"color": "GREEN",
+					"sign": "F"
+				},
+				{
+					"id": 1,
+					"name": "back",
+					"description": "垃圾桶盖反面",
+					"keys": "2",
+					"color": "RED",
+					"sign": "B"
+				}
+			]
+		}
+	]
+}
