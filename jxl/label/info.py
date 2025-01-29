@@ -18,7 +18,7 @@ from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta
 from loguru import logger
 from rustshed import Option, Some, Null
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ID_ROI = -9  # ROI对象默认ID
 ID_ERROR = -3  # 该值错误，需要改正
@@ -156,7 +156,7 @@ class ImageLabelInfo(BaseModel):
     """主机"""
     sensor: int
     """数据来源传感器"""
-    objects: ObjectLabelInfos
+    objects: ObjectLabelInfos = Field(default_factory=list)
     """对象集合"""
     version: float = 1.0
     """版本号，用于新旧格式转换"""
@@ -170,7 +170,7 @@ class ImageLabelInfo(BaseModel):
             last_modified: Optional[str] = None,
             sensor: int = 0,
             host: str = "",
-    ) -> "ImageLabelInfo":
+    ) -> Self:
         date = date or now_iso_str()
         last_modified = last_modified or date
 
@@ -185,7 +185,7 @@ class ImageLabelInfo(BaseModel):
         )
 
     @classmethod
-    def only_roi(cls, user_agent: str = "", sensor: int = 0) -> "ImageLabelInfo":
+    def only_roi(cls, user_agent: str = "", sensor: int = 0) -> Self:
         """生成空的标注信息，只有包括最大化的ROI"""
         roi = ObjectLabelInfo.new_roi(Rect.one().vertexes())
         return ImageLabelInfo.new(user_agent, objects=[roi], sensor=sensor)
@@ -193,7 +193,7 @@ class ImageLabelInfo(BaseModel):
     @classmethod
     def from_det_objects(
             cls, objects: DetObjects, roi: Optional[Points] = None
-    ) -> "ImageLabelInfo":
+    ) -> Self:
         """从检测器结果构建标注信息"""
         objs = [ObjectLabelInfo.from_detected(o) for o in objects]
 
@@ -312,7 +312,7 @@ class ImageLabelInfo(BaseModel):
 
     def crop_by_roi(
             self, im_size: Size, extend_side: int = 4
-    ) -> Tuple[Rect, "ImageLabelInfo"]:
+    ) -> Tuple[Rect, Self]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
         rect = self.roi_rect().unwrap()
         assert rect.is_normalized()
