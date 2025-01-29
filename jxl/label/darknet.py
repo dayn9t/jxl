@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-from jcx.sys.fs import files_in, remake_subdir, make_dir
+from jcx.sys.fs import files_in, make_dir
 from jvi.drawing.color import Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
