@@ -41,17 +41,17 @@ class ObjectLabelInfo(BaseModel):
     """类别"""
     polygon: Points
     """包含目标的多边形区域"""
-    properties: ProbPropertyMap
+    properties: ProbPropertyMap = Field(default_factory=list)
     """属性集合"""
 
     @classmethod
     def new(
-            cls,
-            id_: int,
-            category: int,
-            confidence: float,
-            polygon: Points,
-            properties: Option[ProbPropertyMap] = Null,
+        cls,
+        id_: int,
+        category: int,
+        confidence: float,
+        polygon: Points,
+        properties: Option[ProbPropertyMap] = Null,
     ) -> "ObjectLabelInfo":
         """创建标签信息"""
         assert polygon is not None
@@ -63,12 +63,12 @@ class ObjectLabelInfo(BaseModel):
         )
 
     @classmethod
-    def new_roi(cls, polygon: Points) -> "ObjectLabelInfo":
+    def new_roi(cls, polygon: Points) -> Self:
         """创建感兴趣区域"""
         return ObjectLabelInfo.new(ID_ROI, CAT_ROI, 0, polygon)
 
     @classmethod
-    def from_detected(cls, o: DetObject) -> "ObjectLabelInfo":
+    def from_detected(cls, o: DetObject) -> Self:
         """从检测对象构建标注对象"""
         return ObjectLabelInfo(
             id=o.id,
@@ -163,13 +163,13 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def new(
-            cls,
-            user_agent: str,
-            objects: ObjectLabelInfos,
-            date: Optional[str] = None,
-            last_modified: Optional[str] = None,
-            sensor: int = 0,
-            host: str = "",
+        cls,
+        user_agent: str,
+        objects: ObjectLabelInfos,
+        date: Optional[str] = None,
+        last_modified: Optional[str] = None,
+        sensor: int = 0,
+        host: str = "",
     ) -> Self:
         date = date or now_iso_str()
         last_modified = last_modified or date
@@ -192,7 +192,7 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def from_det_objects(
-            cls, objects: DetObjects, roi: Optional[Points] = None
+        cls, objects: DetObjects, roi: Optional[Points] = None
     ) -> Self:
         """从检测器结果构建标注信息"""
         objs = [ObjectLabelInfo.from_detected(o) for o in objects]
@@ -251,11 +251,11 @@ class ImageLabelInfo(BaseModel):
                 id_ += 1
 
     def draw_on(
-            self,
-            bgr: ImageNda,
-            cfg: LabelMeta,
-            show_conf: bool = True,
-            cat_filter: int = -1,
+        self,
+        bgr: ImageNda,
+        cfg: LabelMeta,
+        show_conf: bool = True,
+        cat_filter: int = -1,
     ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制
@@ -310,9 +310,7 @@ class ImageLabelInfo(BaseModel):
         confs = map(lambda o: o.min_conf(), self.objects)
         return min(confs, default=1.0)
 
-    def crop_by_roi(
-            self, im_size: Size, extend_side: int = 4
-    ) -> Tuple[Rect, Self]:
+    def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> Tuple[Rect, Self]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
         rect = self.roi_rect().unwrap()
         assert rect.is_normalized()
