@@ -7,3 +7,4 @@ poetry.lock
 *.png
 *.pth
 *.pt
+*.spec

@@ -362,8 +362,10 @@ class Labeler(RecordViewer):
 
     def _insert_vertex(self, cursor: Point) -> None:
         """插入节点"""
-        polygon = self.cur_object.unwrap().polygon
-        Polygon(polygon).insert_best(cursor)
+        ob = self.cur_object.unwrap()
+        p = Polygon.new(ob.polygon)
+        p.insert_best(cursor)
+        ob.polygon = p.vertexes
         self.cur_vertex = Some(cursor)
         self.saved = False
         print("插入顶点:", cursor.absolutize(self.size()))

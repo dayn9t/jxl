@@ -12,8 +12,8 @@ rustshed = "*"
 jcx = { path = "/home/jiang/py/jcx" }
 jvi = { path = "/home/jiang/py/jvi" }
 pydantic = "*"
-
-
+typer = "*"
+loguru = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
@@ -21,6 +21,7 @@ pytest = "*"
 [tool.poetry.group.dev.dependencies]
 black = "*"
 pyinstaller = "*"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
