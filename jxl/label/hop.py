@@ -138,7 +138,7 @@ class HopSet(LabelSet):
 
         pairs = []
         for label_file in label_files:
-            label = load_json(label_file, ImageLabelInfo)
+            label = load_json(label_file, ImageLabelInfo).unwrap()
             if label:
                 image_file = image_dir / (label_file.stem + IMG_EXT)
                 pairs.append((image_file, label))

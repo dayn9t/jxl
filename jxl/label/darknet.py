@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-from jcx.sys.fs import files_in, make_dir
+from jcx.sys.fs import files_in, make_subdir
 from jvi.drawing.color import Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
@@ -107,8 +107,8 @@ def darknet_dump_labels(
     """保存darknet样本标注信息, TODO: meta 可能有更多的用处"""
 
     remake = not keep_dst_dir
-    labels_dir = make_dir(folder, "labels", remake)
-    images_dir = make_dir(folder, "images", remake)
+    labels_dir = make_subdir(folder, "labels", remake)
+    images_dir = make_subdir(folder, "images", remake)
 
     print("\n开始生成样本(%d)：" % len(labels))
     total = 0

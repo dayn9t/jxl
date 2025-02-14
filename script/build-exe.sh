@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 
-poetry run pyinstaller --onefile --strip jxl/bin/jxl_label.py
-poetry run pyinstaller --onefile --strip jxl/bin/jxl_label_clean.py
+dir=jxl/bin
+scrips="jxl_label.py jxl_label_clean.py jxl_split.py"
+for script in $scrips; do
+    poetry run pyinstaller --onefile --strip $dir/"$script"
+done

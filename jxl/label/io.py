@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from jcx.sys.fs import StrPath, with_parent, remake_dir, files_in, make_parents
+from jcx.sys.fs import StrPath, with_parent, remake_dir, make_parents
 from jcx.text.txt_json import load_json
 from jvi.image.image_nda import ImageNda
 from jxl.label.info import ImageLabelInfo, ImageLabelInfos, IMG_EXT, ImageLabelPairs
@@ -27,7 +27,7 @@ def load_label_dir(folder: StrPath, meta_id: int) -> ImageLabelInfos:
 
     files = sorted(folder.rglob("*" + tail))
     for lbl_file in files:
-        label = load_json(lbl_file, ImageLabelInfo)
+        label = load_json(lbl_file, ImageLabelInfo).unwrap()
         rs.append(label)
     return rs
 
