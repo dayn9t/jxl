@@ -2,6 +2,7 @@ __pycache__/
 .idea/
 build/
 dist/
+run/
 poetry.lock
 *.jpg
 *.png
