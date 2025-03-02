@@ -29,7 +29,7 @@ dst_mod=best.mod
 chmod 777 nohup.out
 
 echo "$title" 模型训练 @ $(pwd)
-source /opt/ias/env/bin/activate
+#source /opt/ias/env/bin/activate
 
 rm training -rf
 rm $dst_mod
