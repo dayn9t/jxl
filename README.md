@@ -46,7 +46,10 @@
 - 其他
     - 开启视频诊断: ```find -name "*2.json" -exec sed -i 's/"private": true/"private": false/g' {} \;```
 
+## 模型
 
+- 模型导出：```yolo export model=2024-11-10_sign.pt format=onnx simplify dynamic```
+- 验证模型：```yolo val task=detect model=2025-02-15_sign.onnx imgsz=640 data=/home/jiang/ws/s4/sign/dataset.yaml```
 
 ## TODO
 

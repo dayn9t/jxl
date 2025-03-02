@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Self
 
 from jcx.sys.fs import StrPath
 from jvi.drawing.color import Color, LIME, GRAY
@@ -44,17 +44,23 @@ class TileObject:
         v = ProbValue(0, 0)
         return self.obj.properties.get(name, v).value
 
-    def draw_on(self, canvas: ImageNda) -> None:
+    def draw_on(self, canvas: ImageNda, cfg: PropMeta) -> None:
         """绘制瓦片"""
         if self.image.is_null():
             img = ImageNda.load(self.path)
-            self.image = Some(img.roi(self.obj.rect()).clone())
+            r = self.obj.rect()
+            if cfg.border_extend:
+                r = cfg.border_extend.extend(r)
+            r = r.intersect(Rect.one())
+            r = r.absolutize(img.size())
+
+            self.image = Some(img.roi(r).clone())
 
         dst = canvas.roi(self.dst_rect)
         resize(self.image.unwrap(), dst)
 
     def draw_label(
-        self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
+            self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
     ) -> None:
         """绘制标注信息"""
         p = self.obj.prop(prop)
@@ -69,6 +75,7 @@ class TileObject:
     def set_prop(self, name: str, value: int, conf: float = 2.0) -> None:
         """设置属性值"""
         self.obj.set_prop(name, value, conf)
+        self.root.user_agent = "jxl_prop"
         f = hop_save_label(self.root, self.path, self.meta_id)
         print("设置属性, 保存:", f)
 
@@ -92,20 +99,22 @@ class TileRecord:
     objects: TileObjects
     """瓦片对象"""
 
+    cfg: PropMeta
+
     @classmethod
-    def new(cls, size: Size, rects: Rects, objects: TileObjects) -> "TileRecord":
+    def new(cls, size: Size, rects: Rects, objects: TileObjects, cfg: PropMeta) -> Self:
         """创建对象"""
         i = 0
         for o in objects:
             o.dst_rect = rects[i]
             i += 1
-        return TileRecord(size, objects)
+        return TileRecord(size, objects, cfg)
 
     def load_image(self) -> ImageNda:
         """加载图片"""
         image = ImageNda(self.size, color=GRAY)
         for o in self.objects:
-            o.draw_on(image)
+            o.draw_on(image, self.cfg)
         return image
 
     def image_file(self) -> Path:
@@ -118,7 +127,7 @@ class TileRecord:
 
 
 def load_tiles(
-    src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float
+        src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float, min_prop: int
 ) -> TileObjects:
     """加载瓦片对象"""
     rs = load_label_records(src_dir, meta_id, LabelFilter.LABELED)
@@ -129,11 +138,13 @@ def load_tiles(
     for r in rs:
         label = hop_load_label(r.path, meta_id).unwrap()
         assert label
-        for o in label.objects:
-            if o.prob_class.value == category:
-                t = TileObject(r.path, o, label, meta_id)
+        for ob in label.objects:
+            if ob.prob_class.value == category:
+                t = TileObject(r.path, ob, label, meta_id)
                 t.exclude_prop_if(prop, exclude_conf)
-                tiles.append(t)
+                v = t.value_of(prop)
+                if v >= min_prop:
+                    tiles.append(t)
 
     tiles.sort(key=lambda o1: o1.value_of(prop))
     return tiles

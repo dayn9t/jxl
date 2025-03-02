@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from jcx.sys.fs import StrPath, find_in_parts
 from jcx.text.txt_json import load_json
-from jvi.geo.rectangle import PHasRect
+from jvi.geo.rectangle import PHasRect, Rect
 from jvi.geo.size2d import Size
 from rustshed import Result, Ok, Err, Option, Some, Null
 from pydantic import BaseModel, Field
@@ -55,6 +55,29 @@ class LabelCfg(BaseModel):
     """线粗细"""
 
 
+class BorderExtend(BaseModel):
+    """边缘扩展"""
+
+    left: float
+    """向左扩展的比例，相对于宽度"""
+    right: float
+    """向右扩展的比例，相对于宽度"""
+    top: float
+    """向上扩展的比例，相对于高度"""
+    bottom: float
+    """向下扩展的比例，相对于高度"""
+
+    def extend(self, rect: Rect) -> Rect:
+        """扩展边界"""
+        p1, p2 = rect.ltrb()
+        p1.x -= rect.width * self.left
+        p1.y -= rect.height * self.top
+        p2.x += rect.width * self.right
+        p2.y += rect.height * self.bottom
+
+        return Rect.from_ltrb(p1, p2)
+
+
 class PropMeta(BaseModel):
     """属性元数据"""
 
@@ -66,6 +89,7 @@ class PropMeta(BaseModel):
     """属性值描述"""
     size: Size
     """属性分类器输入尺寸"""
+    border_extend: Optional[BorderExtend] = None
     color: str = "WHITE"
     """属性默认颜色"""
     # thickness :Optional[int])  # 线粗细
@@ -198,7 +222,7 @@ class LabelMeta(BaseModel):
     """禁用标签文本, FIXME: 和LabelCfg中内容重复?"""
 
     def cat_meta(
-        self, id_: Optional[int] = None, name: Optional[str] = None
+            self, id_: Optional[int] = None, name: Optional[str] = None
     ) -> CatMeta:
         """获取类别配置"""
         if id_ is not None:
@@ -212,7 +236,7 @@ class LabelMeta(BaseModel):
         raise NotImplementedError("程序BUG")
 
     def prop_meta(
-        self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+            self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
     ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)

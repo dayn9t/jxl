@@ -14,6 +14,9 @@ jvi = { path = "/home/jiang/py/jvi" }
 pydantic = "*"
 typer = "*"
 loguru = "*"
+ultralytics = "*"
+onnxruntime = "*"
+onnx = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
