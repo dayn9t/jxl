@@ -16,13 +16,16 @@ from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 
+
 class DistInfo(BaseModel):
     image: Path
     dist: int
 
+
 class DistItem(BaseModel):
     image: Path
     dists: List[DistInfo]
+
 
 class DistSet(BaseModel):
     items: List[DistItem] = []
@@ -33,6 +36,7 @@ class S4Cfg(BaseModel):
     view_size: Size
     """窗口尺寸 TODO: viewer, label, prop"""
     object_size: Size
+
 
 class S4Labeler(RecordViewer):
 
@@ -52,7 +56,7 @@ class S4Labeler(RecordViewer):
             "  [F1] 显示当前信息",
             "对象类别按键表：",
         ]
-        #self.help_msgs.extend(meta.cat_key_strs())
+        # self.help_msgs.extend(meta.cat_key_strs())
 
     def on_change_image(self, index: int) -> None:
         """处理图片切换事件"""
@@ -122,8 +126,6 @@ class S4Labeler(RecordViewer):
 # args: /var/ias/snapshot/shtm/n1/work 2021-04-11 can amount
 
 
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="目标属性标注")
     parser.add_argument("src_file", type=Path, help="图片目录")
@@ -131,7 +133,9 @@ def main() -> None:
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
-    rs = load_tiles(opt.folder, opt.meta_id, cat, opt.property, opt.exclude_conf, opt.min_prop)
+    rs = load_tiles(
+        opt.folder, opt.meta_id, cat, opt.property, opt.exclude_conf, opt.min_prop
+    )
     assert len(rs) > 0
     print("加载对象:", len(rs))
 

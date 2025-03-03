@@ -222,7 +222,7 @@ class LabelMeta(BaseModel):
     """禁用标签文本, FIXME: 和LabelCfg中内容重复?"""
 
     def cat_meta(
-            self, id_: Optional[int] = None, name: Optional[str] = None
+        self, id_: Optional[int] = None, name: Optional[str] = None
     ) -> CatMeta:
         """获取类别配置"""
         if id_ is not None:
@@ -236,7 +236,7 @@ class LabelMeta(BaseModel):
         raise NotImplementedError("程序BUG")
 
     def prop_meta(
-            self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+        self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
     ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)

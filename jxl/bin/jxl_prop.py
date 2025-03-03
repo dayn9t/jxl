@@ -111,14 +111,35 @@ def main() -> None:
     parser.add_argument(
         "-e", "--exclude_conf", type=float, default=1.0, help="排除置信度大于该值的对象"
     )
-    parser.add_argument("-m", "--min_prop", type=int, default=-2, help="属性最小值：-3 错误，-2 排除，-1 待定，非负 正常值")
+    parser.add_argument(
+        "-m",
+        "--min_prop",
+        type=int,
+        default=-2,
+        help="属性最小值：-3 错误，-2 排除，-1 待定，非负 正常值",
+    )
+    parser.add_argument(
+        "-s",
+        "--sort_by_conf",
+        type=int,
+        default=0,
+        help="基于置信度排序：0 无排序，1 升序，2 降序",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
     meta = find_meta(opt.meta_id, opt.folder).unwrap()
 
     cat = meta.cat_meta(name=opt.category).id
-    rs = load_tiles(opt.folder, opt.meta_id, cat, opt.property, opt.exclude_conf, opt.min_prop)
+    rs = load_tiles(
+        opt.folder,
+        opt.meta_id,
+        cat,
+        opt.property,
+        opt.exclude_conf,
+        opt.min_prop,
+        opt.sort_by_conf,
+    )
     assert len(rs) > 0
     print("加载对象:", len(rs))
 

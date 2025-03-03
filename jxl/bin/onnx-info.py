@@ -3,6 +3,7 @@ from pathlib import Path
 import onnxruntime as ort
 import onnx
 
+
 def main1(model_path: Path):
 
     providers = ["CPUExecutionProvider"]
@@ -10,9 +11,7 @@ def main1(model_path: Path):
     session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
     session = ort.InferenceSession(
-        model_path,
-        session_options=session_options,
-        providers=providers
+        model_path, session_options=session_options, providers=providers
     )
 
     inputs_info = session.get_inputs()

@@ -39,10 +39,18 @@ class TileObject:
     image: Option[ImageNda] = Null
     """目标图像"""
 
-    def value_of(self, name: str) -> float:
+    def value_of(self, name: str) -> int:
         """获取对象属性值"""
+        return self.prop_of(name).value
+
+    def conf_of(self, name: str) -> float:
+        """获取对象属性值"""
+        return self.prop_of(name).confidence
+
+    def prop_of(self, name: str) -> ProbValue:
+        """获取对象属性值/置信度对"""
         v = ProbValue(0, 0)
-        return self.obj.properties.get(name, v).value
+        return self.obj.properties.get(name, v)
 
     def draw_on(self, canvas: ImageNda, cfg: PropMeta) -> None:
         """绘制瓦片"""
@@ -60,7 +68,7 @@ class TileObject:
         resize(self.image.unwrap(), dst)
 
     def draw_label(
-            self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
+        self, prop: str, canvas: ImageNda, active: bool, prop_meta: PropMeta
     ) -> None:
         """绘制标注信息"""
         p = self.obj.prop(prop)
@@ -127,14 +135,20 @@ class TileRecord:
 
 
 def load_tiles(
-        src_dir: StrPath, meta_id: int, category: int, prop: str, exclude_conf: float, min_prop: int
+    src_dir: StrPath,
+    meta_id: int,
+    category: int,
+    prop: str,
+    exclude_conf: float,
+    min_prop: int,
+    sort_by_conf: int,
 ) -> TileObjects:
     """加载瓦片对象"""
     rs = load_label_records(src_dir, meta_id, LabelFilter.LABELED)
     assert len(rs) > 0
     print("加载图片:", len(rs))
 
-    tiles = []
+    tiles: TileObjects = []
     for r in rs:
         label = hop_load_label(r.path, meta_id).unwrap()
         assert label
@@ -146,5 +160,10 @@ def load_tiles(
                 if v >= min_prop:
                     tiles.append(t)
 
-    tiles.sort(key=lambda o1: o1.value_of(prop))
+    if sort_by_conf == 1:
+        tiles.sort(key=lambda o1: o1.conf_of(prop))
+    elif sort_by_conf == 2:
+        tiles.sort(key=lambda o1: o1.conf_of(prop), reverse=True)
+    else:
+        tiles.sort(key=lambda o1: o1.value_of(prop))
     return tiles
