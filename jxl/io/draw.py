@@ -3,7 +3,7 @@ import cv2  # type: ignore
 from jvi.drawing.color import COLORS7, Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
-from jxl.common import ProbValue
+from jxl.label.prop import ProbValue
 
 
 def draw_boxi(

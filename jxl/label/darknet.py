@@ -6,7 +6,7 @@ from jvi.drawing.color import Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import get_roi_image
-from jxl.common import ProbValue
+from jxl.label.prop import ProbValue
 from jxl.label.info import (
     ImageLabelInfos,
     ImageLabelPairs,

@@ -9,7 +9,7 @@ from jvi.geo.point2d import Points, Point, array_normalize
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
-from jxl.common import ProbValue, ProbProperties, ProbPropertyMap
+from jxl.label.prop import ProbValue, ProbProperties, ProbPropertyMap
 from jxl.io.draw import draw_box
 from jxl.model.types import ModelInfo
 

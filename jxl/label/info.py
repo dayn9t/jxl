@@ -12,7 +12,7 @@ from jvi.geo.size2d import Size
 from jvi.geo.trans import points_ncs_trans_in_win
 from jvi.image.image_nda import ImageNda
 from jvi.image.util import make_roi_surround_color
-from jxl.common import ProbValue, ProbPropertyMap
+from jxl.label.prop import ProbValue, ProbPropertyMap
 from jxl.det.idetector import DetObject, DetObjects
 from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta

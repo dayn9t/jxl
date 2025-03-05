@@ -4,10 +4,12 @@ import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
 from jcx.text.txt_json import load_json, save_json
-
+from jcx.sys.fs import files_in
 from pydantic import BaseModel
 from typing import List, Dict
 from pathlib import Path
+import numpy as np
+from jxl.common import JXL_ASSERTS, JXL_IMAGES_DIR
 
 
 class FileInfo(BaseModel):
@@ -17,20 +19,25 @@ class FileInfo(BaseModel):
 class SampleTab(BaseModel):
     files: List[FileInfo] = []
     dist_mat: Dict[int, Dict[int, float]] = {}
-    likelihood_mat: Dict[int, Dict[int, float]] = {}
 
-    def cale_likelihood_mat(self, model):
+    def cale_likelihood_mat(self, model, dst_dir: Path):
         """计算似然矩阵"""
+        items = sorted(self.dist_mat.items())
 
-        for i, m in self.dist_mat.items():
-            for j, dist in m.items():
-                im1 = self.files[i].image
-                im2 = self.files[j].image
-                s = cale_similarity(model, im1, im2)
-                if i not in self.likelihood_mat:
-                    self.likelihood_mat[i] = {}
-                self.likelihood_mat[i][j] = s
-            print("#%d" % i, len(self.likelihood_mat[i]))
+        for i, m in items:
+            dst_file = dst_dir / f"{i}.json"
+            if dst_file.is_file():
+                print("skip:", dst_file)
+            else:
+                likelihood_map: Dict[int, float] = {}
+                for j, dist in m.items():
+                    im1 = self.files[i].image
+                    im2 = self.files[j].image
+                    s = cale_similarity(model, im1, im2)
+                    likelihood_map[j] = float(s)
+                print("#%d" % i, len(likelihood_map))
+
+                save_json(likelihood_map, dst_file)
 
 
 preprocess = transforms.Compose(
@@ -77,10 +84,10 @@ def cale_similarity(model, image_path1, image_path2):
 
 
 def main():
-    # 示例图像路径
-    image_path1 = "/home/jiang/py/jxl/assets/images/10-20-49.241_1.jpg"
-    image_path2 = "/home/jiang/py/jxl/assets/images/10-20-50.041_1.jpg"
-    image_path2 = "/home/jiang/py/jxl/assets/images/10-21-23.839_1.jpg"
+
+    files = files_in(JXL_IMAGES_DIR, ".jpg")
+
+    print("files:", JXL_IMAGES_DIR)
 
     # 加载预训练的 ResNet 模型
     model = models.resnet18(pretrained=True)
@@ -89,24 +96,30 @@ def main():
     model = torch.nn.Sequential(*list(model.children())[:-1])
     model.eval()
 
-    # 计算相似度
-    # similarity = cale_similarity(model, image_path1, image_path2)
-    # print(f"图像相似度: {similarity}")
+    num_files = len(files)
+    similarity_matrix = np.zeros((num_files, num_files), dtype=int)
 
-    cale(model)
+    for i in range(num_files):
+        for j in range(i + 1, num_files):
+            similarity = cale_similarity(model, files[i], files[j])
+            similarity = int(similarity * 100)
+            similarity_matrix[i, j] = similarity
+            similarity_matrix[j, i] = similarity  # Symmetric matrix
+
+    print("Similarity Matrix:")
+    print(similarity_matrix)
+    # cale(model)
 
 
 def cale(model):
-    src_file = "/mnt/data/var/howell/s4/ias/meta_shop/d1/n1/2_images.json"
-    dst_file = "/mnt/data/var/howell/s4/ias/meta_shop/d1/n1/2_images_like.json"
+    src_file = "/var/howell/s4/ias/meta_shop/d1/n1/2_images.json"
+    dst_dir = Path("/var/howell/s4/ias/meta_shop/d1/n1/similarity")
+
     print("load json file:", src_file)
     sample_tab = load_json(src_file, SampleTab).unwrap()
-    sample_tab.cale_likelihood_mat(model)
-    save_json(
-        sample_tab,
-        dst_file,
-    )
-    print("Done:", dst_file)
+    sample_tab.cale_likelihood_mat(model, dst_dir)
+
+    print("Done!")
 
 
 if __name__ == "__main__":
