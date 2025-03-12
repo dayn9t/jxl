@@ -23,7 +23,7 @@ class LabelRecord(PImageEntry):
     info: ImageLabelInfo
     """图像标注信息"""
 
-    def load_image(self) -> ImageNda:
+    def get_image(self) -> ImageNda:
         """加载图片"""
         image: ImageNda = ImageNda.load(self.image)
         return image

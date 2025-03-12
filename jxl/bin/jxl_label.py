@@ -3,7 +3,7 @@
 import argparse
 from copy import deepcopy
 from pathlib import Path
-from typing import Final
+from typing import Final, List
 
 from jcx.time.dt import now_iso_str
 from jcx.ui.key import Key, Flag
@@ -32,11 +32,17 @@ NEAR_R2: Final[float] = 0.05**2 / 4  # TODO:
 class Labeler(RecordViewer):
 
     def __init__(
-        self, meta: LabelMeta, meta_id: int, snapshot_dir: Path, verbose: bool
+        self,
+        meta: LabelMeta,
+        meta_id: int,
+        snapshot_dir: Path,
+        visible_props: List[str],
+        verbose: bool,
     ):
         super().__init__("labeler", meta.view_size)
         self.meta_id = meta_id
         self.snapshot_dir = snapshot_dir
+        self.visible_props = visible_props
         self.verbose = verbose
 
         self.label_meta = meta
@@ -111,6 +117,20 @@ class Labeler(RecordViewer):
         self.cur_vertex = Null
         self.cur_object = Null
         self.saved = True
+
+        size = self.record().get_image().size()
+        rects = [
+            ob.rect().absolutize(size).round()
+            for ob in self.cur_label.objects
+            if ob.id >= 0
+        ]
+        rects.sort(key=lambda r1: r1.x)
+
+        for i, r in enumerate(rects):
+            # print(f"\t{r.width:.2f}x{r.height:.2f} ar={r.aspect_ratio():.2f}")
+            print(
+                f"\t#{i} {int(r.width)}x{int(r.height)} ar={r.aspect_ratio():.2f}, {size}"
+            )
 
     def on_key(self, key: int) -> int:
         """按键响应"""
@@ -275,7 +295,9 @@ class Labeler(RecordViewer):
             cat_filter = -1
         else:
             cat_filter = self.cur_category
-        self.cur_label.draw_on(canvas, self.label_meta, cat_filter=cat_filter)
+        self.cur_label.draw_on(
+            canvas, self.label_meta, self.visible_props, cat_filter=cat_filter
+        )
         text = ""
         if self.labeled:
             text += "Labeled   "
@@ -390,6 +412,13 @@ def main() -> None:
         help="置信度阈值, 标注错误置信度为-2",
     )
     parser.add_argument(
+        "-P",
+        "--properties",
+        type=str,
+        default="",
+        help="要显示的属性列表，逗号分割，all-所有属性",
+    )
+    parser.add_argument(
         "-p", "--pattern", type=str, help="文件要匹配的模式，用于过滤数据"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
@@ -406,9 +435,11 @@ def main() -> None:
     )
     assert len(rs) > 0, "不存在标注记录"
     print("加载样本总数:", len(rs))
+    visible_properties = opt.properties.split(",")
+    print("可见属性:", visible_properties)
 
     snapshot_dir = Path(opt.folder, "snapshot")
-    labeler = Labeler(meta, opt.meta_id, snapshot_dir, opt.verbose)
+    labeler = Labeler(meta, opt.meta_id, snapshot_dir, visible_properties, opt.verbose)
     labeler.set_records(rs)
     labeler.run()
 

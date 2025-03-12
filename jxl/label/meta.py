@@ -43,7 +43,7 @@ class ValueCfg(BaseModel):
 
     def get_sign(self) -> str:
         """获取属性值符号表示"""
-        return self.sign or self.name
+        return self.sign
 
 
 class LabelCfg(BaseModel):
@@ -92,7 +92,7 @@ class PropMeta(BaseModel):
     border_extend: Optional[BorderExtend] = None
     color: str = "WHITE"
     """属性默认颜色"""
-    # thickness :Optional[int])  # 线粗细
+    # thickness :Optional[int]  # 线粗细
     values: List[ValueCfg] = Field(default_factory=list)
     """属性值集合"""
 
@@ -217,9 +217,6 @@ class LabelMeta(BaseModel):
     """类别条目集合"""
     properties: List[PropMeta]
     """属性条目集合"""
-
-    disable_label_text: bool = False
-    """禁用标签文本, FIXME: 和LabelCfg中内容重复?"""
 
     def cat_meta(
         self, id_: Optional[int] = None, name: Optional[str] = None

@@ -252,8 +252,9 @@ class ImageLabelInfo(BaseModel):
 
     def draw_on(
         self,
-        bgr: ImageNda,
+        canvas: ImageNda,
         cfg: LabelMeta,
+        visible_props: List[str],
         show_conf: bool = True,
         cat_filter: int = -1,
     ) -> None:
@@ -262,7 +263,7 @@ class ImageLabelInfo(BaseModel):
         for ob in self.objects:
             # 修正roi BUG
             if ob.is_roi():
-                make_roi_surround_color(bgr, ob.polygon)
+                make_roi_surround_color(canvas, ob.polygon)
 
             if cat_filter >= 0 and cat_filter != ob.prob_class.value:
                 continue
@@ -272,23 +273,22 @@ class ImageLabelInfo(BaseModel):
             color = Color.parse(cat_cfg.color)
             assert color
             label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
-            for k, v in ob.properties.items():
-                p = cfg.prop_value_sign(ob.prob_class.value, k, v.value)
+            for prop_name, v in ob.properties.items():
+                if "all" not in visible_props and prop_name not in visible_props:
+                    continue
+                p = cfg.prop_value_sign(ob.prob_class.value, prop_name, v.value)
                 match p:
                     case Some(v_name):
                         if len(v_name) > 0:
                             label += " " + v_name + (v.conf_str() if show_conf else "")
                     case _:
-                        print("WARN: 无效属性", ob.prob_class.value, k, v.value)
+                        print("WARN: 无效属性", ob.prob_class.value, prop_name, v.value)
                     # fmt = ' %s=%d' if type(v) == int else ' %s=%.2f'
                     # label += fmt % (k, v)
             if cfg.label.title_style == 0:
                 label = ""
-            polylines(bgr, ob.polygon, color, 1)
-            if cfg.disable_label_text:
-                rectangle(bgr, ob.rect(), color, cfg.label.thickness)
-            else:
-                draw_boxf(bgr, ob.rect(), color, label, cfg.label.thickness)
+            polylines(canvas, ob.polygon, color, 1)
+            draw_boxf(canvas, ob.rect(), color, label, cfg.label.thickness)
 
     def clean(self, meta: LabelMeta) -> None:
         """清理无效数据"""
