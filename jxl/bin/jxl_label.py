@@ -125,12 +125,9 @@ class Labeler(RecordViewer):
             if ob.id >= 0
         ]
         rects.sort(key=lambda r1: r1.x)
-
         for i, r in enumerate(rects):
             # print(f"\t{r.width:.2f}x{r.height:.2f} ar={r.aspect_ratio():.2f}")
-            print(
-                f"\t#{i} {int(r.width)}x{int(r.height)} ar={r.aspect_ratio():.2f}, {size}"
-            )
+            print(f"\t#{i} {int(r.width)}x{int(r.height)} ar={r.aspect_ratio():.2f}")
 
     def on_key(self, key: int) -> int:
         """按键响应"""
