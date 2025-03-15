@@ -22,7 +22,7 @@ def test_file():
 
 def test_img2label():
     """从图片文件获取标注文件"""
-    f = Path("images/3.14.jpg")
+    f = Path("sign/3.14.jpg")
     l = Path("labels/3.14.txt")
     assert img2label(f) == l
 
