@@ -22,7 +22,7 @@ from jxl.det.yolo.d2d_yolo import D2dYolo
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Yolo5检测器")
+    parser = argparse.ArgumentParser(description="Yolo检测器")
     parser.add_argument("model", type=Path, help="模型文件路径")
     parser.add_argument("src_dir", type=Path, help="图像来源目录")
     parser.add_argument(

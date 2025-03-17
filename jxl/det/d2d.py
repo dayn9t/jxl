@@ -21,7 +21,8 @@ class D2dOpt(BaseModel):
     """置信度阈值"""
     iou_thr: float
     """非极大值抑制中的重叠率阈值"""
-
+    track: bool = False
+    """是否跟踪"""
     # class Config:
     #    allow_mutation = False
 
@@ -37,6 +38,9 @@ class D2dObject(BaseModel):
     rect: Rect
     """目标区域，归一化"""
 
+    def conf_int(self) -> int:
+        """获取置信度的整数值"""
+        return int(self.conf * 100)
 
 D2dObjects: TypeAlias = List[D2dObject]
 """检测到的2D目标集合"""
@@ -81,5 +85,5 @@ def draw_d2d_objects(canvas: ImageNda, objects: D2dObjects, thickness: int = 2, 
     """绘制检测条目"""
     for ob in objects:
         color = COLORS7[ob.cls]
-        label = "" if not no_label else str(int(ob.conf * 100))
+        label = "" if no_label else f"{ob.id}({ob.conf_int()})"
         draw_boxf(canvas, ob.rect, color, label, thickness)

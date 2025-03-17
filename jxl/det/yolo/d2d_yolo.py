@@ -11,7 +11,7 @@ from jxl.det.yolo.adapter import boxes_to_d2d
 class D2dYolo(Detector2D):
     """目标检测器"""
 
-    model_class = "detector_y8"
+    model_class = "d2d_yolo"
 
     def __init__(self, model_path: Path, opt: D2dOpt, device_name: str = "", verbose: bool = False):
         super().__init__(model_path, opt, device_name, verbose)
@@ -22,16 +22,25 @@ class D2dYolo(Detector2D):
         """检测目标"""
         # data = image.data()[:, :, ::-1]  # BGR => RGB
         data = image.data()
-        rs = self._model(
-            data,
-            conf=self._opt.conf_thr,
-            iou=self._opt.iou_thr,
-            verbose=self._verbose,
-        )
+
+        if self._opt.track:
+            rs = self._model.track(
+                data,
+                persist=True,
+                # conf=self._opt.conf_thr,
+                # iou=self._opt.iou_thr,
+                verbose=self._verbose,
+            )
+        else:
+            rs = self._model(
+                data,
+                conf=self._opt.conf_thr,
+                iou=self._opt.iou_thr,
+                verbose=self._verbose,
+            )
         assert isinstance(rs, list)
         assert len(rs) == 1
         assert isinstance(rs[0], Results)
         # print('YOLO result:', type(rs[0]))
         objects = boxes_to_d2d(rs[0].boxes)
-
         return D2dResult(objects=objects)

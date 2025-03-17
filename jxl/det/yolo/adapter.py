@@ -11,7 +11,7 @@ def boxes_to_d2d(boxes: Boxes) -> D2dObjects:
     xyxyn_arr = boxes.xyxyn.tolist()
     conf_arr = boxes.conf.tolist()
     cls_arr = boxes.cls.int().tolist()
-    id_arr = boxes.id.int().tolist() if boxes.id else [0] * len(xyxyn_arr)
+    id_arr = boxes.id.int().tolist() if boxes.id is not None else [0] * len(xyxyn_arr)
 
     objects = []
     for i in range(len(xyxyn_arr)):
