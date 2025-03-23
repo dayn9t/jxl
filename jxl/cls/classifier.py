@@ -51,7 +51,7 @@ class ClassifierRes(Protocol):
 
     def top_confidence(self) -> float:
         """最可能类别置信度"""
-        return self.top().confidence
+        return self.top().conf
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""
@@ -115,7 +115,7 @@ class ClassifierResList(ClassifierRes):
 
     def top_confidence(self) -> float:
         """最可能类别置信度"""
-        return self.top().confidence
+        return self.top().conf
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""

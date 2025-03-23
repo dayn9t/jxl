@@ -102,14 +102,14 @@ def draw_objects(
         color = COLORS7[o.prob_class.value]
         label = ""
         if not no_label:
-            label = str(int(o.prob_class.confidence * 100))
+            label = str(int(o.prob_class.conf * 100))
             for name, pv in Lict(o.properties).items():
-                if pv.value or pv.confidence < 0.8:
+                if pv.value or pv.conf < 0.8:
                     fmt = " %s=%d" if isinstance(pv.value, int) else " %s=%.2f"
                     label += fmt % (name, pv.value)
                     # print(p.confidence)
-                    if pv.confidence < 0.8:
-                        label += "(%d)" % int(pv.confidence * 100)
+                    if pv.conf < 0.8:
+                        label += "(%d)" % int(pv.conf * 100)
         draw_box(bgr, o.rect(), color, label, thickness)
 
 
@@ -138,7 +138,7 @@ class DetRes(ABC):
 
     def min_prob(self) -> float:
         """检测器结果中的最小置信度, 用于筛选低置信度样本"""
-        confs = [o.prob_class.confidence for o in self.objects()]
+        confs = [o.prob_class.conf for o in self.objects()]
         return min(confs)
 
 

@@ -45,7 +45,7 @@ class TileObject:
 
     def conf_of(self, name: str) -> float:
         """获取对象属性值"""
-        return self.prop_of(name).confidence
+        return self.prop_of(name).conf
 
     def prop_of(self, name: str) -> ProbValue:
         """获取对象属性值/置信度对"""
@@ -74,7 +74,7 @@ class TileObject:
         p = self.obj.prop(prop)
         value = prop_meta.value_meta(p.value)
         # rectangle(canvas, self.dst_rect, color, 4)
-        label = "%s(%d%%)" % (value.name, int(100 * p.confidence))
+        label = "%s(%d%%)" % (value.name, int(100 * p.conf))
         draw_boxi(canvas, self.dst_rect, Color.parse(value.color), label, 2)
 
         if active:
@@ -90,7 +90,7 @@ class TileObject:
     def exclude_prop_if(self, prop: str, conf_thr: float) -> None:
         """将属性设置为排除, 当该属性置信度超过阈值"""
         p = self.obj.properties.get(prop)
-        if p and conf_thr < p.confidence <= 1:
+        if p and conf_thr < p.conf <= 1:
             self.obj.properties[prop] = ProbValue.exclude()
             hop_save_label(self.root, self.path, self.meta_id)
 

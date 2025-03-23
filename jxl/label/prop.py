@@ -26,7 +26,7 @@ class ProbValue:
 
     value: int
     """值: int/float/str"""
-    confidence: float
+    conf: float
     """置信度"""
 
     @classmethod
@@ -49,7 +49,7 @@ class ProbValue:
 
     def conf_str(self) -> str:
         """获取置信度字符串"""
-        c = int(self.confidence * 100)
+        c = int(self.conf * 100)
         return "(%d)" % c if c < PROB_THR or c > 100 else ""
 
     def clone(self) -> Self:
@@ -58,7 +58,7 @@ class ProbValue:
 
     def round(self, n: int = 3) -> Self:
         """置信度舍入到指定位数"""
-        return ProbValue(self.value, round(self.confidence, n))
+        return ProbValue(self.value, round(self.conf, n))
 
 
 PropItem: TypeAlias = LictItem[str, ProbValue]

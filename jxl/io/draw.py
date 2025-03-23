@@ -57,5 +57,5 @@ def draw_class_item(bgr: ImageNda, item: ProbValue, thickness: int = 3) -> None:
     """绘制分类条目"""
     rect = Rect(0.1, 0.1, 0.8, 0.8)
     color = COLORS7[item.value]
-    label = str(int(item.confidence * 100))
+    label = str(int(item.conf * 100))
     draw_boxf(bgr, rect, color, label, thickness)

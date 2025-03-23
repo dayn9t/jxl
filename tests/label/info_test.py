@@ -14,7 +14,7 @@ def test_label_info():
     assert o1.min_conf() == 0.3
 
     o2 = o1.clone()
-    o2.prob_class.confidence = 0.2
+    o2.prob_class.conf = 0.2
     assert o2.min_conf() == 0.2
     assert o1.min_conf() == 0.3
 

@@ -128,9 +128,9 @@ class ObjectLabelInfo(BaseModel):
         p = min(
             self.properties.values(),
             default=self.prob_class,
-            key=lambda x: x.confidence,
+            key=lambda x: x.conf,
         )
-        return min(self.prob_class.confidence, p.confidence)
+        return min(self.prob_class.conf, p.conf)
 
     def move(self, offset: Point) -> None:
         self.polygon = [p + offset for p in self.polygon]
