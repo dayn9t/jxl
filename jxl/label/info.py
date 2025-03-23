@@ -12,8 +12,8 @@ from jvi.geo.size2d import Size
 from jvi.geo.trans import points_ncs_trans_in_win
 from jvi.image.image_nda import ImageNda
 from jvi.image.util import make_roi_surround_color
+
 from jxl.label.prop import ProbValue, ProbPropertyMap
-from jxl.det.idetector import DetObject, DetObjects
 from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta
 from loguru import logger
@@ -46,12 +46,12 @@ class ObjectLabelInfo(BaseModel):
 
     @classmethod
     def new(
-        cls,
-        id_: int,
-        category: int,
-        confidence: float,
-        polygon: Points,
-        properties: Option[ProbPropertyMap] = Null,
+            cls,
+            id_: int,
+            category: int,
+            confidence: float,
+            polygon: Points,
+            properties: Option[ProbPropertyMap] = Null,
     ) -> "ObjectLabelInfo":
         """创建标签信息"""
         assert polygon is not None
@@ -66,16 +66,6 @@ class ObjectLabelInfo(BaseModel):
     def new_roi(cls, polygon: Points) -> Self:
         """创建感兴趣区域"""
         return ObjectLabelInfo.new(ID_ROI, CAT_ROI, 0, polygon)
-
-    @classmethod
-    def from_detected(cls, o: DetObject) -> Self:
-        """从检测对象构建标注对象"""
-        return ObjectLabelInfo(
-            id=o.id,
-            prob_class=o.prob_class,
-            polygon=deepcopy(o.polygon),
-            properties=o.property_map(),
-        )
 
     def draw_on(self, bgr: ImageNda, colors: Colors, line_thickness: int = 1) -> None:
         """绘制标注信息在图上"""
@@ -163,13 +153,13 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def new(
-        cls,
-        user_agent: str,
-        objects: ObjectLabelInfos,
-        date: Optional[str] = None,
-        last_modified: Optional[str] = None,
-        sensor: int = 0,
-        host: str = "",
+            cls,
+            user_agent: str,
+            objects: ObjectLabelInfos,
+            date: Optional[str] = None,
+            last_modified: Optional[str] = None,
+            sensor: int = 0,
+            host: str = "",
     ) -> Self:
         date = date or now_iso_str()
         last_modified = last_modified or date
@@ -189,18 +179,6 @@ class ImageLabelInfo(BaseModel):
         """生成空的标注信息，只有包括最大化的ROI"""
         roi = ObjectLabelInfo.new_roi(Rect.one().vertexes())
         return ImageLabelInfo.new(user_agent, objects=[roi], sensor=sensor)
-
-    @classmethod
-    def from_det_objects(
-        cls, objects: DetObjects, roi: Optional[Points] = None
-    ) -> Self:
-        """从检测器结果构建标注信息"""
-        objs = [ObjectLabelInfo.from_detected(o) for o in objects]
-
-        if roi:
-            ob = ObjectLabelInfo.new_roi(roi)
-            objs.insert(0, ob)
-        return ImageLabelInfo.new("detector", objects=objs)
 
     def roi(self) -> Option[Points]:
         """获取ROI引用"""
@@ -251,12 +229,12 @@ class ImageLabelInfo(BaseModel):
                 id_ += 1
 
     def draw_on(
-        self,
-        canvas: ImageNda,
-        cfg: LabelMeta,
-        visible_props: List[str],
-        show_conf: bool = True,
-        cat_filter: int = -1,
+            self,
+            canvas: ImageNda,
+            cfg: LabelMeta,
+            visible_props: List[str],
+            show_conf: bool = True,
+            cat_filter: int = -1,
     ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制
