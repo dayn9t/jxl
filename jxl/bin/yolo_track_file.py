@@ -21,10 +21,10 @@ def main(src_file: str, dst_dir: str):
             break
 
         n += 1
-        #if n % 5 != 0:
+        # if n % 5 != 0:
         #    continue
-        #timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
-        #print(f"#{n} Timestamp: {timestamp} ms")
+        # timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
+        # print(f"#{n} Timestamp: {timestamp} ms")
         number = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         if number % 4 != 0:
             continue
@@ -36,9 +36,9 @@ def main(src_file: str, dst_dir: str):
         result = results[0]
 
         # Print bounding boxes, classes, and probabilities
-        #print("Bounding Boxes:", result.boxes.xyxy.tolist())
-        #print("Classes:", result.boxes.cls)
-        #print("Probabilities:", result.boxes.conf)
+        # print("Bounding Boxes:", result.boxes.xyxy.tolist())
+        # print("Classes:", result.boxes.cls)
+        # print("Probabilities:", result.boxes.conf)
 
         annotated_frame = results[0].plot()
         cv2.imshow("YOLO11 Tracking", annotated_frame)
@@ -47,9 +47,9 @@ def main(src_file: str, dst_dir: str):
         if number % 20 == 0:
             print("save frame", number)
 
-
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     # catch_show_err(main)

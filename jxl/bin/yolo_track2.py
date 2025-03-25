@@ -1,6 +1,7 @@
 import cv2
 
 from ultralytics import YOLO
+
 # !/opt/ias/env/bin/python
 
 import argparse
@@ -54,7 +55,6 @@ def main():
         # Break the loop if 'q' is pressed
         if cv2.waitKey(800) & 0xFF == ord("q"):
             break
-
 
     cv2.destroyAllWindows()
 

@@ -25,9 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description="Yolo检测器")
     parser.add_argument("model", type=Path, help="模型文件路径")
     parser.add_argument("src_dir", type=Path, help="图像来源目录")
-    parser.add_argument(
-        "-c", "--conf_thr", type=float, default=0.5, help="置信度阈值"
-    )
+    parser.add_argument("-c", "--conf_thr", type=float, default=0.5, help="置信度阈值")
     parser.add_argument(
         "-i", "--iou_thr", type=float, default=0.7, help="非极大值抑制重叠率阈值"
     )
@@ -50,7 +48,11 @@ def main():
         print("没有搜索到指定的文件")
         sys.exit(0)
 
-    det_opt = D2dOpt(input_shape=(opt.img_size, opt.img_size), conf_thr=opt.conf_thr, iou_thr=opt.iou_thr)
+    det_opt = D2dOpt(
+        input_shape=(opt.img_size, opt.img_size),
+        conf_thr=opt.conf_thr,
+        iou_thr=opt.iou_thr,
+    )
     detector = D2dYolo(opt.model, det_opt)
     wait = int(opt.wait * 1000)
     image_out = ImageNda(out_size)

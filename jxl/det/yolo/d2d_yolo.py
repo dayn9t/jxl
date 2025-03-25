@@ -13,7 +13,13 @@ class D2dYolo(Detector2D):
 
     model_class = "d2d_yolo"
 
-    def __init__(self, model_path: Path, opt: D2dOpt, device_name: str = "", verbose: bool = False):
+    def __init__(
+        self,
+        model_path: Path,
+        opt: D2dOpt,
+        device_name: str = "",
+        verbose: bool = False,
+    ):
         super().__init__(model_path, opt, device_name, verbose)
 
         self._model = YOLO(model_path, task="detect")

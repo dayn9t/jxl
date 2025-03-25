@@ -3,7 +3,13 @@ from pathlib import Path
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
-from jxl.det.yolo_old.idetector_old import DetRes, DetOpt, IDetector, DetObjects, DetObject
+from jxl.det.yolo_old.idetector_old import (
+    DetRes,
+    DetOpt,
+    IDetector,
+    DetObjects,
+    DetObject,
+)
 from ultralytics import YOLO
 from ultralytics.engine.results import Boxes, Results
 

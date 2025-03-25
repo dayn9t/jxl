@@ -29,6 +29,7 @@ class D2dOpt(BaseModel):
 
 class D2dObject(BaseModel):
     """检测到的2D目标"""
+
     id: int
     """目标ID"""
     cls: int
@@ -41,6 +42,7 @@ class D2dObject(BaseModel):
     def conf_int(self) -> int:
         """获取置信度的整数值"""
         return int(self.conf * 100)
+
 
 D2dObjects: TypeAlias = List[D2dObject]
 """检测到的2D目标集合"""
@@ -68,7 +70,9 @@ class Detector2D(ABC):
         return d
 
     @abstractmethod
-    def __init__(self, model_path: Path, opt: D2dOpt, device_name: str, verbose: bool = False):
+    def __init__(
+        self, model_path: Path, opt: D2dOpt, device_name: str, verbose: bool = False
+    ):
         """创建分类器, 为 cls.new 提供模板"""
         self._model_path = model_path
         self._opt = opt
@@ -81,7 +85,9 @@ class Detector2D(ABC):
         pass
 
 
-def draw_d2d_objects(canvas: ImageNda, objects: D2dObjects, thickness: int = 2, no_label: bool = False) -> None:
+def draw_d2d_objects(
+    canvas: ImageNda, objects: D2dObjects, thickness: int = 2, no_label: bool = False
+) -> None:
     """绘制检测条目"""
     for ob in objects:
         color = COLORS7[ob.cls]

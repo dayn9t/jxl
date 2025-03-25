@@ -41,18 +41,18 @@ class ObjectLabelInfo(BaseModel):
     """类别"""
     polygon: Points
     """包含目标的多边形区域"""
-    properties: ProbPropertyMap = Field(default_factory=list)
+    properties: ProbPropertyMap = Field(default_factory=dict)
     """属性集合"""
 
     @classmethod
     def new(
-            cls,
-            id_: int,
-            category: int,
-            confidence: float,
-            polygon: Points,
-            properties: Option[ProbPropertyMap] = Null,
-    ) -> "ObjectLabelInfo":
+        cls,
+        id_: int,
+        category: int,
+        confidence: float,
+        polygon: Points,
+        properties: Option[ProbPropertyMap] = Null,
+    ) -> Self:
         """创建标签信息"""
         assert polygon is not None
         return ObjectLabelInfo(
@@ -153,13 +153,13 @@ class ImageLabelInfo(BaseModel):
 
     @classmethod
     def new(
-            cls,
-            user_agent: str,
-            objects: ObjectLabelInfos,
-            date: Optional[str] = None,
-            last_modified: Optional[str] = None,
-            sensor: int = 0,
-            host: str = "",
+        cls,
+        user_agent: str,
+        objects: ObjectLabelInfos,
+        date: Optional[str] = None,
+        last_modified: Optional[str] = None,
+        sensor: int = 0,
+        host: str = "",
     ) -> Self:
         date = date or now_iso_str()
         last_modified = last_modified or date
@@ -229,12 +229,12 @@ class ImageLabelInfo(BaseModel):
                 id_ += 1
 
     def draw_on(
-            self,
-            canvas: ImageNda,
-            cfg: LabelMeta,
-            visible_props: List[str],
-            show_conf: bool = True,
-            cat_filter: int = -1,
+        self,
+        canvas: ImageNda,
+        cfg: LabelMeta,
+        visible_props: List[str],
+        show_conf: bool = True,
+        cat_filter: int = -1,
     ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制

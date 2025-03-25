@@ -34,7 +34,7 @@ class LabelRecord(PImageEntry):
 
     def draw_on(self, canvas: ImageNda, _pos: Point) -> None:
         """把记录绘制在画板上"""
-        self.info.draw_on(canvas, self.meta)
+        self.info.draw_on(canvas, self.meta, ["all"])
         time = iso_to_local(self.info.last_modified)
         label = f"modified={time}  image={self.image}"
         color = LIME

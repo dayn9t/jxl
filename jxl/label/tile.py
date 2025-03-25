@@ -118,7 +118,7 @@ class TileRecord:
             i += 1
         return TileRecord(size, objects, cfg)
 
-    def load_image(self) -> ImageNda:
+    def get_image(self) -> ImageNda:
         """加载图片"""
         image = ImageNda(self.size, color=GRAY)
         for o in self.objects:
