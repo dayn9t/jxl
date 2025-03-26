@@ -76,6 +76,7 @@ def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
                 meta_path = image_path.with_suffix(".json")
                 logger.info(f"#{number} {image_path}")
                 image_in.save(image_path)
+                res.roi = roi
                 save_json(res, meta_path)
 
         cap.release()
@@ -95,7 +96,7 @@ def main():
         if res.is_some():
             task: TaskInfo = res.unwrap()
             logger.info("find task: {}", to_json(task))
-            track_videos(task.data_urls, dst_dir / str(task.id))
+            track_videos(task.data_urls, dst_dir / str(task.id), 10)
             db.task_done(task.id)
         else:
             logger.info("no task")

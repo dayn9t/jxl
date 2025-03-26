@@ -23,7 +23,7 @@ class A2dYolo(Analyzer2D):
             model_dir / opt.d2d_name, opt.d2d, device_name, verbose
         )
         self._prop_models = {}
-        for _id, name in opt.props:
+        for _id, name in opt.props.items():
             model = YOLO(model_dir / name, task="classify")
             self._prop_models[_id] = model
 
@@ -37,5 +37,6 @@ class A2dYolo(Analyzer2D):
             for obj in a2d.objects:
                 roi = image.roi(obj.rect)
                 rs = model(roi.data(), verbose=False)
-                obj.props[_id] = rs[0].probs.tolist()
+                obj.props[_id] = rs[0].probs.data.cpu().tolist()
+
         return a2d

@@ -1,18 +1,13 @@
 from abc import abstractmethod, ABC
 from pathlib import Path
-from typing import Self, List, Dict
-from typing import TypeAlias, Type
+from typing import List, Dict
+from typing import TypeAlias
 
-from fontTools.qu2cu.qu2cu import Point
-from jvi.drawing.color import COLORS7
-from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
 from pydantic import BaseModel
-from ultralytics import YOLO
+
 from jxl.det.d2d import D2dOpt, D2dResult, D2dObject
-from jxl.det.yolo.d2d_yolo import D2dYolo
-from jxl.io.draw import draw_boxf
-from jxl.model.types import ModelInfo
+from jvi.geo.point2d import Points
 
 
 class A2dOpt(BaseModel):
@@ -42,7 +37,7 @@ A2dObjects: TypeAlias = List[A2dObject]
 class A2dResult(BaseModel):
     """2D目标检测器结果"""
 
-    roi: List[Point]
+    roi: Points
     """检测区域"""
     objects: A2dObjects
     """目标"""

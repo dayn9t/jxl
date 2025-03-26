@@ -4,7 +4,7 @@ from jvi.image.image_nda import ImageNda
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-from jxl.det.d2d import Detector2D, D2dOpt, D2dResults, D2dResult
+from jxl.det.d2d import Detector2D, D2dOpt, D2dResult
 from jxl.det.yolo.adapter import boxes_to_d2d
 
 
