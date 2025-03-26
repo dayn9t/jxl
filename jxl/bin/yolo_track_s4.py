@@ -6,11 +6,12 @@ import cv2  # type: ignore
 import cv2
 from jcx.text.txt_json import save_json, to_json
 from jcx.ui.key import Key
-from jvi.geo.size2d import SIZE_HD
+from jvi.geo.size2d import SIZE_HD, SIZE_FHD
+from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import resize
 from loguru import logger
-from pydantic_core._pydantic_core import Some
+from jvi.image.util import make_mask, copy_mask
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.d2d import draw_d2d_objects
@@ -19,10 +20,11 @@ from jxl.task_s4 import TaskDb, TaskInfo
 
 
 def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
-    model_file = Path("/opt/howell/s4/current/ias/model/2025-03-05_sign.pt")
+    model_file = Path("/opt/howell/s4/current/ias/model/sign.pt")
     img_size = 640
     conf_thr = 0.5
     iou_thr = 0.7
+    roi = Rect(x=0.0, y=0.0, width=1.0, height=0.94).vertexes()
 
     src_files.sort()
 
@@ -33,6 +35,7 @@ def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
 
     out_size = SIZE_HD
     canvas = ImageNda(out_size)
+    mask = make_mask(SIZE_FHD, roi)
 
     for src_file in src_files:
         logger.info("Open file: {}", src_file)
@@ -49,9 +52,10 @@ def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
             number = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
             # if number % 4 != 0:
             #    continue
-            image_in = ImageNda(data=frame)
+            image_ori = ImageNda(data=frame)
             # logger.debug(f"#{number} size: {image_in.size()}")
-
+            assert image_ori.size() == SIZE_FHD
+            image_in = copy_mask(image_ori, mask)
             res = detector.detect(image_in)
 
             resize(image_in, canvas)
