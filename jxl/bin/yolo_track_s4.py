@@ -6,21 +6,23 @@ import cv2  # type: ignore
 import cv2
 from jcx.text.txt_json import save_json, to_json
 from jcx.ui.key import Key
-from jvi.geo.size2d import SIZE_HD, SIZE_FHD
 from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import SIZE_HD, SIZE_FHD
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import resize
-from loguru import logger
 from jvi.image.util import make_mask, copy_mask
+from loguru import logger
 
+from jxl.det.a2d import A2dOpt
 from jxl.det.d2d import D2dOpt
 from jxl.det.d2d import draw_d2d_objects
-from jxl.det.yolo.d2d_yolo import D2dYolo
+from jxl.det.yolo.a2d_yolo import A2dYolo
 from jxl.task_s4 import TaskDb, TaskInfo
 
 
 def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
-    model_file = Path("/opt/howell/s4/current/ias/model/sign.pt")
+    model_dir = Path("/opt/howell/s4/current/ias/model/")
+
     img_size = 640
     conf_thr = 0.5
     iou_thr = 0.7
@@ -28,10 +30,11 @@ def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
 
     src_files.sort()
 
-    det_opt = D2dOpt(
+    d2d_opt = D2dOpt(
         input_shape=(img_size, img_size), conf_thr=conf_thr, iou_thr=iou_thr, track=True
     )
-    detector = D2dYolo(model_file, det_opt)
+    a2d_opt = A2dOpt(d2d=d2d_opt, d2d_name="sign.pt", props={0: "sign-valid.pt"})
+    analyzer = A2dYolo(model_dir, a2d_opt)
 
     out_size = SIZE_HD
     canvas = ImageNda(out_size)
@@ -56,7 +59,7 @@ def track_videos(src_files: List[str], dst_dir: Path, wait: int = -1):
             # logger.debug(f"#{number} size: {image_in.size()}")
             assert image_ori.size() == SIZE_FHD
             image_in = copy_mask(image_ori, mask)
-            res = detector.detect(image_in)
+            res = analyzer.detect(image_in)
 
             resize(image_in, canvas)
             if len(res.objects) > 0:

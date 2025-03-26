@@ -11,7 +11,7 @@ from jxl.det.yolo.adapter import boxes_to_d2d
 class D2dYolo(Detector2D):
     """目标检测器"""
 
-    model_class = "d2d_yolo"
+    model_class = "D2dYolo"
 
     def __init__(
         self,

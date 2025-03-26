@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Self, List
 from typing import TypeAlias, Type
 
+from fontTools.qu2cu.qu2cu import Point
 from jvi.drawing.color import COLORS7
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
@@ -52,6 +53,7 @@ class D2dResult(BaseModel):
     """2D目标检测器结果"""
 
     objects: D2dObjects
+    """目标集合"""
 
 
 D2dResults: TypeAlias = List[D2dResult]
