@@ -96,7 +96,7 @@ def main():
         if res.is_some():
             task: TaskInfo = res.unwrap()
             logger.info("find task: {}", to_json(task))
-            track_videos(task.data_urls, dst_dir / str(task.id), 10)
+            track_videos(task.data_urls, dst_dir / str(task.id))
             db.task_done(task.id)
         else:
             logger.info("no task")
