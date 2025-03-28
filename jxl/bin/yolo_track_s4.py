@@ -20,9 +20,7 @@ from jxl.det.yolo.a2d_yolo import A2dYolo
 from jxl.task_s4 import TaskDb, TaskInfo
 
 
-def handle_display_and_input(
-    image_in: ImageNda, canvas: ImageNda, res: D2dResult, wait: int
-):
+def display_and_input(image_in: ImageNda, canvas: ImageNda, res: D2dResult, wait: int):
     """处理图像显示和键盘输入
 
     Args:
@@ -80,8 +78,8 @@ def process_video(
 
         if number % 20 == 0:
             if wait >= 0:
-                should_exit, frames_to_skip = handle_display_and_input(
-                    image_in, canvas, res, wait, cap
+                should_exit, frames_to_skip = display_and_input(
+                    image_in, canvas, res, wait
                 )
                 if should_exit:
                     cap.release()
