@@ -3,6 +3,14 @@ from typing import List, Optional
 
 from jcx.db.jdb.table import *
 from jcx.text.txt_json import load_json, to_json
+from jvi.geo.point2d import Point
+
+
+class D2dParams(Record):
+    """D2D参数配置"""
+
+    fps: Optional[float]
+    roi: List[Point]
 
 
 class TaskInfo(Record):
