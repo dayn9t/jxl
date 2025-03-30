@@ -1,6 +1,6 @@
 from pathlib import Path
 from time import sleep
-from typing import List
+from typing import List, Final
 
 import cv2  # type: ignore
 import cv2
@@ -18,7 +18,7 @@ from jxl.det.a2d import A2dOpt
 from jxl.det.d2d import D2dOpt, D2dResult
 from jxl.det.d2d import draw_d2d_objects
 from jxl.det.yolo.a2d_yolo import A2dYolo
-from jxl.task_s4 import TaskDb, TaskInfo, D2dParams
+from js4.task import TaskDb, TaskInfo, D2dParams
 
 
 def display_and_input(image_in: ImageNda, canvas: ImageNda, res: D2dResult, wait: int):
@@ -50,7 +50,7 @@ def display_and_input(image_in: ImageNda, canvas: ImageNda, res: D2dResult, wait
 
 
 def process_video(
-    src_file: str, dst_dir: Path, analyzer, mask, canvas, roi, wait: int = -1
+        src_file: str, dst_dir: Path, analyzer, mask, canvas, roi, wait: int = -1
 ) -> bool:
     """处理单个视频文件，提取帧并生成元数据
 
@@ -102,7 +102,7 @@ def process_video(
 
 
 def track_videos(
-    src_files: List[str], dst_dir: Path, d2d_cfg: D2dParams, wait: int = -1
+        src_files: List[str], dst_dir: Path, d2d_cfg: D2dParams, wait: int = -1
 ) -> bool:
     model_dir = Path("/opt/howell/s4/current/ias/model/")
 
@@ -135,6 +135,9 @@ def track_videos(
 
 cv2.destroyAllWindows()
 
+START_PROGRESS: Final = 1
+END_PROGRESS: Final = 10
+
 
 def main(wait: int):
     db_dir = Path("/opt/howell/s4/current/ias/domain/d1/n1/db")
@@ -142,7 +145,7 @@ def main(wait: int):
     dst_dir = Path("/var/howell/s4/ias/track")
     logger.info("db_dir: {}", db_dir)
     logger.info("dst_dir: {}", dst_dir)
-    db = TaskDb(db_dir)
+    db = TaskDb(db_dir, START_PROGRESS, END_PROGRESS)
     # db.show()
     d2d_cfg = load_json(d2d_cfg_file, D2dParams).unwrap()
 
