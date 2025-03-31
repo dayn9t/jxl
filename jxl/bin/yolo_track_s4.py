@@ -152,7 +152,7 @@ def main(wait: int):
     while True:
         res = db.find_task()
         if res.is_some():
-            task: TaskInfo = res.unwrap()
+            task, status = res.unwrap()
             logger.info("find task: {}", to_json(task))
             if track_videos(task.data_urls, dst_dir / str(task.id), d2d_cfg, wait=wait):
                 db.task_done(task.id)
