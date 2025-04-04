@@ -118,9 +118,13 @@ def process_video(
 
 
 def track_videos(
-    src_files: List[str], dst_dir: Path, d2d_cfg: D2dParams, fps: float, wait: int = -1
+    src_files: List[str],
+    dst_dir: Path,
+    d2d_cfg: D2dParams,
+    model_dir: Path,
+    fps: float,
+    wait: int = -1,
 ) -> bool:
-    model_dir = Path("/opt/howell/s4/current/ias/model/")
 
     img_size = 640
     conf_thr = 0.5

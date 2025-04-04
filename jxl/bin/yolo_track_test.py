@@ -15,23 +15,25 @@ END_PROGRESS: Final = 10
 
 def main(wait: int):
     d2d_cfg_file = Path("/home/jiang/py/jxl/assets/meta/d2d_cfg.json")
+    # model_dir = Path("/opt/howell/s4/current/ias/model/")
+    model_dir = Path("/home/jiang/1/model")
     dst_dir = Path("/home/jiang/1/track")
     fps = 1.25
     urls = [
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_47_18_R.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_42_17_R.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_47_18_L.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_37_16_L.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_17_12_R.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_27_14_L.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_17_12_L.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_37_16_R.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_32_15_L.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_32_15_R.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_22_13_R.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_42_17_L.mkv",
-        "file:///mnt/temp/2025_03_31/C3_2025_03_31T10_27_14_R.mkv",
-        "file:///mnt/temp/2025_03_31/C2_2025_03_31T10_22_13_L.mkv"
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_47_18_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_42_17_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_47_18_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_37_16_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_17_12_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_27_14_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_17_12_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_37_16_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_32_15_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_32_15_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_22_13_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_42_17_L.mkv",
+        "file:///home/jiang/1/2025_03_31/C3_2025_03_31T10_27_14_R.mkv",
+        "file:///home/jiang/1/2025_03_31/C2_2025_03_31T10_22_13_L.mkv",
     ]
 
     logger.info("d2d_cfg_file: {}", d2d_cfg_file)
@@ -40,7 +42,8 @@ def main(wait: int):
     d2d_cfg = load_json(d2d_cfg_file, D2dParams).unwrap()
 
     start_time = time()
-    #track_videos(urls, dst_dir, d2d_cfg, fps, wait=wait)
+    for _ in range(3):
+        track_videos(urls, dst_dir, d2d_cfg, model_dir, fps, wait=wait)
     elapsed_time = time() - start_time
     logger.info("track_videos函数执行时间: {:.2f}秒", elapsed_time)
 

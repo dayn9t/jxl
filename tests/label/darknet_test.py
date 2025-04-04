@@ -1,5 +1,5 @@
 from ias.app.afs import init_afs, afs
-from jxl.label.darknet import *
+from jxl.label.darknet.darknet import *
 from jxl.label.meta import find_meta
 
 label_file = Path("n1_31015111120700111_2023-03-09_15-12-34.054.txt")
