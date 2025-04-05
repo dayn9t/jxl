@@ -1,15 +1,12 @@
-import typer
 from pathlib import Path
-from typing import List
 
-from jxl.det.yolo.d2d_yolo import D2dYolo
-from jxl.label.darknet.darknet_dir import DarknetImageLabel, DarknetDir
-from jxl.det.d2d import Detector2D, D2dResult, D2dOpt
-from jxl.label.darknet.darknet_set import DarknetSet
-from jxl.model.types import ModelInfo
+import typer
 from jvi.image.image_nda import ImageNda
-from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel
-from jcx.time.dt import now_iso_str
+
+from jxl.det.d2d import D2dResult, D2dOpt
+from jxl.det.yolo.d2d_yolo import D2dYolo
+from jxl.label.a2d.dd import A2dImageLabel
+from jxl.label.darknet.darknet_set import DarknetSet, darknet_dump_labels
 
 
 def iou_match(res: D2dResult, label: A2dImageLabel, iou_threshold: float) -> bool:
@@ -61,6 +58,7 @@ def main(
         if not iou_match(det, label, iou_threshold):
             unmatched.append((image_path, label))
 
+    darknet_dump_labels(unmatched, export_root)
     print("unmatched:", len(unmatched))
 
 

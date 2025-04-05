@@ -37,7 +37,9 @@ class PropLabeler(RecordViewer):
     def on_change_image(self, index: int) -> None:
         """处理图片切换事件"""
 
-        f = Path(self.cur_image_file())  # TODO: 不反应所有文件
+        cur_image = self.cur_image_file()
+        assert cur_image
+        f = Path(cur_image)  # TODO: 不反应所有文件
         print("#%d" % index, f)
         self.tile_index = 0
 
