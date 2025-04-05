@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Self, List
 from typing import TypeAlias, Type
 
-from fontTools.qu2cu.qu2cu import Point
 from jvi.drawing.color import COLORS7
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
@@ -16,11 +15,11 @@ from jxl.model.types import ModelInfo
 class D2dOpt(BaseModel):
     """2D目标检测器选项"""
 
-    input_shape: tuple
+    input_shape: tuple = (640, 640)
     """输入形状"""
-    conf_thr: float
+    conf_thr: float = 0.5
     """置信度阈值"""
-    iou_thr: float
+    iou_thr: float = 0.7
     """非极大值抑制中的重叠率阈值"""
     track: bool = False
     """是否跟踪"""

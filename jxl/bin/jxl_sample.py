@@ -43,9 +43,7 @@ def main() -> None:
             labels, dst_dir, cat_id, opt.prop, opt.keep_dst_dir, opt.prefix
         )
     else:
-        total = darknet_dump_labels(
-            labels, dst_dir, meta, opt.crop_roi, opt.keep_dst_dir, opt.prefix
-        )
+        total = darknet_dump_labels(labels, dst_dir, opt.crop_roi, opt.keep_dst_dir)
     print(f"\n样本({total})生成完毕!")
 
 

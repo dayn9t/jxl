@@ -116,7 +116,7 @@ class TileRecord:
         for o in objects:
             o.dst_rect = rects[i]
             i += 1
-        return TileRecord(size, objects, cfg)
+        return cls(size, objects, cfg)
 
     def get_image(self) -> ImageNda:
         """加载图片"""

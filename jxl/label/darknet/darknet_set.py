@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from jcx.sys.fs import make_subdir
-from jvi.drawing.color import Color
+from jvi.drawing.color import YOLO_GRAY
+from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import get_roi_image
 
@@ -11,7 +12,6 @@ from jxl.label.a2d.dd import (
 )
 from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
 from jxl.label.darknet.darknet_dir import DarknetDir
-from jxl.label.meta import LabelMeta
 
 DARKNET_EXT = ".txt"
 """Darknet标注文件扩展名"""
@@ -33,7 +33,7 @@ class DarknetSet(A2dLabelSet):
     def __len__(self) -> int:
         return len(self.darknet_dir)
 
-    def find_pairs(self, pattern: str) -> A2dImageLabelPairs:
+    def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
         """查找匹配模式的标注对集"""
 
         pairs = self.darknet_dir.find_pairs(pattern)
@@ -57,12 +57,10 @@ def darknet_export_objects(objects: A2dObjectLabels, txt_file: Path) -> None:
 def darknet_dump_labels(
     labels: A2dImageLabelPairs,
     folder: Path,
-    meta: LabelMeta,
     crop_roi: bool = False,
     keep_dst_dir: bool = False,
-    prefix: str = "",
 ) -> int:
-    """保存darknet样本标注信息, TODO: meta 可能有更多的用处"""
+    """保存darknet样本标注信息"""
 
     remake = not keep_dst_dir
     labels_dir = make_subdir(folder, "labels", remake)
@@ -76,13 +74,16 @@ def darknet_dump_labels(
         if crop_roi:
             rect, label = label.crop_by_roi(src.size())
             src = src.roi(rect)
-        name = prefix + image.stem
+        name = image.stem
         jpg = images_dir / f"{name}.jpg"
         txt = labels_dir / f"{name}.txt"
         darknet_export_objects(label.objects, txt)
 
         roi = label.roi().unwrap()
-        dst = get_roi_image(src, roi, Color.parse(meta.sample.background))
+        if roi == Rect.one().vertexes():
+            dst = src
+        else:
+            dst = get_roi_image(src, roi, YOLO_GRAY)
         dst.save(jpg)
         total += len(label.objects)
     return total
