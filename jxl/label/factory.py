@@ -14,7 +14,7 @@ _class_map = {
 
 
 def open_label_set(
-    folder: Path, label_format: LabelFormat, meta_id: int, pattern: str
+    folder: Path, label_format: LabelFormat, meta_id: int
 ) -> Result[A2dLabelSet, str]:
     """打开标注数据集合"""
 
@@ -26,7 +26,7 @@ def open_label_set(
     if not fmt_cls.valid_set(folder, meta_id=meta_id):
         return Err(f'Invalid folder for format "{label_format}"')
 
-    return Ok(fmt_cls(folder, meta_id, pattern))
+    return Ok(fmt_cls(folder, meta_id))
 
 
 def guess_format_cls(folder: Path, label_format: LabelFormat, meta_id: int):

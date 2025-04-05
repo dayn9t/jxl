@@ -34,7 +34,7 @@ class DarknetSet(A2dLabelSet):
         return len(self.darknet_dir)
 
     def find_pairs(self, pattern: str) -> A2dImageLabelPairs:
-        """加载 darknet 格式的数据集"""
+        """查找匹配模式的标注对集"""
 
         pairs = self.darknet_dir.find_pairs(pattern)
         return [(path, label.to_label()) for path, label in pairs]

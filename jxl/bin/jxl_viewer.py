@@ -15,7 +15,7 @@ def main() -> int:
     parser.add_argument("folder", type=Path, help="图片目录")
     parser.add_argument("-m", "--meta_id", type=int, default=0, help="元数据ID")
     parser.add_argument(
-        "-p", "--pattern", type=str, help="文件要匹配的模式，用于过滤数据"
+        "-p", "--pattern", type=str, default="", help="文件要匹配的模式，用于过滤数据"
     )
     parser.add_argument(
         "-f",
@@ -38,12 +38,10 @@ def main() -> int:
             return -1
 
     assert label_format
-    label_set = open_label_set(
-        opt.folder, label_format, opt.meta_id, opt.pattern
-    ).unwrap()
+    label_set = open_label_set(opt.folder, label_format, opt.meta_id).unwrap()
     print(f"标注集: {label_set}")
 
-    label_pairs = label_set.load_pairs()
+    label_pairs = label_set.find_pairs(opt.pattern)
     print("样本总数:", len(label_pairs))
 
     rs = [LabelRecord(meta, image, label) for image, label in label_pairs]
