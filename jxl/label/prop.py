@@ -1,6 +1,6 @@
 from copy import copy
 from dataclasses import dataclass
-from typing import TypeAlias, Self
+from typing import TypeAlias, Self, List, Dict
 
 from jcx.util.lict import LictItem
 
@@ -32,12 +32,12 @@ class ProbValue:
     @classmethod
     def exclude(cls) -> Self:
         """创建特殊属性-排除"""
-        return ProbValue(PROP_EXCLUDE, CONF_EXCLUDE)
+        return cls(PROP_EXCLUDE, CONF_EXCLUDE)
 
     @classmethod
     def error(cls) -> Self:
         """创建特殊属性-排除"""
-        return ProbValue(PROP_ERROR, CONF_ERROR)
+        return cls(PROP_ERROR, CONF_ERROR)
 
     def is_excluded(self) -> bool:
         """是否排除"""
@@ -64,8 +64,8 @@ class ProbValue:
 PropItem: TypeAlias = LictItem[str, ProbValue]
 """属性集合条目带"""
 
-ProbProperties: TypeAlias = list[PropItem]
+ProbProperties: TypeAlias = List[PropItem]
 """带有置信度的属性列表, 受flask_restx限制, 用list代替map"""
 
-ProbPropertyMap: TypeAlias = dict[str, ProbValue]
+ProbPropertyMap: TypeAlias = Dict[str, ProbValue]
 """带有置信度的属性字典"""

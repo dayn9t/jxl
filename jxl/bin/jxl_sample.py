@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from jxl.label.darknet.darknet import darknet_dump_labels
+from jxl.label.darknet.darknet_set import darknet_dump_labels
 from jxl.label.hop import hop_load_labels
 from jxl.label.io import dump_label_prop
 from jxl.label.meta import find_meta

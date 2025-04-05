@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from jxl.label.darknet.darknet import DarknetSet
+from jxl.label.darknet.darknet_set import DarknetSet
 from jxl.label.hop import HopSet
-from jxl.label.label_set import LabelSet, LabelFormat
+from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
 from rustshed import Result, Err, Ok
 
 _class_map = {
@@ -15,7 +15,7 @@ _class_map = {
 
 def open_label_set(
     folder: Path, label_format: LabelFormat, meta_id: int, pattern: str
-) -> Result[LabelSet, str]:
+) -> Result[A2dLabelSet, str]:
     """打开标注数据集合"""
 
     fmt_cls = guess_format_cls(folder, label_format, meta_id)

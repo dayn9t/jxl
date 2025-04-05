@@ -8,7 +8,7 @@ import torchvision.transforms as transforms  # type: ignore
 from jvi.image.image_nda import ImageNda
 from jxl.cls.arch.torch_image import load_pth_tar
 from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt, ModelFormat
-from jxl.label.info import ProbValue
+from jxl.label.a2d.dd import ProbValue
 from jvi.image.trans import bgr_to_pil, PilImage
 from torch import Tensor
 from torchsummary import summary  # type: ignore

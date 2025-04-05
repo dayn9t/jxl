@@ -5,7 +5,7 @@ from pathlib import Path
 
 from jvi.gui.record_viewer import RecordViewer
 from jxl.label.factory import open_label_set
-from jxl.label.label_set import LabelFormat
+from jxl.label.a2d.label_set import LabelFormat
 from jxl.label.meta import find_meta
 from jxl.label.viewer import LabelRecord
 
@@ -48,7 +48,7 @@ def main() -> int:
 
     rs = [LabelRecord(meta, image, label) for image, label in label_pairs]
 
-    win = RecordViewer("files://" + str(opt.folder), meta.view_size)
+    win: RecordViewer = RecordViewer("files://" + str(opt.folder), meta.view_size)
     win.set_records(rs)
 
     win.run()

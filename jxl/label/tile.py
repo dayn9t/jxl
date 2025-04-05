@@ -17,7 +17,7 @@ from jxl.label.hop import (
     LabelFilter,
     hop_load_label,
 )
-from jxl.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue
+from jxl.label.a2d.dd import A2dObjectLabel, A2dImageLabel, ProbValue
 from jxl.label.meta import PropMeta
 from rustshed import Option, Null, Some
 
@@ -28,9 +28,9 @@ class TileObject:
 
     path: Path
     """图像路径"""
-    obj: ObjectLabelInfo
+    obj: A2dObjectLabel
     """目标标签"""
-    root: ImageLabelInfo
+    root: A2dImageLabel
     """目标所属的图片标注信息"""
     meta_id: int
     """传感器类型"""

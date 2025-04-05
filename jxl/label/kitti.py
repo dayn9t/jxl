@@ -4,7 +4,7 @@ from typing import List, Any
 
 from jcx.sys.fs import StrPath
 from jvi.geo.rectangle import Rect
-from jxl.label.info import ObjectLabelInfo, ObjectLabelInfos, ProbValue
+from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels, ProbValue
 from rustshed import Result, Ok
 
 """
@@ -103,10 +103,10 @@ def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, Any]:
     return Ok(True)
 
 
-def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> ObjectLabelInfo:
+def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> A2dObjectLabel:
     """KITTI标注转通用标注"""
     category = label_names.index(kitti.class_name)
-    return ObjectLabelInfo(
+    return A2dObjectLabel(
         id=-1,
         prob_class=ProbValue(category, 1.0),
         polygon=kitti.bbox.vertexes(),
@@ -114,7 +114,7 @@ def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> ObjectLabelInfo
     )
 
 
-def to_kitti(info: ObjectLabelInfo, label_names: List[str]) -> KittiLabelInfo:
+def to_kitti(info: A2dObjectLabel, label_names: List[str]) -> KittiLabelInfo:
     """KITTI标注转通用标注"""
     class_name = label_names[info.prob_class.value]
     k = KittiLabelInfo(class_name=class_name)
@@ -122,9 +122,7 @@ def to_kitti(info: ObjectLabelInfo, label_names: List[str]) -> KittiLabelInfo:
     return k
 
 
-def import_kitti(
-    file: StrPath, label_names: List[str]
-) -> Result[ObjectLabelInfos, Any]:
+def import_kitti(file: StrPath, label_names: List[str]) -> Result[A2dObjectLabels, Any]:
     """导入KITTI标注文件"""
     r = load_kitti(file)
     if r.is_err():
@@ -134,7 +132,7 @@ def import_kitti(
 
 
 def export_kitti(
-    infos: ObjectLabelInfos, file: StrPath, label_names: List[str]
+    infos: A2dObjectLabels, file: StrPath, label_names: List[str]
 ) -> Result[bool, Any]:
     """导出KITTI标注文件"""
     ks = [to_kitti(info, label_names) for info in infos]

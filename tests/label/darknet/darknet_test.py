@@ -1,5 +1,5 @@
 from ias.app.afs import init_afs, afs
-from jxl.label.darknet.darknet import *
+from jxl.label.darknet.darknet_set import *
 from jxl.label.meta import find_meta
 
 label_file = Path("n1_31015111120700111_2023-03-09_15-12-34.054.txt")
@@ -9,14 +9,14 @@ folder = Path("/home/jiang/ws/trash/cabin/dates/2023-03-09")
 def test_file():
     print("darknet_dir:", folder)
 
-    os1 = load_objects(folder / "labels" / label_file)
+    os1 = import_darknet_objects(folder / "labels" / label_file)
     print("objects:", os1[0].rect())
 
     txt_file = Path("/tmp") / label_file
     print("txt_file:", txt_file)
-    save_objects(os1, txt_file)
+    darknet_export_objects(os1, txt_file)
 
-    os2 = load_objects(txt_file)
+    os2 = import_darknet_objects(txt_file)
     print("objects:", os2[0].rect())
 
 

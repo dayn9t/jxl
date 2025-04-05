@@ -3,7 +3,7 @@ from pathlib import Path
 from jcx.sys.fs import StrPath, with_parent, remake_dir, make_parents
 from jcx.text.txt_json import load_json
 from jvi.image.image_nda import ImageNda
-from jxl.label.info import ImageLabelInfo, ImageLabelInfos, IMG_EXT, ImageLabelPairs
+from jxl.label.a2d.dd import A2dImageLabel, A2dImageLabels, IMG_EXT, A2dImageLabelPairs
 from jxl.label.meta import meta_fix
 
 
@@ -18,7 +18,7 @@ def label_path_of(img_file: StrPath, format_name: str, meta_id: int, ext: str) -
     return with_parent(file, f"{format_name}_{meta_fix(meta_id)}")
 
 
-def load_label_dir(folder: StrPath, meta_id: int) -> ImageLabelInfos:
+def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:
     """加载目录下的图片标注记录"""
     folder = Path(folder)
     rs = []
@@ -27,13 +27,13 @@ def load_label_dir(folder: StrPath, meta_id: int) -> ImageLabelInfos:
 
     files = sorted(folder.rglob("*" + tail))
     for lbl_file in files:
-        label = load_json(lbl_file, ImageLabelInfo).unwrap()
+        label = load_json(lbl_file, A2dImageLabel).unwrap()
         rs.append(label)
     return rs
 
 
 def dump_label_prop(
-    label_pairs: ImageLabelPairs,
+    label_pairs: A2dImageLabelPairs,
     dst: Path,
     category_id: int,
     prop_name: str,
@@ -63,7 +63,7 @@ def dump_label_prop(
     return total
 
 
-def dump_label_prop_demo(label_pairs: ImageLabelPairs, dst_dir: Path) -> int:
+def dump_label_prop_demo(label_pairs: A2dImageLabelPairs, dst_dir: Path) -> int:
     """保存标注多项属性, 生成分类样本"""
 
     remake_dir(dst_dir)

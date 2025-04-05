@@ -7,9 +7,9 @@ from jcx.sys.fs import with_parent, StrPath, files_in
 from jcx.text.txt_json import load_json, save_json
 from jvi.gui.record_viewer import FileRecord
 from jxl.label.ias import ias_label_path_of
-from jxl.label.info import ImageLabelPairs, ImageLabelInfo, IMG_EXT
+from jxl.label.a2d.dd import A2dImageLabelPairs, A2dImageLabel, IMG_EXT
 from jxl.label.io import label_path_of
-from jxl.label.label_set import LabelSet, LabelFormat, HOP
+from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat, HOP
 from jxl.label.meta import meta_fix
 from rustshed import Option
 
@@ -28,13 +28,13 @@ def hop_label_path_of(img_file: StrPath, meta_id: int) -> Path:
     return label_path_of(img_file, HOP_FIX, meta_id, HOP_EXT)
 
 
-def hop_load_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
+def hop_load_label(img_file: StrPath, meta_id: int) -> Option[A2dImageLabel]:
     """加载标签"""
     label_file = hop_label_path_of(img_file, meta_id)
-    return load_json(label_file, ImageLabelInfo).ok()
+    return load_json(label_file, A2dImageLabel).ok()
 
 
-def hop_save_label(label: ImageLabelInfo, img_file: StrPath, meta_id: int) -> Path:
+def hop_save_label(label: A2dImageLabel, img_file: StrPath, meta_id: int) -> Path:
     """保存标签"""
     label_file = hop_label_path_of(img_file, meta_id)
     save_json(label, label_file)
@@ -47,7 +47,7 @@ def hop_del_label(img_file: StrPath, meta_id: int) -> None:
     print("删除标注:", label_file)
 
 
-def hop_load_labels(folder: StrPath, meta_id: int) -> ImageLabelPairs:
+def hop_load_labels(folder: StrPath, meta_id: int) -> A2dImageLabelPairs:
     hs = HopSet(Path(folder), meta_id)
     return hs.load_pairs()
 
@@ -69,19 +69,19 @@ class LabelFilter(IntEnum):
         return label.is_file()
 
 
-def get_label(image_file: Path, meta_id: int) -> ImageLabelInfo:
+def get_label(image_file: Path, meta_id: int) -> A2dImageLabel:
     """获取图像文件的标注信息"""
     cur_label = hop_load_label(image_file, meta_id)
     if cur_label.is_null():
         cur_label = import_label(image_file, meta_id)
-    return cur_label.unwrap_or(ImageLabelInfo.only_roi("jxl_label"))
+    return cur_label.unwrap_or(A2dImageLabel.only_roi("jxl_label"))
 
 
 @dataclass
 class LabelRecord(FileRecord):
     """标注记录"""
 
-    label: ImageLabelInfo = field(default_factory=ImageLabelInfo.only_roi)
+    label: A2dImageLabel = field(default_factory=A2dImageLabel.only_roi)
 
 
 LabelRecords: TypeAlias = list[LabelRecord]
@@ -108,14 +108,14 @@ def load_label_records(
     return rs
 
 
-def import_label(img_file: StrPath, meta_id: int) -> Option[ImageLabelInfo]:
+def import_label(img_file: StrPath, meta_id: int) -> Option[A2dImageLabel]:
     """读取从IAS导入的标签"""
     # label_file = label_path(img_file, meta_id, LBL_EXT)
     msg_file = ias_label_path_of(img_file, meta_id)
-    return load_json(msg_file, ImageLabelInfo).ok()
+    return load_json(msg_file, A2dImageLabel).ok()
 
 
-class HopSet(LabelSet):
+class HopSet(A2dLabelSet):
     """皓维对象与属性标注格式(Howell Object & Properties)"""
 
     @classmethod
@@ -130,7 +130,7 @@ class HopSet(LabelSet):
         assert self
         return 0
 
-    def load_pairs(self) -> ImageLabelPairs:
+    def load_pairs(self) -> A2dImageLabelPairs:
         """加载本格式的数据集"""
         image_dir = Path(self.folder, "image")
         label_dir = Path(self.folder, f"hop_m{self.meta_id}")
@@ -138,7 +138,7 @@ class HopSet(LabelSet):
 
         pairs = []
         for label_file in label_files:
-            label = load_json(label_file, ImageLabelInfo).unwrap()
+            label = load_json(label_file, A2dImageLabel).unwrap()
             if label:
                 image_file = image_dir / (label_file.stem + IMG_EXT)
                 pairs.append((image_file, label))

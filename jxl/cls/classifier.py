@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Any, TypeVar, Type, Protocol
 
 import numpy as np
-from jxl.label.info import ProbValue
+from jxl.label.a2d.dd import ProbValue
 from jxl.model.types import ModelInfo
-from pydantic import BaseModel
 
 
 # 参考: [torch模型存取](https://blog.csdn.net/dialogueeeee/article/details/122714704)

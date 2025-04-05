@@ -6,7 +6,7 @@ from pathlib import Path
 
 from jcx.sys.fs import files_in
 from jxl.label.hop import HOP_EXT
-from jxl.label.info import IMG_EXT
+from jxl.label.a2d.dd import IMG_EXT
 
 
 def main() -> None:

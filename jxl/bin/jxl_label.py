@@ -21,7 +21,7 @@ from jxl.label.hop import (
     load_label_records,
     LabelFilter,
 )
-from jxl.label.info import ImageLabelInfo, ObjectLabelInfo, ObjectLabelInfos
+from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel, A2dObjectLabels
 from jxl.label.meta import LabelMeta, find_meta
 from rustshed import Option, Null, Some
 
@@ -46,15 +46,15 @@ class Labeler(RecordViewer):
         self.verbose = verbose
 
         self.label_meta = meta
-        self.cur_label: ImageLabelInfo = ImageLabelInfo.only_roi(
+        self.cur_label: A2dImageLabel = A2dImageLabel.only_roi(
             "jxl_label"
         )  # 当前图片标注信息
-        self.cur_object: Option[ObjectLabelInfo] = Null  # 当前标注对象
+        self.cur_object: Option[A2dObjectLabel] = Null  # 当前标注对象
         self.cur_vertex: Option[Point] = Null  # 当前标注定点
         self.cur_category = 0
         self.show_all_category: bool = True
         self.locked_roi: Option[Points] = Null  # 锁定的ROI
-        self.pre_objects: Option[ObjectLabelInfos] = Null  # 前一对象集
+        self.pre_objects: Option[A2dObjectLabels] = Null  # 前一对象集
         self.saved = True  # 是否已经保存修改
         self.labeled = False  # 是否已经标注
         self.help_msgs = [
@@ -105,7 +105,7 @@ class Labeler(RecordViewer):
         if cur_label.is_null():
             cur_label = import_label(f, self.meta_id)
             self.labeled = False
-        self.cur_label = cur_label.unwrap_or(ImageLabelInfo.only_roi("jxl_label"))
+        self.cur_label = cur_label.unwrap_or(A2dImageLabel.only_roi("jxl_label"))
         print("  #%d" % index, f, len(self.cur_label.objects) - 1)
 
         if self.locked_roi.is_some():
@@ -283,6 +283,7 @@ class Labeler(RecordViewer):
         src = self.cur_image_file()
         # dst = self.snapshot_dir / now_file('.jpg')
         # dst.symlink_to(src)
+        assert src
         dst = self.snapshot_dir / Path(src).name
         self.canvas().save(dst)
         print("抓图:", dst)
@@ -312,10 +313,10 @@ class Labeler(RecordViewer):
                 text += "[e]RemoveObject [r]RectifyPolygon   "
         put_text(canvas, text, Point(x=8, y=32), LIME, 2)
 
-    def _closest_object(self, cursor: Point) -> Option[ObjectLabelInfo]:
+    def _closest_object(self, cursor: Point) -> Option[A2dObjectLabel]:
         """获取光标邻域内最接近的对象"""
         d2_min = NEAR_R2
-        obj: Option[ObjectLabelInfo] = Null
+        obj: Option[A2dObjectLabel] = Null
         for o in self.cur_label.objects:
             d2, p = closest_point(cursor, o.polygon)
             if d2 < d2_min:

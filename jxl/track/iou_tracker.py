@@ -4,13 +4,6 @@ from jvi.geo.rectangle import Rect
 from pydantic import BaseModel
 
 
-def iou(r1: Rect, r2: Rect) -> float:
-    """计算两个长方形交并比"""
-    s1 = max(0, r1.intersect(r2).area())
-    s2 = r1.area() + r2.area() - s1
-    return s1 / s2
-
-
 class RectObject(Protocol):
     """可获取Rect的目标需要实现的协议"""
 
@@ -59,11 +52,11 @@ class IouTracker(BaseModel):
 def test_iou() -> None:
     r0 = Rect.zero()
     r1 = Rect.one()
-    assert iou(r0, r1) == 0
-    assert iou(r1, r1) == 1
+    assert r0.iou(r1) == 0
+    assert r1.iou(r1) == 1
 
     r = Rect(0.5, 0.5, 1, 1)
-    assert iou(r, r1) == 0.25 / (2 - 0.25)
+    assert r.iou(r1) == 0.25 / (2 - 0.25)
 
 
 def test_tracker() -> None:

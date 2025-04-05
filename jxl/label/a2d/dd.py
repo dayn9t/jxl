@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Protocol, Self
 from jcx.m.number import align_down
 from jcx.time.dt import now_iso_str
 from jvi.drawing.color import Color, Colors
-from jvi.drawing.shape import polylines, rectangle
+from jvi.drawing.shape import polylines
 from jvi.geo.point2d import Points, Point
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
@@ -32,8 +32,8 @@ IMG_EXT = ".jpg"  # 图片文件扩展名
 MSG_EXT = ".json"  # 传感器消息扩展名
 
 
-class ObjectLabelInfo(BaseModel):
-    """目标标注信息"""
+class A2dObjectLabel(BaseModel):
+    """2D分析目标标注信息"""
 
     id: int
     """目标ID"""
@@ -55,7 +55,7 @@ class ObjectLabelInfo(BaseModel):
     ) -> Self:
         """创建标签信息"""
         assert polygon is not None
-        return ObjectLabelInfo(
+        return cls(
             id=id_,
             prob_class=ProbValue(category, confidence),
             polygon=polygon,
@@ -65,7 +65,7 @@ class ObjectLabelInfo(BaseModel):
     @classmethod
     def new_roi(cls, polygon: Points) -> Self:
         """创建感兴趣区域"""
-        return ObjectLabelInfo.new(ID_ROI, CAT_ROI, 0, polygon)
+        return cls.new(ID_ROI, CAT_ROI, 0, polygon)
 
     def draw_on(self, bgr: ImageNda, colors: Colors, line_thickness: int = 1) -> None:
         """绘制标注信息在图上"""
@@ -129,11 +129,12 @@ class ObjectLabelInfo(BaseModel):
         return deepcopy(self)
 
 
-ObjectLabelInfos = List[ObjectLabelInfo]  # 目标标注信息集合
+A2dObjectLabels = List[A2dObjectLabel]
+"""2D分析目标标注信息集"""
 
 
-class ImageLabelInfo(BaseModel):
-    """图片标注信息"""
+class A2dImageLabel(BaseModel):
+    """2D分析图片标注信息"""
 
     # id :int  # 图像ID
     user_agent: str
@@ -146,7 +147,7 @@ class ImageLabelInfo(BaseModel):
     """主机"""
     sensor: int
     """数据来源传感器"""
-    objects: ObjectLabelInfos = Field(default_factory=list)
+    objects: A2dObjectLabels = Field(default_factory=list)
     """对象集合"""
     version: float = 1.0
     """版本号，用于新旧格式转换"""
@@ -155,7 +156,7 @@ class ImageLabelInfo(BaseModel):
     def new(
         cls,
         user_agent: str,
-        objects: ObjectLabelInfos,
+        objects: A2dObjectLabels,
         date: Optional[str] = None,
         last_modified: Optional[str] = None,
         sensor: int = 0,
@@ -164,7 +165,7 @@ class ImageLabelInfo(BaseModel):
         date = date or now_iso_str()
         last_modified = last_modified or date
 
-        return ImageLabelInfo(
+        return cls(
             version=1.0,
             user_agent=user_agent,
             host=host,
@@ -177,8 +178,8 @@ class ImageLabelInfo(BaseModel):
     @classmethod
     def only_roi(cls, user_agent: str = "", sensor: int = 0) -> Self:
         """生成空的标注信息，只有包括最大化的ROI"""
-        roi = ObjectLabelInfo.new_roi(Rect.one().vertexes())
-        return ImageLabelInfo.new(user_agent, objects=[roi], sensor=sensor)
+        roi = A2dObjectLabel.new_roi(Rect.one().vertexes())
+        return cls.new(user_agent, objects=[roi], sensor=sensor)
 
     def roi(self) -> Option[Points]:
         """获取ROI引用"""
@@ -211,14 +212,14 @@ class ImageLabelInfo(BaseModel):
         id_ = max([o.id for o in self.objects], default=0) + 1
         return max(id_, 1)
 
-    def new_object(self, p: Point) -> ObjectLabelInfo:
+    def new_object(self, p: Point) -> A2dObjectLabel:
         """添加一个目标"""
         id_ = self.next_id()
-        o = ObjectLabelInfo.new(id_, 1, 2.0, [p])
+        o = A2dObjectLabel.new(id_, 1, 2.0, [p])
         self.objects.append(o)
         return o
 
-    def extend_objects(self, objs: ObjectLabelInfos) -> None:
+    def extend_objects(self, objs: A2dObjectLabels) -> None:
         """追加目标集"""
         id_ = self.next_id()
         for o in objs:
@@ -310,19 +311,27 @@ class ImageLabelInfo(BaseModel):
         return deepcopy(self)
 
 
-ImageLabelInfos = List[ImageLabelInfo]
+A2dImageLabels = List[A2dImageLabel]
 """图像标注信息集"""
 
-ImageLabelPair = tuple[Path, ImageLabelInfo]
+A2dImageLabelPair = Tuple[Path, A2dImageLabel]
 """图像与标注信息对"""
 
-ImageLabelPairs = List[ImageLabelPair]
+A2dImageLabelPairs = List[A2dImageLabelPair]
 """图像与标注信息对集"""
 
 
-class ToImageLabel(Protocol):
-    """可转换为标注信息"""
+class ToA2dObjectLabel(Protocol):
+    """可转换为2D目标标注信息协议"""
 
-    def to_label(self) -> ImageLabelInfo:
+    def to_label(self) -> A2dObjectLabel:
+        """转换为标注信息"""
+        pass
+
+
+class ToA2dImageLabel(Protocol):
+    """可转换为2D图片标注信息协议"""
+
+    def to_label(self) -> A2dImageLabel:
         """转换为标注信息"""
         pass

@@ -1,8 +1,8 @@
-from jxl.label.info import *
+from jxl.label.a2d.dd import *
 
 
 def test_label_info():
-    o1 = ObjectLabelInfo(
+    o1 = A2dObjectLabel(
         id=1,
         prob_class=ProbValue(0, 0.5),
         polygon=Rect.one().vertexes(),
@@ -18,5 +18,5 @@ def test_label_info():
     assert o2.min_conf() == 0.2
     assert o1.min_conf() == 0.3
 
-    label = ImageLabelInfo.new("", objects=[o1, o2])
+    label = A2dImageLabel.new("", objects=[o1, o2])
     assert label.min_conf() == 0.2

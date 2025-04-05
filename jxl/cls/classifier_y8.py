@@ -1,10 +1,9 @@
-import logging
 from pathlib import Path
 
 import torch
 from jvi.image.image_nda import ImageNda
 from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt
-from jxl.label.info import ProbValue
+from jxl.label.a2d.dd import ProbValue
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 

@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABC
 from enum import IntEnum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Self
 
-from jxl.label.info import ImageLabelInfos, ImageLabelPairs
+from jxl.label.a2d.dd import A2dImageLabelPairs
 
 HOP = "hop"
 DARKNET = "darknet"
@@ -28,41 +28,42 @@ class LabelFormat(IntEnum):
     """Google标注格式"""
 
     @classmethod
-    def parse(cls, name: str) -> Optional["LabelFormat"]:
+    def parse(cls, name: str) -> Optional[Self]:
         """解析字符串成枚举, 解析失败则为Null"""
         return cls._member_map_.get(name.upper())
 
 
-class LabelSet(ABC):
-    """标注集合"""
+class A2dLabelSet(ABC):
+    """2D分析标注集合"""
 
     @classmethod
     def valid_set(cls, folder: Path, meta_id: int) -> bool:
         """检验路径是否是本格式的数据集"""
         return False
 
-    def __init__(
-        self, format_id: LabelFormat, folder: Path, meta_id: int, pattern: str
-    ):
-        self.format_id = format_id
-        self.folder = folder
-        self.meta_id = meta_id
-        self.pattern = pattern
+    def __init__(self, label_format: LabelFormat, folder: Path, meta_id: int):
+        self._format = label_format
+        self._folder = folder
+        self._meta_id = meta_id
 
     def __str__(self) -> str:
-        return f"LabelFormat(format={self.format_id},meta_id={self.meta_id})"
+        return f"LabelFormat(format={self._format},meta_id={self._meta_id})"
 
     @abstractmethod
     def __len__(self) -> int:
         """获取集合中样本总数"""
         pass
 
+    def format(self) -> LabelFormat:
+        """获取标注格式"""
+        return self._format
+
     @abstractmethod
-    def load_pairs(self) -> ImageLabelPairs:
-        """加载本格式的数据集"""
+    def find_pairs(self, pattern: str) -> A2dImageLabelPairs:
+        """查找满足条件的标签/图像对"""
         pass
 
     @abstractmethod
     def save(self, root: Path) -> None:
-        """报错本格式的数据集"""
+        """保存本格式的数据集"""
         pass

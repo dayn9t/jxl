@@ -17,7 +17,7 @@ from jxl.label.hop import (
     LabelFilter,
     hop_load_label,
 )
-from jxl.label.info import ObjectLabelInfo, ImageLabelInfo, ProbValue
+from jxl.label.a2d.dd import ProbValue
 from jxl.label.meta import PropMeta
 from rustshed import Option, Null, Some
 
