@@ -52,28 +52,3 @@ class LabelRecord(PImageEntry):
 
 LabelRecords: TypeAlias = list[LabelRecord]
 """标注记录列表"""
-
-"""
-def show_main():
-    from dateutil.parser import parse
-    path = '/var/ias/snapshot/shtm/n1/work'
-    meta = find_meta(31, path).unwrap()
-
-    folder = Path("/home/jiang/ws/mine/sorting/darknet")
-    print('darknet_dir:', folder)
-
-    labels = darknet_load_labels(folder)
-    assert len(labels) > 0
-
-    rs = [LabelRecord(meta, label) for label in labels]
-
-    win = RecordViewer('files://' + str(folder), meta.view_size)
-    win.set_records(rs)
-
-    print('image number:', win.image_count())
-    win.run()
-
-
-if __name__ == '__main__':
-    show_main()
-"""
