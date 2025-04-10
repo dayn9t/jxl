@@ -49,7 +49,7 @@ def hop_del_label(img_file: StrPath, meta_id: int) -> None:
 
 def hop_load_labels(folder: StrPath, meta_id: int) -> A2dImageLabelPairs:
     hs = HopSet(Path(folder), meta_id)
-    return hs.load_pairs()
+    return hs.find_pairs()
 
 
 class LabelFilter(IntEnum):
@@ -74,14 +74,14 @@ def get_label(image_file: Path, meta_id: int) -> A2dImageLabel:
     cur_label = hop_load_label(image_file, meta_id)
     if cur_label.is_null():
         cur_label = import_label(image_file, meta_id)
-    return cur_label.unwrap_or(A2dImageLabel.only_roi("jxl_label"))
+    return cur_label.unwrap_or(A2dImageLabel(user_agent="jxl_label"))
 
 
 @dataclass
 class LabelRecord(FileRecord):
     """标注记录"""
 
-    label: A2dImageLabel = field(default_factory=A2dImageLabel.only_roi)
+    label: A2dImageLabel = field(default_factory=A2dImageLabel)
 
 
 LabelRecords: TypeAlias = list[LabelRecord]
@@ -123,17 +123,17 @@ class HopSet(A2dLabelSet):
         """检验路径是否是本格式的数据集"""
         return Path(folder, f"{HOP}_m{meta_id}").is_dir()
 
-    def __init__(self, folder: Path, meta_id: int, pattern: str = "*"):
-        super().__init__(LabelFormat.HOP, folder, meta_id, pattern)
+    def __init__(self, folder: Path, meta_id: int):
+        super().__init__(LabelFormat.HOP, folder, meta_id)
 
     def __len__(self) -> int:
         assert self
         return 0
 
-    def load_pairs(self) -> A2dImageLabelPairs:
+    def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
         """加载本格式的数据集"""
-        image_dir = Path(self.folder, "image")
-        label_dir = Path(self.folder, f"hop_m{self.meta_id}")
+        image_dir = Path(self._folder, "image")
+        label_dir = Path(self._folder, f"hop_m{self._meta_id}")
         label_files = files_in(label_dir, HOP_EXT)
 
         pairs = []

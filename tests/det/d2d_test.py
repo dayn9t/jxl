@@ -1,4 +1,4 @@
-from jxl.det.d2d import D2dObject, D2dObjectTrack
+from jxl.det.d2d import D2dObject
 from jvi.geo.rectangle import Rect
 
 

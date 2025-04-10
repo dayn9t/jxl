@@ -172,10 +172,7 @@ class DarknetImageLabel(BaseModel):
             objects.append(a2d_ob)
 
         # 创建A2dImageLabel对象
-        return A2dImageLabel.new(
-            user_agent="darknet",
-            objects=objects,
-        )
+        return A2dImageLabel(user_agent="darknet", objects=objects)
 
 
 DarknetImageLabelPair: TypeAlias = Tuple[Path, DarknetImageLabel]

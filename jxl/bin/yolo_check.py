@@ -50,10 +50,10 @@ def find_matched(label: A2dImageLabel, iou_threshold: float, ob1: D2dObject) -> 
 
 
 def main(
-        darknet_dir: Path = typer.Argument(..., help="Darknet样本集所在文件夹"),
-        model_path: Path = typer.Argument(..., help="模型路径"),
-        export_root: Path = typer.Argument(..., help="导出路径"),
-        iou_threshold: float = typer.Option(0.5, help="IOU阈值，用于判断两个目标是否匹配"),
+    darknet_dir: Path = typer.Argument(..., help="Darknet样本集所在文件夹"),
+    model_path: Path = typer.Argument(..., help="模型路径"),
+    export_root: Path = typer.Argument(..., help="导出路径"),
+    iou_threshold: float = typer.Option(0.5, help="IOU阈值，用于判断两个目标是否匹配"),
 ) -> None:
     if not model_path.exists():
         print(f"模型路径不存在: {model_path}")
@@ -72,7 +72,9 @@ def main(
         image = ImageNda.load(image_path)
         det = detector.detect(image)
         if not iou_match(det, label, iou_threshold):
-            logger.info(f"#{i}: {image_path.name} unmatched: {len(label.objects)}/{len(det.objects)}")
+            logger.info(
+                f"#{i}: {image_path.name} unmatched: {len(label.objects)}/{len(det.objects)}"
+            )
             unmatched.append((image_path, label))
 
     darknet_dump_labels(unmatched, export_root)

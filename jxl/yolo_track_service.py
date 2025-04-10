@@ -1,11 +1,10 @@
 from pathlib import Path
-from time import sleep
-from typing import List, Final
+from typing import List
 
-import cv2  # type: ignore
 import cv2
-from jcx.text.txt_json import save_json, to_json, load_json
+from jcx.text.txt_json import save_json, load_json
 from jcx.ui.key import Key
+from js4.task import D2dParams
 from jvi.drawing.color import YOLO_GRAY
 from jvi.geo.point2d import Points
 from jvi.geo.size2d import SIZE_HD, SIZE_FHD
@@ -18,7 +17,6 @@ from jxl.det.a2d import A2dOpt, A2dResult
 from jxl.det.d2d import D2dOpt
 from jxl.det.d2d import draw_d2d_objects
 from jxl.det.yolo.a2d_yolo import A2dYolo
-from js4.task import TaskDb, D2dParams
 
 
 def display_and_input(image_in: ImageNda, canvas: ImageNda, res: A2dResult, wait: int):
@@ -125,7 +123,6 @@ def track_videos(
     fps: float,
     wait: int = -1,
 ) -> bool:
-
     img_size = 640
     conf_thr = 0.5
     iou_thr = 0.7

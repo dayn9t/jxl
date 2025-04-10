@@ -1,6 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Tuple, Protocol, Self
+from typing import *
 
 from jcx.m.number import align_down
 from jcx.time.dt import now_iso_str
@@ -20,16 +20,23 @@ from loguru import logger
 from rustshed import Option, Some, Null
 from pydantic import BaseModel, Field
 
-ID_ROI = -9  # ROI对象默认ID
-ID_ERROR = -3  # 该值错误，需要改正
-ID_EXCLUDE = -2  # 该值将被排除，不予考虑
-ID_PENDING = -1  # 该值待定，需要设置
+ID_ERROR: Final[int] = -3
+"""该值错误，需要改正"""
+ID_EXCLUDE: Final[int] = -2
+"""该值将被排除，不予考虑"""
+ID_PENDING: Final[int] = -1
+"""该值待定，需要设置"""
 
-CAT_ROI = -9  # ROI对象默认类别
-CAT_PENDING = -1  # ROI对象默认类别
+CAT_PENDING: Final[int] = -1
+"""ROI对象默认类别"""
 
-IMG_EXT = ".jpg"  # 图片文件扩展名
-MSG_EXT = ".json"  # 传感器消息扩展名
+IMG_EXT: Final[str] = ".jpg"
+"""图片文件扩展名"""
+MSG_EXT: Final[str] = ".json"
+"""传感器消息扩展名"""
+
+ROI_FULL: Final[Points] = Rect.one().vertexes()
+"""感兴趣区域-全图"""
 
 
 class A2dObjectLabel(BaseModel):
@@ -62,10 +69,12 @@ class A2dObjectLabel(BaseModel):
             properties=properties.unwrap_or({}),
         )
 
+    '''
     @classmethod
     def new_roi(cls, polygon: Points) -> Self:
         """创建感兴趣区域"""
         return cls.new(ID_ROI, CAT_ROI, 0, polygon)
+'''
 
     def draw_on(self, bgr: ImageNda, colors: Colors, line_thickness: int = 1) -> None:
         """绘制标注信息在图上"""
@@ -89,10 +98,6 @@ class A2dObjectLabel(BaseModel):
         """ROI多边形区域化为矩形，并返回矩形"""
         self.polygon = self.rect().vertexes()
         return self.rect()
-
-    def is_roi(self) -> bool:
-        """判定目标是否为外包矩形"""
-        return self.prob_class.value == CAT_ROI
 
     def is_objective(self) -> bool:
         """判定是否为客观存在的目标"""
@@ -136,64 +141,26 @@ A2dObjectLabels = List[A2dObjectLabel]
 class A2dImageLabel(BaseModel):
     """2D分析图片标注信息"""
 
-    # id :int  # 图像ID
-    user_agent: str
+    user_agent: str = ""
     """用户代理信息"""
-    date: str
+    date: str = now_iso_str()
     """标注时间"""
-    last_modified: str
+    last_modified: str = now_iso_str()
     """最后修改时间"""
-    host: str
+    host: str = ""
     """主机"""
-    sensor: int
+    sensor: int = 0
     """数据来源传感器"""
     objects: A2dObjectLabels = Field(default_factory=list)
     """对象集合"""
+    roi: Points = Field(default_factory=lambda: deepcopy(ROI_FULL))
+    """感兴趣区域"""
     version: float = 1.0
     """版本号，用于新旧格式转换"""
 
-    @classmethod
-    def new(
-        cls,
-        user_agent: str,
-        objects: A2dObjectLabels,
-        date: Optional[str] = None,
-        last_modified: Optional[str] = None,
-        sensor: int = 0,
-        host: str = "",
-    ) -> Self:
-        date = date or now_iso_str()
-        last_modified = last_modified or date
-
-        return cls(
-            version=1.0,
-            user_agent=user_agent,
-            host=host,
-            sensor=sensor,
-            last_modified=last_modified,
-            date=date,
-            objects=objects,
-        )
-
-    @classmethod
-    def only_roi(cls, user_agent: str = "", sensor: int = 0) -> Self:
-        """生成空的标注信息，只有包括最大化的ROI"""
-        roi = A2dObjectLabel.new_roi(Rect.one().vertexes())
-        return cls.new(user_agent, objects=[roi], sensor=sensor)
-
-    def roi(self) -> Option[Points]:
-        """获取ROI引用"""
-        for o in self.objects:
-            if o.is_roi():
-                return Some(o.polygon)
-        return Null
-
-    def roi_rect(self) -> Option[Rect]:
-        """获取ROI引用"""
-        for o in self.objects:
-            if o.is_roi():
-                return Some(o.rect())
-        return Null
+    def roi_rect(self) -> Rect:
+        """获取 ROI 外包矩形"""
+        return Rect.bounding(self.roi)
 
     def objects_rect(self) -> Option[Rect]:
         """获取所有客观目标的外包矩形"""
@@ -223,11 +190,10 @@ class A2dImageLabel(BaseModel):
         """追加目标集"""
         id_ = self.next_id()
         for o in objs:
-            if not o.is_roi():
-                o1 = deepcopy(o)
-                o1.id = id_
-                self.objects.append(o1)
-                id_ += 1
+            o1 = deepcopy(o)
+            o1.id = id_
+            self.objects.append(o1)
+            id_ += 1
 
     def draw_on(
         self,
@@ -239,11 +205,9 @@ class A2dImageLabel(BaseModel):
     ) -> None:
         """绘制标注信息在图上"""
         # TODO: show_conf应该由cfg.label.title_style控制
-        for ob in self.objects:
-            # 修正roi BUG
-            if ob.is_roi():
-                make_roi_surround_color(canvas, ob.polygon)
+        make_roi_surround_color(canvas, self.roi)
 
+        for ob in self.objects:
             if cat_filter >= 0 and cat_filter != ob.prob_class.value:
                 continue
 
@@ -271,14 +235,13 @@ class A2dImageLabel(BaseModel):
 
     def clean(self, meta: LabelMeta) -> None:
         """清理无效数据"""
-        roi = self.roi().unwrap_or(Rect.one().vertexes())
         objs = []
         for ob in self.objects:
             cat = meta.cat_meta(ob.prob_class.value)
             r = cat.check(ob)
             if r.is_err():
                 logger.info(f"Meta验证失败，原因：{r}, 舍弃: {ob} ")
-            elif not ob.is_roi() and ob.center().outside(roi):
+            elif ob.center().outside(self.roi):
                 logger.info(f"中心超出ROI范围：舍弃: {ob} ")
             else:
                 objs.append(ob)
@@ -291,7 +254,7 @@ class A2dImageLabel(BaseModel):
 
     def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> Tuple[Rect, Self]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
-        rect = self.roi_rect().unwrap()
+        rect = self.roi_rect()
         assert rect.is_normalized()
         rect = rect.absolutize(im_size)
         rect = rect.dilate(extend_side)

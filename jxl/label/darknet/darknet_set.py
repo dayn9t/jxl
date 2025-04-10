@@ -80,11 +80,10 @@ def darknet_dump_labels(
         txt = labels_dir / f"{name}.txt"
         darknet_export_objects(label.objects, txt)
 
-        roi = label.roi().unwrap()
-        if roi == Rect.one().vertexes():
+        if label.roi == Rect.one().vertexes():
             dst = src
         else:
-            dst = get_roi_image(src, roi, YOLO_GRAY)
+            dst = get_roi_image(src, label.roi, YOLO_GRAY)
         dst.save(jpg)
         total += len(label.objects)
     return total

@@ -2,10 +2,11 @@ from pathlib import Path
 from time import sleep
 from typing import Final
 
-import cv2  # type: ignore
+import cv2
 from jcx.text.txt_json import to_json, load_json
 from js4.task import TaskDb, D2dParams
 from loguru import logger
+from rustshed import *
 
 from jxl.yolo_track_service import track_videos
 

@@ -46,9 +46,7 @@ class Labeler(RecordViewer):
         self.verbose = verbose
 
         self.label_meta = meta
-        self.cur_label: A2dImageLabel = A2dImageLabel.only_roi(
-            "jxl_label"
-        )  # 当前图片标注信息
+        self.cur_label: A2dImageLabel = A2dImageLabel(user_agent="jxl_label")
         self.cur_object: Option[A2dObjectLabel] = Null  # 当前标注对象
         self.cur_vertex: Option[Point] = Null  # 当前标注定点
         self.cur_category = 0
@@ -98,20 +96,20 @@ class Labeler(RecordViewer):
     def on_change_image(self, index: int) -> None:
         """处理图片切换事件"""
 
-        f = Path(self.cur_image_file())
+        cur = self.cur_image_file()
+        assert cur
+        f = Path(cur)
 
         cur_label = hop_load_label(f, self.meta_id)
         self.labeled = True
         if cur_label.is_null():
             cur_label = import_label(f, self.meta_id)
             self.labeled = False
-        self.cur_label = cur_label.unwrap_or(A2dImageLabel.only_roi("jxl_label"))
+        self.cur_label = cur_label.unwrap_or(A2dImageLabel(user_agent="jxl_label"))
         print("  #%d" % index, f, len(self.cur_label.objects) - 1)
 
         if self.locked_roi.is_some():
-            roi = self.cur_label.roi().unwrap()
-            roi.clear()
-            roi.extend(deepcopy(self.locked_roi.unwrap()))
+            self.cur_label.roi = deepcopy(self.locked_roi.unwrap())
             print("locked_roi:", self.locked_roi)
 
         self.cur_vertex = Null
@@ -166,7 +164,7 @@ class Labeler(RecordViewer):
             self.locked_roi = Null
             print("ROI锁定解除")
         else:
-            self.locked_roi = Some(deepcopy(self.cur_label.roi().unwrap()))
+            self.locked_roi = Some(deepcopy(self.cur_label.roi))
             print("ROI锁定，后继图片都使用ROI")
 
     def _copy_objects(self) -> None:
@@ -204,8 +202,7 @@ class Labeler(RecordViewer):
         """当前目标区域填满整个ROI"""
         match self.cur_object:
             case Some(cur):
-                r = self.cur_label.roi().unwrap()
-                cur.polygon = deepcopy(r)
+                cur.polygon = deepcopy(self.cur_label.roi)
                 self.cur_vertex = Null
                 self.saved = False
                 print("目标区域充满ROI")
@@ -217,8 +214,9 @@ class Labeler(RecordViewer):
         lab.last_modified = now_iso_str()
         lab.user_agent = "jxl_label"
         lab.clean(self.label_meta)
-        print("save_label", self.cur_image_file(), self.meta_id)
-        hop_save_label(lab, self.cur_image_file(), self.meta_id)
+        cur = self.cur_image_file_unwrap()
+        print("save_label", cur, self.meta_id)
+        hop_save_label(lab, cur, self.meta_id)
         self.cur_vertex = Null
         self.cur_object = Null
         self.saved = True
@@ -226,7 +224,7 @@ class Labeler(RecordViewer):
         self.pre_objects = Some(lab.objects)
 
     def _del_label(self) -> None:
-        hop_del_label(self.cur_image_file(), self.meta_id)
+        hop_del_label(self.cur_image_file_unwrap(), self.meta_id)
 
     def _move_cur(self, dx: int, dy: int) -> None:
         """移动当前节点/ROI"""
