@@ -14,7 +14,6 @@ loguru = "*"
 
 jcx = { path = "/home/jiang/py/jcx" }
 jvi = { path = "/home/jiang/py/jvi" }
-js4 = { path = "/home/jiang/py/js4" }
 
 ultralytics = "*"
 onnxruntime = "*"
@@ -27,6 +26,9 @@ pytest = "*"
 black = "*"
 mypy = "*"
 pyinstaller = "*"
+
+[tool.ruff]
+ignore = ["F403", "F405"]
 
 [build-system]
 requires = ["poetry-core"]
