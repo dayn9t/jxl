@@ -1,23 +1,28 @@
-[tool.poetry]
+[project]
 name = "jxl"
-version = "0.3.4"
+version = "0.4.0"
 description = ""
-authors = ["dayn9t <dayn9t@gmail.com>"]
 readme = "README.md"
+authors = [
+    { name = "dayn9t", email = "dayn9t@gmail.com" }
+]
+requires-python = "~=3.12"
+dependencies = [
+    "jcx @ file:///home/jiang/py/jcx",
+    "jvi @ file:///home/jiang/py/jvi",
 
-[tool.poetry.dependencies]
-python = "~3.12"
-rustshed = "*"
-pydantic = "*"
-typer = "*"
-loguru = "*"
+    "rustshed",
+    "pydantic",
+    "typer",
+    "loguru"
+    ,
+    "ultralytics",
+    "onnxruntime",
+    "onnx",
+    "jcx",
+    "jvi",
+]
 
-jcx = { path = "/home/jiang/py/jcx" }
-jvi = { path = "/home/jiang/py/jvi" }
-
-ultralytics = "*"
-onnxruntime = "*"
-onnx = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
