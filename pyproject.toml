@@ -27,10 +27,13 @@ dependencies = [
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 
+
 [tool.poetry.group.dev.dependencies]
 black = "*"
-mypy = "*"
 pyinstaller = "*"
+mypy = "*"
+pre-commit = "*"
+
 
 [tool.ruff]
 ignore = ["F403", "F405"]
