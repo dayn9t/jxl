@@ -4,25 +4,12 @@ from ultralytics import YOLO
 
 # !/opt/ias/env/bin/python
 
-import argparse
-import sys
-from pathlib import Path
 
-import cv2  # type: ignore
-from jcx.sys.fs import find, stem_append
-from jcx.ui.key import Key
-from jvi.drawing.color import LIME
-from jvi.drawing.shape import put_text
-from jvi.geo.point2d import Point
-from jvi.geo.size2d import size_parse
+from jcx.sys.fs import find
 from jvi.image.image_nda import ImageNda
-from jvi.image.proc import resize
-
-from jxl.det.d2d import D2dOpt, draw_d2d_objects
-from jxl.det.yolo.d2d_yolo import D2dYolo
 
 
-def main():
+def main() -> None:
     model_file = "/opt/howell/s4/current/ias/model/2025-03-05_sign.pt"
     # video_path = "/mnt/temp/C2_2025_03_05T10_09_47_L.mkv"
     video_path = "/mnt/temp/C2_2025_03_05T10_14_48_L.mkv"

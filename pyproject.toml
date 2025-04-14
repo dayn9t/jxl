@@ -7,6 +7,7 @@ authors = [
     { name = "dayn9t", email = "dayn9t@gmail.com" }
 ]
 requires-python = "~=3.12"
+
 dependencies = [
     "jcx @ file:///home/jiang/py/jcx",
     "jvi @ file:///home/jiang/py/jvi",
@@ -19,8 +20,6 @@ dependencies = [
     "ultralytics",
     "onnxruntime",
     "onnx",
-    "jcx",
-    "jvi",
 ]
 
 
@@ -37,6 +36,7 @@ pre-commit = "*"
 
 [tool.ruff]
 ignore = ["F403", "F405"]
+
 
 [build-system]
 requires = ["poetry-core"]
