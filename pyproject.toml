@@ -23,6 +23,12 @@ dependencies = [
 ]
 
 
+[tool.poetry.scripts]
+jxl_label = "jxl.bin.jxl_label:main"
+jxl_prop = "jxl.bin.jxl_prop:main"
+jxl_sample = "jxl.bin.jxl_sample:main"
+
+
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 
