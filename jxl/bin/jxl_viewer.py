@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/home/jiang/py/jxl/.venv/bin/python
 
 import argparse
 from pathlib import Path
