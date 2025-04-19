@@ -27,9 +27,20 @@ class A2dYolo(Analyzer2D):
             model = YOLO(model_dir / name, task="classify")
             self._prop_models[_id] = model
 
-    def detect(self, image: ImageNda) -> A2dResult:
-        """检测"""
-        d2d: D2dResult = self._d2d_model.detect(image)
+    def detect(self, image: ImageNda, persist: bool = True) -> A2dResult:
+        """检测并分析图像中的目标
+
+        该方法首先使用底层的目标检测器(D2dYolo)进行目标检测，
+        然后对每个检测到的目标应用属性分类器进行进一步分析。
+
+        Args:
+            image: ImageNda - 输入的图像数据
+            persist: bool - 是否持久化跟踪信息，在启用目标跟踪时使用，默认为True
+
+        Returns:
+            A2dResult - 包含检测到的目标及其属性的结果对象
+        """
+        d2d: D2dResult = self._d2d_model.detect(image, persist)
 
         a2d = from_d2d(d2d)
 
