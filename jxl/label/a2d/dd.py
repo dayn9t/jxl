@@ -141,6 +141,8 @@ A2dObjectLabels = List[A2dObjectLabel]
 class A2dImageLabel(BaseModel):
     """2D分析图片标注信息"""
 
+    version: float = 2.0
+    """版本号，用于新旧格式转换"""
     user_agent: str = ""
     """用户代理信息"""
     date: str = now_iso_str()
@@ -150,13 +152,11 @@ class A2dImageLabel(BaseModel):
     host: str = ""
     """主机"""
     sensor: int = 0
-    """数据来源传感器"""
-    objects: A2dObjectLabels = Field(default_factory=list)
     """对象集合"""
     roi: Points = Field(default_factory=lambda: deepcopy(ROI_FULL))
     """感兴趣区域"""
-    version: float = 1.0
-    """版本号，用于新旧格式转换"""
+    """数据来源传感器"""
+    objects: A2dObjectLabels = Field(default_factory=list)
 
     def roi_rect(self) -> Rect:
         """获取 ROI 外包矩形"""
