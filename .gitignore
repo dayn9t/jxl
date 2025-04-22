@@ -5,6 +5,7 @@ dist/
 run/
 tmp/
 poetry.lock
+*.dist/
 *.jpg
 *.png
 *.pth

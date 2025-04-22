@@ -3,20 +3,25 @@ from pathlib import Path
 from typing import List, Dict
 from typing import TypeAlias
 
+from jvi.drawing.color import COLORS7
 from jvi.image.image_nda import ImageNda
 from pydantic import BaseModel
 
 from jxl.det.d2d import D2dOpt, D2dResult, D2dObject
 from jvi.geo.point2d import Points
 
+from jxl.io.draw import draw_boxf
+
 
 class A2dOpt(BaseModel):
     """2D目标分析器选项"""
 
     d2d: D2dOpt
+    """2D目标检测器选项"""
     d2d_name: str
-
+    """2D目标检测器名称"""
     props: Dict[int, str]
+    """属性名称集合, key: 属性索引, value: 属性名称"""
 
 
 class A2dObject(D2dObject):
@@ -77,7 +82,17 @@ class Analyzer2D(ABC):
         self._device_name = device_name
         self._verbose = verbose
 
-    # @abstractmethod
-    def detect(self, image: ImageNda) -> A2dResult:
+    @abstractmethod
+    def detect(self, image: ImageNda, persist: bool = True) -> A2dResult:
         """检测"""
         pass
+
+
+def draw_a2d_objects(
+    canvas: ImageNda, objects: A2dObjects, thickness: int = 2, no_label: bool = False
+) -> None:
+    """绘制检测条目"""
+    for ob in objects:
+        color = COLORS7[ob.cls]
+        label = "" if no_label else f"{ob.id}({ob.conf_int()})"
+        draw_boxf(canvas, ob.rect, color, label, thickness)

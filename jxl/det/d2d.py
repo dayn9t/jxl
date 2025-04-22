@@ -56,6 +56,7 @@ class D2dResult(BaseModel):
 
 
 D2dResults: TypeAlias = List[D2dResult]
+"""检测到的2D目标集合"""
 
 
 class Detector2D(ABC):
