@@ -4,8 +4,8 @@ build/
 dist/
 run/
 tmp/
-poetry.lock
 *.dist/
+poetry.lock
 *.jpg
 *.png
 *.pth
