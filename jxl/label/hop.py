@@ -124,11 +124,15 @@ class HopSet(A2dLabelSet):
         return Path(folder, f"{HOP}_m{meta_id}").is_dir()
 
     def __init__(self, folder: Path, meta_id: int):
-        super().__init__(LabelFormat.HOP, folder, meta_id)
+        super().__init__(folder, meta_id)
 
     def __len__(self) -> int:
         assert self
         return 0
+
+    def format(self) -> LabelFormat:
+        """获取标注格式"""
+        return LabelFormat.HOP
 
     def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
         """加载本格式的数据集"""

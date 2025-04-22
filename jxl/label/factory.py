@@ -1,15 +1,15 @@
 from pathlib import Path
+from typing import Type, Optional, Dict
 
 from jxl.label.darknet.darknet_set import DarknetSet
 from jxl.label.hop import HopSet
 from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
 from rustshed import Result, Err, Ok
 
-_class_map = {
+_class_map: Dict[LabelFormat, Type[A2dLabelSet]] = {
     LabelFormat.HOP: HopSet,
+    LabelFormat.A2D: A2dLabelSet,
     LabelFormat.DARKNET: DarknetSet,
-    LabelFormat.IMAGENET: HopSet,
-    LabelFormat.KITTI: HopSet,
 }
 
 
@@ -29,7 +29,9 @@ def open_label_set(
     return Ok(fmt_cls(folder, meta_id))
 
 
-def guess_format_cls(folder: Path, label_format: LabelFormat, meta_id: int):
+def guess_format_cls(
+    folder: Path, label_format: LabelFormat, meta_id: int
+) -> Optional[Type[A2dLabelSet]]:
     """猜测数据集格式"""
     fmt_cls = None
     if label_format:

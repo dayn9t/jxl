@@ -27,12 +27,16 @@ class DarknetSet(A2dLabelSet):
         return DarknetDir.valid_dir(folder)
 
     def __init__(self, folder: Path, meta_id: int = 0):
-        super().__init__(LabelFormat.DARKNET, folder, meta_id)
+        super().__init__(folder, meta_id)
 
         self.darknet_dir = DarknetDir(folder)
 
     def __len__(self) -> int:
         return len(self.darknet_dir)
+
+    def format(self) -> LabelFormat:
+        """获取标注格式"""
+        return LabelFormat.DARKNET
 
     def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
         """查找匹配模式的标注对集"""
