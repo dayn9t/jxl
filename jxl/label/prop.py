@@ -56,7 +56,7 @@ class ProbValue:
         """克隆自身"""
         return copy(self)
 
-    def round(self, n: int = 3) -> Self:
+    def round(self, n: int = 3) -> "ProbValue":
         """置信度舍入到指定位数"""
         return ProbValue(self.value, round(self.conf, n))
 

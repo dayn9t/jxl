@@ -16,15 +16,17 @@ class LabelFormat(IntEnum):
 
     HOP = 1
     """通用对象属性标注格式"""
-    IMAGENET = 2
+    A2D = 2
     """ImageNet分类器标注格式"""
     DARKNET = 3
     """DarkNet标注格式"""
-    KITTI = 4
+    IMAGENET = 4
+    """ImageNet分类器标注格式"""
+    KITTI = 5
     """KITTI标注格式"""
-    COCO = 5
+    COCO = 6
     """COCO标注格式"""
-    GOOGLE = 6
+    GOOGLE = 7
     """Google标注格式"""
 
     @classmethod
@@ -41,22 +43,22 @@ class A2dLabelSet(ABC):
         """检验路径是否是本格式的数据集"""
         return False
 
-    def __init__(self, label_format: LabelFormat, folder: Path, meta_id: int):
-        self._format = label_format
+    def __init__(self, folder: Path, meta_id: int):
         self._folder = folder
         self._meta_id = meta_id
 
     def __str__(self) -> str:
-        return f"LabelFormat(format={self._format},meta_id={self._meta_id})"
+        return f"LabelFormat(format={self.format()},meta_id={self._meta_id})"
 
     @abstractmethod
     def __len__(self) -> int:
         """获取集合中样本总数"""
         pass
 
+    @abstractmethod
     def format(self) -> LabelFormat:
         """获取标注格式"""
-        return self._format
+        pass
 
     @abstractmethod
     def find_pairs(self, pattern: str) -> A2dImageLabelPairs:
