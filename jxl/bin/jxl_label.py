@@ -70,13 +70,14 @@ class Labeler(RecordViewer):
             "  [F1] 显示当前信息",
             "  [SPACE] 保存标注信息",
             "  [BACKSPACE] 删除标注信息",
-            "  [x] 放弃保存标注信息",
+            "  [X] 放弃保存标注信息",
             "  [j] 抓图",
             "ROI按键表：",
             "  [e] 删除ROI",
             "  [r] 目标区域变为矩形",
             "  [f] ROI锁定/解锁",
             "  [z] 目标区域充满ROI",
+            "  [x] 目标区域改为ROI",
             "  [c] 复制以前一对象集",
             "对象类别按键表：",
         ]
@@ -139,7 +140,7 @@ class Labeler(RecordViewer):
             self._save_label()
         elif key == Key.BACKSPACE:
             self._del_label()
-        elif key == ord("x"):
+        elif key == ord("X"):
             self.cur_vertex = Null
             self.cur_object = Null
             self.saved = True
@@ -152,6 +153,8 @@ class Labeler(RecordViewer):
         elif key == ord("c"):
             self._copy_objects()
         elif key == ord("z"):
+            self._polygon_fill_roi()
+        elif key == ord("x"):
             self._polygon_to_roi()
         elif key == ord("j"):
             self._take_snapshot()
@@ -198,7 +201,7 @@ class Labeler(RecordViewer):
             case _:
                 print("当前目标不存在")
 
-    def _polygon_to_roi(self) -> None:
+    def _polygon_fill_roi(self) -> None:
         """当前目标区域填满整个ROI"""
         match self.cur_object:
             case Some(cur):
@@ -206,6 +209,21 @@ class Labeler(RecordViewer):
                 self.cur_vertex = Null
                 self.saved = False
                 print("目标区域充满ROI")
+            case _:
+                print("当前目标不存在")
+
+    def _polygon_to_roi(self) -> None:
+        """当前目标区域填满整个ROI"""
+        match self.cur_object:
+            case Some(cur):
+                self.cur_label.roi = cur.polygon
+                print("ROI len:", len(self.cur_label.objects))
+                self.cur_label.objects.remove(cur)
+                print("ROI len:", len(self.cur_label.objects))
+                self.cur_object = Null
+                self.cur_vertex = Null
+                self.saved = False
+                print("目标区域变为ROI")
             case _:
                 print("当前目标不存在")
 
