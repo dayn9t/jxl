@@ -3,6 +3,7 @@ __pycache__/
 build/
 dist/
 run/
+runs/
 tmp/
 *.dist/
 poetry.lock
