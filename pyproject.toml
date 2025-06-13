@@ -15,12 +15,10 @@ dependencies = [
     "rustshed",
     "pydantic",
     "typer",
-    "loguru"
-    ,
+    "loguru",
     "ultralytics",
     "onnxruntime",
     "onnx",
-    "nuitka (>=2.6.9,<3.0.0)",
 ]
 
 
@@ -39,6 +37,7 @@ black = "*"
 pyinstaller = "*"
 mypy = "*"
 pre-commit = "*"
+nuitka = "*"
 
 
 [tool.ruff]
