@@ -9,6 +9,6 @@ wheels/
 # Virtual environments
 .venv
 
-*.bin
-*.dist/
+.idea/
+dist/
 
