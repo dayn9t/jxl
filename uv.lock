@@ -424,7 +424,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.4.0" }]
+dev = [{ name = "pytest" }]
 
 [[package]]
 name = "kiwisolver"
