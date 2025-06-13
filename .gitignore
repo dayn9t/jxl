@@ -1,14 +1,10 @@
+# Python-generated files
 __pycache__/
-.idea/
+*.py[oc]
 build/
 dist/
-run/
-runs/
-tmp/
-*.dist/
-poetry.lock
-*.jpg
-*.png
-*.pth
-*.pt
-*.spec
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

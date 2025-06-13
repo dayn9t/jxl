@@ -1,13 +1,12 @@
 [project]
 name = "jxl"
-version = "0.4.2"
-description = ""
+version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
 authors = [
     { name = "dayn9t", email = "dayn9t@gmail.com" }
 ]
 requires-python = "~=3.12"
-
 dependencies = [
     "jcx @ file:///home/jiang/py/jcx",
     "jvi @ file:///home/jiang/py/jvi",
@@ -21,29 +20,12 @@ dependencies = [
     "onnx",
 ]
 
-
-[tool.poetry.scripts]
+[project.scripts]
+#jxl = "jxl:main"
 jxl_label = "jxl.bin.jxl_label:main"
 jxl_prop = "jxl.bin.jxl_prop:main"
 jxl_sample = "jxl.bin.jxl_sample:main"
 
-
-[tool.poetry.group.test.dependencies]
-pytest = "*"
-
-
-[tool.poetry.group.dev.dependencies]
-black = "*"
-pyinstaller = "*"
-mypy = "*"
-pre-commit = "*"
-nuitka = "*"
-
-
-[tool.ruff]
-ignore = ["F403", "F405"]
-
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
