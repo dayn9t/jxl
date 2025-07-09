@@ -16,6 +16,8 @@ dependencies = [
     "typer",
     "loguru",
     "ultralytics",
+    "lap",      # for ultralytics
+    "numpy",    # for ultralytics
     "onnxruntime",
     "onnx",
 ]
