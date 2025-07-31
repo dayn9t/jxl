@@ -48,7 +48,6 @@ def main():
         sys.exit(0)
 
     with torch.no_grad():  # 不计算导数
-
         cls_opt = ClassifierOpt(
             (opt.img_size, opt.img_size),
             opt.num_classes,

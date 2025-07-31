@@ -84,7 +84,6 @@ def cale_similarity(model, image_path1, image_path2):
 
 
 def main():
-
     files = files_in(JXL_IMAGES_DIR, ".jpg")
 
     print("files:", JXL_IMAGES_DIR)

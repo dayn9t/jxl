@@ -66,7 +66,6 @@ class A2dLabelSet(ABC):
         pairs = []
         for image_file, label in self.pairs:
             if pattern in image_file.name:
-
                 pairs.append((image_file, label))
         return pairs
 

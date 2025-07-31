@@ -1,25 +1,25 @@
 [project]
 name = "jxl"
-version = "0.1.0"
+version = "0.4.1"
 description = "Add your description here"
 readme = "README.md"
 authors = [
     { name = "dayn9t", email = "dayn9t@gmail.com" }
 ]
-requires-python = "~=3.12"
+requires-python = "~=3.12.0"
 dependencies = [
     "jcx @ file:///home/jiang/py/jcx",
     "jvi @ file:///home/jiang/py/jvi",
-
     "rustshed",
     "pydantic",
     "typer",
     "loguru",
     "ultralytics",
-    "lap",      # for ultralytics
-    "numpy",    # for ultralytics
+    "lap", # for ultralytics
+    "numpy", # for ultralytics
     "onnxruntime",
     "onnx",
+    "opencv_python",
 ]
 
 [dependency-groups]

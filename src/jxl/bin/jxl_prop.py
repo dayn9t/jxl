@@ -13,7 +13,6 @@ from jxl.label.tile import TileRecord, TileObject, load_tiles, TileObjects
 
 
 class PropLabeler(RecordViewer):
-
     def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str):
         super().__init__("labeler-%s-%s" % (cat_name, prop_name), meta.view_size)
         self.meta = meta

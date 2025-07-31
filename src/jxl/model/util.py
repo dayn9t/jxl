@@ -21,7 +21,6 @@ def show_model(model: Path, opt):
     shape = (3, 224, 224)
 
     with torch.no_grad():  # 不计算导数
-
         model = torch.load(model)
 
         model = model.cuda()

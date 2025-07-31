@@ -13,6 +13,7 @@ from jvi.geo.trans import points_ncs_trans_in_win
 from jvi.image.image_nda import ImageNda
 from jvi.image.util import make_roi_surround_color
 
+from jxl.det.d2d import D2dResult, D2dObject
 from jxl.label.prop import ProbValue, ProbPropertyMap
 from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta
@@ -67,6 +68,17 @@ class A2dObjectLabel(BaseModel):
             prob_class=ProbValue(category, confidence),
             polygon=polygon,
             properties=properties.unwrap_or({}),
+        )
+
+    @classmethod
+    def from_d2d(cls, ob: D2dObject) -> Self:
+        """从D2dObject转换为A2dObjectLabel"""
+        return cls.new(
+            ob.id,
+            ob.cls,
+            ob.conf,
+            ob.rect.vertexes(),
+            properties={},
         )
 
     '''
@@ -157,6 +169,16 @@ class A2dImageLabel(BaseModel):
     """感兴趣区域"""
     """数据来源传感器"""
     objects: A2dObjectLabels = Field(default_factory=list)
+
+    @classmethod
+    def from_d2d(cls, d2d: D2dResult) -> "A2dImageLabel":
+        """从D2dResult转换为A2dImageLabel"""
+        label = A2dImageLabel()
+
+        label.objects = [A2dObjectLabel.from_d2d(ob) for ob in d2d.objects]
+        for i, ob in enumerate(label.objects):
+            ob.id = i + 1
+        return label
 
     def roi_rect(self) -> Rect:
         """获取 ROI 外包矩形"""

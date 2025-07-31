@@ -40,7 +40,6 @@ class DatasetChecker:
         top_num: int = 10,
         ext: str = ".jpg",
     ):
-
         self.top_num = top_num
         self.ext = ext
         self.max_conf = max_conf

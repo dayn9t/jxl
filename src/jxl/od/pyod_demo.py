@@ -75,7 +75,6 @@ def show_od(
 
 
 if __name__ == "__main__":
-
     clf_name = "IForest"
     clf = None
 

@@ -10,7 +10,6 @@ from jvi.gui.record_viewer import RecordViewer, load_dir_records
 
 
 class Sorter(RecordViewer):
-
     def __init__(self, title: str, dst_dir: Path):
         super().__init__(title, Size(244 * 3 * 2, 244 * 2))
         self.dst_dir = dst_dir

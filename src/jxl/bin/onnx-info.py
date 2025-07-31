@@ -5,7 +5,6 @@ import onnx
 
 
 def main1(model_path: Path):
-
     providers = ["CPUExecutionProvider"]
     session_options = ort.SessionOptions()
     session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -26,7 +25,6 @@ def main1(model_path: Path):
 
 
 def main2(model_path: Path):
-
     model = onnx.load(model_path)
     for imp in model.opset_import:
         print(f"打印OpSet导入信息: {imp.domain}, Version: {imp.version}")
@@ -41,7 +39,6 @@ def main2(model_path: Path):
 
 
 if __name__ == "__main__":
-
     folder = Path("/opt/howell/iws/current/ias/model/cabin2")
     model_path = folder / "2024-03-16_cabin.onnx"
 

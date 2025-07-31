@@ -15,7 +15,6 @@ from numpy import ndarray
 
 
 class LabelViewer(ImageViewer, ABC):
-
     def __init__(self, size: Size):
         super().__init__("LabelViewer", size)
         self.labels = []
@@ -35,7 +34,6 @@ class LabelViewer(ImageViewer, ABC):
             rectangle(canvas, label.rect, color, 2)
 
     def load(self, coco_file):
-
         coco_data = DataCoco(coco_file)
 
         for id, label in sorted(coco_data.labels.items()):

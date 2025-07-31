@@ -32,14 +32,12 @@ class DistSet(BaseModel):
 
 
 class S4Cfg(BaseModel):
-
     view_size: Size
     """窗口尺寸 TODO: viewer, label, prop"""
     object_size: Size
 
 
 class S4Labeler(RecordViewer):
-
     def __init__(self, meta: S4Cfg):
         super().__init__("labeler", meta.view_size)
         self.meta = meta

@@ -30,7 +30,6 @@ NEAR_R2: Final[float] = 0.05**2 / 4  # TODO:
 
 
 class Labeler(RecordViewer):
-
     def __init__(
         self,
         meta: LabelMeta,
