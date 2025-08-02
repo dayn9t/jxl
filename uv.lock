@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.12.*"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -281,7 +281,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/b3/2d/b337afbd232ea1ea9
 
 [[package]]
 name = "jcx"
-version = "0.4.9"
+version = "0.5.0"
 source = { directory = "../jcx" }
 dependencies = [
     { name = "arrow" },
