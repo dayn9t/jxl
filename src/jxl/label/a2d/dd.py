@@ -78,7 +78,7 @@ class A2dObjectLabel(BaseModel):
             ob.cls,
             ob.conf,
             ob.rect.vertexes(),
-            properties={},
+            properties=Null,
         )
 
     '''
@@ -173,7 +173,7 @@ class A2dImageLabel(BaseModel):
     @classmethod
     def from_d2d(cls, d2d: D2dResult) -> "A2dImageLabel":
         """从D2dResult转换为A2dImageLabel"""
-        label = A2dImageLabel()
+        label = A2dImageLabel(user_agent="d2d_label")
 
         label.objects = [A2dObjectLabel.from_d2d(ob) for ob in d2d.objects]
         for i, ob in enumerate(label.objects):

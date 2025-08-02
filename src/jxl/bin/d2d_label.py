@@ -11,23 +11,24 @@ from jvi.image.image_nda import ImageNda
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yolo import D2dYolo
+from jxl.label.a2d.dd import A2dImageLabel
 
 app = typer.Typer(help="Yolo检测器")
 
 
 @app.command()
 def main(
-        model: Path = typer.Argument(..., help="模型文件路径"),
-        src_dir: Path = typer.Argument(..., help="图像来源目录"),
-        dst_dir: Path = typer.Argument(..., help="元数据目标目录"),
-        conf_thr: float = typer.Option(0.5, "-c", "--conf-thr", help="置信度阈值"),
-        iou_thr: float = typer.Option(
-            0.7, "-i", "--iou-thr", help="非极大值抑制重叠率阈值"
-        ),
-        wait: float = typer.Option(0.0, "-w", "--wait", help="等待的秒数"),
-        img_size: int = typer.Option(640, "-s", "--img-size", help="输入图像尺寸"),
-        output_size: str = typer.Option("HD", "-o", "--output-size", help="输出图像尺寸"),
-        verbose: bool = typer.Option(False, "-v", "--verbose", help="显示详细信息"),
+    model: Path = typer.Argument(..., help="模型文件路径"),
+    src_dir: Path = typer.Argument(..., help="图像来源目录"),
+    dst_dir: Path = typer.Argument(..., help="元数据目标目录"),
+    conf_thr: float = typer.Option(0.5, "-c", "--conf-thr", help="置信度阈值"),
+    iou_thr: float = typer.Option(
+        0.7, "-i", "--iou-thr", help="非极大值抑制重叠率阈值"
+    ),
+    wait: float = typer.Option(0.0, "-w", "--wait", help="等待的秒数"),
+    img_size: int = typer.Option(640, "-s", "--img-size", help="输入图像尺寸"),
+    output_size: str = typer.Option("HD", "-o", "--output-size", help="输出图像尺寸"),
+    verbose: bool = typer.Option(False, "-v", "--verbose", help="显示详细信息"),
 ):
     """
     使用Yolo模型检测图像中的对象。
@@ -57,7 +58,8 @@ def main(
         print(f"  {src_file} => {dst_file}")
 
         res = detector.detect(image_in)
-        save_json(res, dst_file)
+        label = A2dImageLabel.from_d2d(res)
+        save_json(label, dst_file)
 
 
 if __name__ == "__main__":

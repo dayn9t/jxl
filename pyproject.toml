@@ -28,11 +28,11 @@ dev = [
     "pytest",
 ]
 
-
 [project.scripts]
 jxl_label = "jxl.bin.jxl_label:main"
 jxl_prop = "jxl.bin.jxl_prop:main"
 jxl_sample = "jxl.bin.jxl_sample:main"
+jxl_sample = "jxl.bin.d2d_label:main"
 
 [build-system]
 requires = ["hatchling"]
