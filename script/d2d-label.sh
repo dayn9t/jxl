@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 function show_help() {
-  echo -e "\nJML图像分类器训练程序，用法:"
-  echo -e "    jxl-train-ic.sh <目录>\n"
+  echo -e "\nD2D 标注程序，用法:"
+  echo -e "    s4-d2d-label.sh <目录>\n"
 }
 
 if [[ x$1 == x ]]; then
@@ -18,5 +18,5 @@ date=$1
 
 model=/home/jiang/ws/s4/sign/model_dir/sign.pt
 root=/home/jiang/ws/s4/dates/$date
-
-uv run python "$BIN_DIR"/d2d_label.py $model $root/image $root/hop_m101
+python=/home/jiang/py/jxl/.venv/bin/python
+$python "$BIN_DIR"/d2d_label.py $model $root/image $root/hop_m101
