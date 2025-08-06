@@ -1,32 +1,34 @@
 from pathlib import Path
 
 from jvi.image.image_nda import ImageNda
-from ultralytics import YOLO
+from ultralytics import YOLO, YOLOE
 
 from jxl.det.d2d import Detector2D, D2dOpt, D2dResult
 from jxl.yolo.results import results_list_to_d2d_result
 
 
-class D2dYolo(Detector2D):
+class D2dYoloE(Detector2D):
     """目标检测器"""
 
-    model_class = "D2dYolo"
+    model_class = "D2dYoloE"
 
     def __init__(
         self,
         model_path: Path,
         opt: D2dOpt,
+        names: list[str],
         device_name: str = "",
         verbose: bool = False,
     ):
         super().__init__(model_path, opt, device_name, verbose)
 
-        self._model = YOLO(model_path, task="detect")
+        self._model = YOLOE(model_path)
+        self._model.set_classes(names, self._model.get_text_pe(names))
 
     def detect(self, image: ImageNda, persist: bool = True) -> D2dResult:
         """检测图像中的目标
 
-        使用YOLO模型对输入图像进行目标检测。根据配置选择是否启用目标跟踪功能。
+        对输入图像进行目标检测。根据配置选择是否启用目标跟踪功能。
 
         Args:
             image: ImageNda - 输入的图像数据，格式为NumPy数组
@@ -43,8 +45,6 @@ class D2dYolo(Detector2D):
             results_list = self._model.track(
                 data,
                 persist=persist,
-                # conf=self._opt.conf_thr,
-                # iou=self._opt.iou_thr,
                 verbose=self._verbose,
             )
         else:

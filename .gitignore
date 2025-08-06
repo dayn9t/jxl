@@ -11,5 +11,8 @@ wheels/
 
 .idea/
 dist/
+models/
 *.pt
+*.ts
+
 

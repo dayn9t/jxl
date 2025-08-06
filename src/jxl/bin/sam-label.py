@@ -13,11 +13,11 @@ from ultralytics import NAS, YOLO
 
 
 def detect_person_in_video(
-        video_path: str,
-        model_name: str = "yolo_nas_s",
-        conf_thres: float = 0.25,
-        output_path: Optional[str] = None,
-        display: bool = False
+    video_path: str,
+    model_name: str = "yolo_nas_s",
+    conf_thres: float = 0.25,
+    output_path: Optional[str] = None,
+    display: bool = False,
 ):
     """
     使用YOLO-NAS检测视频中的人员
@@ -62,7 +62,7 @@ def detect_person_in_video(
     # 设置输出视频
     out = None
     if output_path:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
         logger.info(f"输出视频将保存到: {output_path}")
 
@@ -76,7 +76,9 @@ def detect_person_in_video(
 
         frame_idx += 1
         if frame_idx % 10 == 0:
-            logger.info(f"正在处理第 {frame_idx}/{frame_count} 帧 ({frame_idx / frame_count * 100:.1f}%)")
+            logger.info(
+                f"正在处理第 {frame_idx}/{frame_count} 帧 ({frame_idx / frame_count * 100:.1f}%)"
+            )
 
         # 使用YOLO-NAS进行检测
         results = model(frame, conf=conf_thres, classes=[0])  # 类别0通常是person
@@ -98,7 +100,7 @@ def detect_person_in_video(
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             (0, 255, 0),
-            2
+            2,
         )
 
         # 保存或显示帧
@@ -107,7 +109,7 @@ def detect_person_in_video(
 
         if display:
             cv2.imshow("YOLO-NAS Person Detection", annotated_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
     # 清理资源
@@ -121,12 +123,16 @@ def detect_person_in_video(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='使用YOLO-NAS检测视频中的人员')
-    parser.add_argument('video', help='输入视频文件路径')
-    parser.add_argument('--model', default='yolo_nas_s', help='YOLO-NAS模型: yolo_nas_s, yolo_nas_m, yolo_nas_l')
-    parser.add_argument('--conf', type=float, default=0.25, help='置信度阈值')
-    parser.add_argument('--output', help='输出视频路径')
-    parser.add_argument('--display', action='store_true', help='实时显示检测结果')
+    parser = argparse.ArgumentParser(description="使用YOLO-NAS检测视频中的人员")
+    parser.add_argument("video", help="输入视频文件路径")
+    parser.add_argument(
+        "--model",
+        default="yolo_nas_s",
+        help="YOLO-NAS模型: yolo_nas_s, yolo_nas_m, yolo_nas_l",
+    )
+    parser.add_argument("--conf", type=float, default=0.25, help="置信度阈值")
+    parser.add_argument("--output", help="输出视频路径")
+    parser.add_argument("--display", action="store_true", help="实时显示检测结果")
 
     args = parser.parse_args()
 
@@ -135,7 +141,7 @@ def main():
         model_name=args.model,
         conf_thres=args.conf,
         output_path=args.output,
-        display=args.display
+        display=args.display,
     )
 
 

@@ -28,6 +28,11 @@ dev = [
     "pytest",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
 [project.scripts]
 jxl_label = "jxl.bin.jxl_label:main"
 jxl_prop = "jxl.bin.jxl_prop:main"
