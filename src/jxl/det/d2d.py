@@ -54,6 +54,16 @@ class D2dResult(BaseModel):
     objects: D2dObjects
     """目标集合"""
 
+    def min_conf(self) -> float:
+        """获取最低置信度"""
+        if not self.objects:
+            return 1.0  # 没有目标时返回最高置信度
+        return min(ob.conf for ob in self.objects)
+
+    def empty(self):
+        """判定结果是否为空"""
+        return len(self.objects) == 0
+
 
 D2dResults: TypeAlias = List[D2dResult]
 """检测到的2D目标集合"""

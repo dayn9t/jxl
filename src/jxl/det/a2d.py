@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from typing import TypeAlias
 
 from jvi.drawing.color import COLORS7
@@ -26,6 +26,27 @@ class A2dOpt(BaseModel):
     """属性名称集合, key: 属性索引, value: 属性名称"""
 
 
+def prop_to_label(
+    prop_id: int, probs: List[float], prop_names: List[str]
+) -> Tuple[str, ProbValue]:
+    """将属性概率分布转换为标签和值"""
+
+    max_conf = max(probs)
+    max_index = probs.index(max_conf)
+    return prop_names[prop_id], ProbValue(max_index, max_conf)
+
+
+def props_to_label(
+    props: Dict[int, List[float]], prop_names: List[str]
+) -> Dict[str, ProbValue]:
+    """将属性概率分布集合转换为标签和值集合"""
+    label_props = {}
+    for prop_id, probs in props.items():
+        prop_name, prob_value = prop_to_label(prop_id, probs, prop_names)
+        label_props[prop_name] = prob_value
+    return label_props
+
+
 class A2dObject(D2dObject):
     """检测到的2D目标"""
 
@@ -36,7 +57,7 @@ class A2dObject(D2dObject):
         """获取置信度的整数值"""
         return int(self.conf * 100)
 
-    def to_label(self) -> A2dObjectLabel:
+    def to_label(self, names: List[str]) -> A2dObjectLabel:
         """将检测到的2D目标转换为标注格式
 
         将当前的A2dObject对象转换为标注格式A2dObjectLabel，
@@ -45,17 +66,13 @@ class A2dObject(D2dObject):
         Returns:
             A2dObjectLabel: 对应的目标标注数据
         """
-        # 转换polygon点集，使用矩形的四个角点
-        polygon = self.rect.vertexes()
-
-        props = {k: v for k, v in self.props.items()}
 
         # 转换属性，保持原有结构
         return A2dObjectLabel(
             id=self.id,
             prob_class=ProbValue(self.cls, self.conf),
-            polygon=polygon,
-            properties=props,
+            polygon=self.rect.vertexes(),
+            properties=props_to_label(self.props, names),
         )
 
 
@@ -80,6 +97,16 @@ class A2dResult(BaseModel):
         """
         objects = [ob.to_label() for ob in self.objects]
         return A2dImageLabel(user_agent="a2d_result", roi=self.roi, objects=objects)
+
+    def min_conf(self) -> float:
+        """获取最低置信度"""
+        if not self.objects:
+            return 1.0  # 没有目标时返回最高置信度
+        return min(ob.conf for ob in self.objects)
+
+    def empty(self):
+        """判定结果是否为空"""
+        return len(self.objects) == 0
 
 
 def from_d2d(d2d_result: D2dResult) -> A2dResult:

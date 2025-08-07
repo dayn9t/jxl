@@ -9,18 +9,19 @@ from jxl.yolo.results import results_list_to_d2d_result
 
 # https://docs.ultralytics.com/models/yoloe/
 
+
 class D2dYoloE(Detector2D):
     """目标检测器"""
 
     model_class = "D2dYoloE"
 
     def __init__(
-            self,
-            model_path: Path,
-            opt: D2dOpt,
-            names: list[str],
-            device_name: str = "",
-            verbose: bool = False,
+        self,
+        model_path: Path,
+        opt: D2dOpt,
+        names: list[str],
+        device_name: str = "",
+        verbose: bool = False,
     ):
         super().__init__(model_path, opt, device_name, verbose)
 

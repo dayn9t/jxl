@@ -1,28 +1,64 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-import os
-import sys
-import argparse
 from pathlib import Path
-from typing import Optional
 
-import cv2
+from jvi.geo.size2d import Size, SIZE_FHD
+from jvi.video.capture import Capture
 from loguru import logger
 
+from jxl.det.a2d import from_d2d
+from jxl.det.d2d import D2dOpt
+from jxl.det.yolo.d2d_yoloe import D2dYoloE
+from jxl.label.meta_dataset import MetaDataset
 
-def main(video_file:Path, label_folder:Path):
-    capture = Capture(file)
-    print(file)
+
+def main(
+    video_file: Path,
+    dataset_dir: Path,
+    names: str,
+    meta_id: int = 0,
+    fps: float = 1,
+    size: Size = SIZE_FHD,
+) -> None:
+    logger.info("video_file: {}", video_file)
+
+    capture = Capture(video_file)
     assert capture.is_opened()
-    ok = capture.set_fps(0.2)
-    assert ok
-    assert capture.fps() == 0.2
-    print("fps:", capture.fps())
-    size = capture.video_size()
-    print("size:", size)
 
+    capture.set_fps(fps).unwrap()
+    logger.info("fps: {}", fps)
+
+    capture.set_size(size).unwrap()
+    logger.info("size: {}", size)
+
+    conf = 0.4
+    iou = 0.5
+    opt = D2dOpt(conf_thr=conf, iou_thr=iou)
+
+    model_name = "yoloe-11l-seg.pt"
+    model_file = Path("/home/jiang/py/jxl/models/yoloe", model_name)
+    name_arr = names.split(",")
+
+    model = D2dYoloE(model_file, opt, name_arr)
+
+    a2d_set = MetaDataset(dataset_dir, "a2d", meta_id)
+
+    while True:
+        r = capture.read_frame()
+        if r.is_null():
+            break
+        frame = r.unwrap()
+
+        d2d_ret = model.detect(frame.data)
+        a2d_ret = from_d2d(d2d_ret)
+
+        name = f"{video_file.parent.name}_{video_file.stem}_{frame.number:04d}"
+        logger.info(f"#{frame.number} {name}")
+        a2d_set.add_sample(name, frame.data, a2d_ret)
 
 
 if __name__ == "__main__":
-    main()
+    video_file = Path(
+        "/var/www/static/projects/sgcc/video/柜员后视角/2024-03-15/08-30-57.mp4"
+    )
+    dataset_dir = Path("/home/jiang/py/jxl/dist/2024-03-15")
+    names = "person"
+    main(video_file, dataset_dir, names, fps=0.1)
