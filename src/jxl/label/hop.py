@@ -125,6 +125,8 @@ class HopSet(A2dLabelSet):
 
     def __init__(self, folder: Path, meta_id: int):
         super().__init__(folder, meta_id)
+        self._image_dir = Path(self._folder, "image")
+        self._label_dir = Path(self._folder, f"hop_m{self._meta_id}")
 
     def __len__(self) -> int:
         assert self
@@ -136,18 +138,15 @@ class HopSet(A2dLabelSet):
 
     def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
         """加载本格式的数据集"""
-        image_dir = Path(self._folder, "image")
-        label_dir = Path(self._folder, f"hop_m{self._meta_id}")
-        label_files = files_in(label_dir, HOP_EXT)
+
+        label_files = files_in(self._label_dir, HOP_EXT)
 
         pairs = []
         for label_file in label_files:
             label = load_json(label_file, A2dImageLabel).unwrap()
-            if label:
-                image_file = image_dir / (label_file.stem + IMG_EXT)
-                pairs.append((image_file, label))
-            else:
-                print("WARN: load label fail @", label_file)
+            image_file = self._image_dir / (label_file.stem + IMG_EXT)
+            pairs.append((image_file, label))
+
         return pairs
 
     def save(self, _root: Path) -> None:

@@ -10,7 +10,7 @@ from jxl.det.yolo.d2d_yoloe import D2dYoloE
 
 def a_test() -> None:
     file = "/home/jiang/py/jxl/assets/person/p2.jpg"
-    conf = 0.3
+    conf = 0.4
     iou = 0.5
     opt = D2dOpt(input_shape=(640, 640), conf_thr=conf, iou_thr=iou)
 

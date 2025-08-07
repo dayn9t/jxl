@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from jvi.image.image_nda import ImageNda
-from ultralytics import YOLO, YOLOE
+from ultralytics import YOLOE
 
 from jxl.det.d2d import Detector2D, D2dOpt, D2dResult
 from jxl.yolo.results import results_list_to_d2d_result
 
+
+# https://docs.ultralytics.com/models/yoloe/
 
 class D2dYoloE(Detector2D):
     """目标检测器"""
@@ -13,12 +15,12 @@ class D2dYoloE(Detector2D):
     model_class = "D2dYoloE"
 
     def __init__(
-        self,
-        model_path: Path,
-        opt: D2dOpt,
-        names: list[str],
-        device_name: str = "",
-        verbose: bool = False,
+            self,
+            model_path: Path,
+            opt: D2dOpt,
+            names: list[str],
+            device_name: str = "",
+            verbose: bool = False,
     ):
         super().__init__(model_path, opt, device_name, verbose)
 
