@@ -83,13 +83,13 @@ def main(
     dataset_dir: Annotated[Path, typer.Argument(help="输出数据集目录")],
     names: Annotated[str, typer.Argument(help="目标类别名称，多个类别用逗号分隔")],
     meta_id: Annotated[int, typer.Option(help="元数据ID")] = 0,
-    fps: Annotated[float, typer.Option(help="提取视频帧的帧率")] = 1.0,
+    fps: Annotated[float, typer.Option(help="提取视频帧的帧率")] = 0.2,
     width: Annotated[int, typer.Option(help="处理图像宽度")] = SIZE_FHD.width,
     height: Annotated[int, typer.Option(help="处理图像高度")] = SIZE_FHD.height,
-    min_conf: Annotated[float, typer.Option(help="最小置信度阈值")] = 0.4,
+    min_conf: Annotated[float, typer.Option(help="最小置信度阈值")] = 0.3,
     max_conf: Annotated[
         float, typer.Option(help="最大置信度阈值，超过此值的帧会被跳过")
-    ] = 0.8,
+    ] = 0.7,
     iou_thr: Annotated[float, typer.Option(help="IOU阈值")] = 0.5,
     model_name: Annotated[str, typer.Option(help="模型文件名")] = "yoloe-11l-seg.pt",
     weights_dir: Annotated[Optional[Path], typer.Option(help="权重文件目录")] = None,
