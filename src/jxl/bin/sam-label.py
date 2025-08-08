@@ -8,6 +8,7 @@ from jxl.det.a2d import from_d2d
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yoloe import D2dYoloE
 from jxl.label.meta_dataset import MetaDataset
+from jxl.yolo.util import yolo_set_weights_dir
 
 
 def main(
@@ -23,6 +24,8 @@ def main(
 ) -> None:
     logger.info("video_file: {}", video_file)
 
+    yolo_set_weights_dir("/home/jiang/py/jxl/models")
+
     capture = Capture(video_file)
     assert capture.is_opened()
 
@@ -35,7 +38,7 @@ def main(
     opt = D2dOpt(conf_thr=min_conf, iou_thr=iou_thr)
 
     model_name = "yoloe-11l-seg.pt"
-    model_file = Path("/home/jiang/py/jxl/models/yoloe", model_name)
+    model_file = Path("/home/jiang/py/jxl/models", model_name)
     name_arr = names.split(",")
     model = D2dYoloE(model_file, opt, name_arr)
 
