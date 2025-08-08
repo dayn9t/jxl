@@ -6,8 +6,6 @@ from ultralytics import YOLOE
 from jxl.det.d2d import Detector2D, D2dOpt, D2dResult
 from jxl.yolo.results import results_list_to_d2d_result
 
-from ultralytics.utils import DATASETS_DIR, SETTINGS
-
 # https://docs.ultralytics.com/models/yoloe/
 
 
@@ -24,7 +22,6 @@ class D2dYoloE(Detector2D):
         device_name: str = "",
         verbose: bool = False,
     ):
-        print("SETTINGS:", SETTINGS)
         super().__init__(model_path, opt, device_name, verbose)
 
         self._model = YOLOE(model_path)
