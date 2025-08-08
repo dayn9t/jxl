@@ -20,6 +20,9 @@ dependencies = [
     "onnxruntime",
     "onnx",
     "opencv_python",
+
+    "torch>=2.8.0",
+    "torchvision>=0.23.0"
 ]
 
 [dependency-groups]
