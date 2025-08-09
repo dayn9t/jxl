@@ -18,7 +18,7 @@ class PropLabeler(RecordViewer):
         self.meta = meta
         self.cat_name = cat_name
         self.prop_name = prop_name
-        self.prop_meta = meta.prop_meta(prop_name, cat_name=cat_name).unwrap()
+        self.prop_meta = meta.prop_meta_by_name(prop_name, cat_name=cat_name).unwrap()
         self.tile_index = 0  # 当前瓦片(标注对象)索引
         self.help_msgs = [
             "方向按键表：",

@@ -1,8 +1,6 @@
 from copy import copy
 from dataclasses import dataclass
-from typing import TypeAlias, Self, List, Dict
-
-from jcx.util.lict import LictItem
+from typing import TypeAlias, Self, Dict
 
 PROB_THR = 80
 """标签中概率省略下限, 高于该值的概率不再显示"""
@@ -61,11 +59,5 @@ class ProbValue:
         return ProbValue(self.value, round(self.conf, n))
 
 
-PropItem: TypeAlias = LictItem[str, ProbValue]
-"""属性集合条目带"""
-
-ProbProperties: TypeAlias = List[PropItem]
-"""带有置信度的属性列表, 受flask_restx限制, 用list代替map"""
-
-ProbPropertyMap: TypeAlias = Dict[str, ProbValue]
+ProbPropertyMap: TypeAlias = Dict[int, ProbValue]
 """带有置信度的属性字典"""

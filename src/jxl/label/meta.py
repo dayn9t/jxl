@@ -232,7 +232,7 @@ class LabelMeta(BaseModel):
                     return c
         raise NotImplementedError("程序BUG")
 
-    def prop_meta(
+    def prop_meta_by_name(
         self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
     ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
@@ -243,14 +243,25 @@ class LabelMeta(BaseModel):
                 return Some(p)
         return Null
 
+    def prop_meta_by_id(
+        self, prop_id: int, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+    ) -> Option[PropMeta]:
+        """获取属性值对应的元数据"""
+        cat = self.cat_meta(cat_id, cat_name)
+        type_name = cat.properties[prop_id].type
+        for p in self.properties:
+            if p.name == type_name:
+                return Some(p)
+        return Null
+
     def prop_value_name(self, cat_id: int, name: str, value_id: int) -> str:
         """获取属性值对应的表示"""
-        meta = self.prop_meta(name, cat_id).unwrap()
+        meta = self.prop_meta_by_name(name, cat_id).unwrap()
         return meta.value_meta(value_id).name
 
-    def prop_value_sign(self, cat_id: int, name: str, value_id: int) -> Option[str]:
+    def prop_value_sign(self, cat_id: int, prop_id: int, value_id: int) -> Option[str]:
         """获取属性值对应的符号表示"""
-        match self.prop_meta(name, cat_id):
+        match self.prop_meta_by_id(prop_id, cat_id):
             case Some(meta):
                 return Some(meta.value_meta(value_id).get_sign())
             case _:

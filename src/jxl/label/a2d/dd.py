@@ -115,18 +115,18 @@ class A2dObjectLabel(BaseModel):
         """判定是否为客观存在的目标"""
         return self.prob_class.value >= 0
 
-    def prop(self, name: str) -> ProbValue:
+    def prop(self, prop_id: int) -> ProbValue:
         """获取属性"""
-        return self.properties.get(name, ProbValue(0, 0))
+        return self.properties.get(prop_id, ProbValue(0, 0))
 
-    def set_prop(self, name: str, value: int, conf: float = 2.0) -> None:
+    def set_prop(self, prop_id: int, value: int, conf: float = 2.0) -> None:
         """设置属性值"""
-        self.properties[name] = ProbValue(value, conf)
+        self.properties[prop_id] = ProbValue(value, conf)
 
-    def remove_prop(self, name: str) -> None:
+    def remove_prop(self, prop_id: int) -> None:
         """删除属性值"""
-        if name in self.properties:
-            self.properties.pop("act")
+        if prop_id in self.properties:
+            self.properties.pop(prop_id)
 
     def min_conf(self) -> float:
         """最小置信度"""
@@ -238,16 +238,16 @@ class A2dImageLabel(BaseModel):
             color = Color.parse(cat_cfg.color)
             assert color
             label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
-            for prop_name, v in ob.properties.items():
-                if "all" not in visible_props and prop_name not in visible_props:
+            for prop_id, v in ob.properties.items():
+                if "all" not in visible_props and prop_id not in visible_props:
                     continue
-                p = cfg.prop_value_sign(ob.prob_class.value, prop_name, v.value)
+                p = cfg.prop_value_sign(ob.prob_class.value, prop_id, v.value)
                 match p:
                     case Some(v_name):
                         if len(v_name) > 0:
                             label += " " + v_name + (v.conf_str() if show_conf else "")
                     case _:
-                        print("WARN: 无效属性", ob.prob_class.value, prop_name, v.value)
+                        print("WARN: 无效属性", ob.prob_class.value, prop_id, v.value)
                     # fmt = ' %s=%d' if type(v) == int else ' %s=%.2f'
                     # label += fmt % (k, v)
             if cfg.label.title_style == 0:
