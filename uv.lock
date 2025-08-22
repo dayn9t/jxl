@@ -281,7 +281,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/b3/2d/b337afbd232ea1ea9
 
 [[package]]
 name = "jcx"
-version = "0.5.1"
+version = "0.5.3"
 source = { directory = "../jcx" }
 dependencies = [
     { name = "arrow" },
@@ -335,7 +335,7 @@ wheels = [
 
 [[package]]
 name = "jvi"
-version = "0.4.2"
+version = "0.4.3"
 source = { directory = "../jvi" }
 dependencies = [
     { name = "arrow" },
@@ -377,7 +377,7 @@ dev = [{ name = "pytest" }]
 
 [[package]]
 name = "jxl"
-version = "0.4.3"
+version = "0.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "jcx" },

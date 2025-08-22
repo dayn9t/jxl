@@ -1,4 +1,7 @@
 #!/opt/ias/env/bin/python
+import argparse
+import sys
+from pathlib import Path
 
 import cv2  # type: ignore
 from jcx.sys.fs import find, stem_append

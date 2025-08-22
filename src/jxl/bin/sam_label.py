@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import List, Optional, Annotated
+from typing import Annotated
 
-from jvi.geo.size2d import Size, SIZE_FHD
+import typer
+from jvi.geo.size2d import SIZE_FHD, Size
 from jvi.video.capture import Capture
 from loguru import logger
-import typer
 
 from jxl.det.a2d import from_d2d
 from jxl.det.d2d import D2dOpt
@@ -26,8 +26,30 @@ def process_video(
     max_conf: float = 0.8,
     iou_thr: float = 0.5,
     model_name: str = "yoloe-11l-seg.pt",
-    weights_dir: Optional[Path] = None,
+    weights_dir: Path | None = None,
 ) -> None:
+    """处理视频文件, 提取帧并使用SAM模型进行目标检测和分割.
+
+    该函数从指定视频文件中按给定帧率提取帧, 使用YOLO-E模型进行目标检测和分割,
+    然后将检测和分割结果保存到指定的数据集目录中.
+
+    Args:
+        video_file: 输入视频文件路径
+        dataset_dir: 输出数据集目录路径
+        names: 目标类别名称, 多个类别用逗号分隔
+        meta_id: 元数据ID, 默认为0
+        fps: 提取视频帧的帧率, 默认为1fps
+        size: 处理图像的大小, 默认为全高清(1920x1080)
+        min_conf: 目标检测的最小置信度阈值, 默认为0.4
+        max_conf: 最大置信度阈值, 超过此值的帧会被跳过, 默认为0.8
+        iou_thr: 非极大值抑制的IOU阈值, 默认为0.5
+        model_name: YOLO-E模型文件名, 默认为"yoloe-11l-seg.pt"
+        weights_dir: 模型权重文件目录, 如果为None则使用默认目录
+
+    Returns:
+        None
+
+    """
     logger.info("video_file: {}", video_file)
 
     weights_dir = weights_dir or Path("/home/jiang/py/jxl/models")
@@ -70,7 +92,8 @@ def process_video(
 
         a2d_ret = from_d2d(d2d_ret)
 
-        name = f"{video_file.parent.parent.name}_{video_file.parent.name}_{video_file.stem}_{frame.number:04d}"
+        p = video_file.parent
+        name = f"{p.parent.name}_{p.name}_{video_file.stem}_{frame.number:04d}"
         logger.info(f"#{n} {name} {min_conf:.2f}")
         n += 1
         a2d_set.add_sample(name, frame.data, a2d_ret)
@@ -78,27 +101,26 @@ def process_video(
 
 
 @app.command()
-def main(
+def main(  # noqa: PLR0913
     video_file: Annotated[Path, typer.Argument(help="输入视频文件路径")],
     dataset_dir: Annotated[Path, typer.Argument(help="输出数据集目录")],
-    names: Annotated[str, typer.Argument(help="目标类别名称，多个类别用逗号分隔")],
+    names: Annotated[str, typer.Argument(help="目标类别名称, 多个类别用逗号分隔")],
     meta_id: Annotated[int, typer.Option(help="元数据ID")] = 0,
     fps: Annotated[float, typer.Option(help="提取视频帧的帧率")] = 0.2,
     width: Annotated[int, typer.Option(help="处理图像宽度")] = SIZE_FHD.width,
     height: Annotated[int, typer.Option(help="处理图像高度")] = SIZE_FHD.height,
     min_conf: Annotated[float, typer.Option(help="最小置信度阈值")] = 0.3,
     max_conf: Annotated[
-        float, typer.Option(help="最大置信度阈值，超过此值的帧会被跳过")
+        float, typer.Option(help="最大置信度阈值, 超过此值的帧会被跳过")
     ] = 0.7,
     iou_thr: Annotated[float, typer.Option(help="IOU阈值")] = 0.5,
     model_name: Annotated[str, typer.Option(help="模型文件名")] = "yoloe-11l-seg.pt",
-    weights_dir: Annotated[Optional[Path], typer.Option(help="权重文件目录")] = None,
+    weights_dir: Annotated[Path | None, typer.Option(help="权重文件目录")] = None,
 ) -> None:
-    """
-    使用SAM模型从视频中提取标注数据。
+    """使用SAM模型从视频中提取标注数据.
 
-    此工具从视频中提取帧，使用YOLO-E模型进行目标检测和分割，
-    然后将结果保存到指定目录的数据集中。
+    此工具从视频中提取帧, 使用YOLO-E模型进行目标检测和分割,
+    然后将结果保存到指定目录的数据集中.
     """
     size = Size(width=width, height=height)
     process_video(
