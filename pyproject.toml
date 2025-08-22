@@ -1,6 +1,6 @@
 [project]
 name = "jxl"
-version = "0.4.4"
+version = "0.4.6"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -36,7 +36,7 @@ jxl_label = "jxl.bin.jxl_label:main"
 jxl_prop = "jxl.bin.jxl_prop:main"
 jxl_sample = "jxl.bin.jxl_sample:main"
 d2d_label = "jxl.bin.d2d_label:main"
-sam_label = "jxl.bin.sam_label:main"
+sam_label = "jxl.bin.sam_label:app"
 
 [build-system]
 requires = ["hatchling"]

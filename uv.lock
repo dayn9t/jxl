@@ -377,7 +377,7 @@ dev = [{ name = "pytest" }]
 
 [[package]]
 name = "jxl"
-version = "0.4.4"
+version = "0.4.6"
 source = { editable = "." }
 dependencies = [
     { name = "jcx" },
