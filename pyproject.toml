@@ -1,6 +1,6 @@
 [project]
 name = "jxl"
-version = "0.4.6"
+version = "0.4.7"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -20,6 +20,7 @@ dependencies = [
     "onnxruntime",
     "onnx",
     "opencv_python",
+    "clip @ git+https://github.com/ultralytics/CLIP.git", # Ultralytics CLIP 依赖
 
     "torch>=2.8.0",
     "torchvision>=0.23.0"
@@ -44,4 +45,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
