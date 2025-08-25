@@ -10,6 +10,7 @@
 4. 处理返回的D2dResult结果
 
 """
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Self
@@ -92,7 +93,7 @@ class D2dResult(BaseModel):
             return 1.0  # 没有目标时返回最高置信度
         return min(ob.conf for ob in self.objects)
 
-    def empty(self)-> bool:
+    def empty(self) -> bool:
         """判定结果是否为空.
 
         检查是否存在检测到的目标对象.
