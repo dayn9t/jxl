@@ -1,0 +1,7 @@
+{
+	"api_base": "http://localhost:11434/v1/",
+	"api_key": "ollama",
+	"model": "qwen3:14b",
+	"top_p": 0.7,
+	"temperature": 0.4
+}

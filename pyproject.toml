@@ -23,7 +23,9 @@ dependencies = [
     "clip @ git+https://github.com/ultralytics/CLIP.git", # Ultralytics CLIP 依赖
 
     "torch>=2.8.0",
-    "torchvision>=0.23.0"
+    "torchvision>=0.23.0",
+
+    "openai"
 ]
 
 [dependency-groups]

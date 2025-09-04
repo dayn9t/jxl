@@ -1,0 +1,7 @@
+{
+	"api_base": "https://open.bigmodel.cn/api/paas/v4/",
+	"api_key": "a9000feb341642d2ba2d5a328005a5b5.XRpPKPVwJhmzoZBW",
+	"model": "glm-4-flashx",
+	"top_p": 0.7,
+	"temperature": 0.4
+}
