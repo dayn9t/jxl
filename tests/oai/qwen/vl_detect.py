@@ -28,7 +28,7 @@ def main():
 
     client = OpenAI(
         api_key=cfg.api_key,
-        base_url=cfg.api_base,
+        base_url=cfg.base_url,
     )
 
     # 记录请求开始时间

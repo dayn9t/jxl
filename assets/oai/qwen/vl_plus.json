@@ -1,6 +1,6 @@
 {
 	"api_key": "sk-1a47f41d0dfa471aa9461d421f7539b5",
-	"api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+	"base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
 	"model": "qwen-vl-plus-latest",
     "desc": "qwen-plus-latest/qwen-turbo-latest/qwen-flash-latest/qwen-max-latest",
 	"top_p": 0.7,

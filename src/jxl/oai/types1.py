@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class LlmCfg(BaseModel):
     """OCR 信息"""
 
-    api_base: str
+    base_url: str
     """API URL"""
 
     api_key: str

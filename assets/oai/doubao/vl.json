@@ -1,5 +1,5 @@
 {
-	"api_base": "https://ark.cn-beijing.volces.com/api/v3/",
+	"base_url": "https://ark.cn-beijing.volces.com/api/v3/",
 	"api_key": "a0f8cf60-dede-44ca-bf0a-581854496fa4",
 	"model": "doubao-1.5-vision-lite-250315",
 	"top_p": 0.7,

@@ -13,7 +13,7 @@ def main():
     client = OpenAI(
         # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
         api_key=cfg.api_key,
-        base_url=cfg.api_base,
+        base_url=cfg.base_url,
     )
 
     completion = client.chat.completions.create(

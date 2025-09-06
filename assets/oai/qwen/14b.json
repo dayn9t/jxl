@@ -1,6 +1,6 @@
 {
 	"api_key": "ollama",
-	"api_base": "http://localhost:11434/v1/",
+	"base_url": "http://localhost:11434/v1/",
 	"model": "qwen3:14b",
 	"top_p": 0.7,
 	"temperature": 0.4

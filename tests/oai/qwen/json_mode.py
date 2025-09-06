@@ -47,7 +47,7 @@ def main():
     client = OpenAI(
         # 若没有配置环境变量，请将下行替换为：api_key="sk-xxx"
         api_key=cfg.api_key,
-        base_url=cfg.api_base,
+        base_url=cfg.base_url,
     )
 
     # dedent的作用是去除每行开头的公共缩进，使字符串在代码中可以美观地缩进，但在运行时不会包含这些额外的空格

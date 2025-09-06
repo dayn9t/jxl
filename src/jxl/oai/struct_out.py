@@ -16,7 +16,7 @@ def main():
     # cfg =  load_json(JXL_OAI_DIR / "doubao_vl.json", LlmCfg).unwrap()
     cfg = load_json(JXL_OAI_DIR / "qwen_plus.json", LlmCfg).unwrap()
 
-    client = OpenAI(api_key=cfg.api_key, base_url=cfg.api_base)
+    client = OpenAI(api_key=cfg.api_key, base_url=cfg.base_url)
 
     response = client.responses.parse(
         model=cfg.model,
