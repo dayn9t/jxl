@@ -1,0 +1,7 @@
+{
+	"api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+	"api_key": "sk-1a47f41d0dfa471aa9461d421f7539b5",
+	"model": "qwen-vl-ocr-latest",
+	"top_p": 0.7,
+	"temperature": 0.4
+}
