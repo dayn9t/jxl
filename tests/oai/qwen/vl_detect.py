@@ -14,7 +14,7 @@ def encode_image(image_path):
 
 
 def main():
-    cfg = load_json(JXL_OAI_DIR / "qwen_vl_7b.json", LlmCfg).unwrap()
+    cfg = load_json(JXL_OAI_DIR / "qwen/vl_7b.json", LlmCfg).unwrap()
     print("cfg:", to_json(cfg))
 
     file = JXL_ASSERTS / "person/p2.jpg"

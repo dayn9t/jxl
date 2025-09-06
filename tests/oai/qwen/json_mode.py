@@ -11,7 +11,7 @@ from jxl.oai.types1 import LlmCfg
 
 
 def main():
-    cfg = load_json(JXL_OAI_DIR / "qwen_flash.json", LlmCfg).unwrap()
+    cfg = load_json(JXL_OAI_DIR / "qwen/flash.json", LlmCfg).unwrap()
 
     print("cfg:", to_json(cfg))
 
@@ -109,7 +109,7 @@ def main():
     print("model:", completion.model)
     print("total_tokens:", completion.usage.total_tokens)
     print("json_string:", json_string)
-    print("system_prompt:", system_prompt)
+    #print("system_prompt:", system_prompt)
 
 
 if __name__ == "__main__":

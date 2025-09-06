@@ -32,15 +32,15 @@ def main():
         extra_body={
             "thinking": {
                 "type": "disabled"  # 不使用深度思考能力
-                #"type": "enabled" # 使用深度思考能力
+                # "type": "enabled" # 使用深度思考能力
             }
         }
     )
-    print("elapsed:", watch.stop());
     resp = completion.choices[0].message.parsed
     # 打印 JSON 格式结果
     # print(resp.model_dump_json(indent=2))
     print(to_json(completion))
+    print("elapsed:", watch.stop())
 
 
 if __name__ == "__main__":

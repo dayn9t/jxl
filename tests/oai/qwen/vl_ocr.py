@@ -13,7 +13,7 @@ def encode_image(image_path):
 
 
 def main():
-    cfg = load_json(JXL_OAI_DIR / "qwen_ocr_plus.json", LlmCfg).unwrap()
+    cfg = load_json(JXL_OAI_DIR / "qwen/ocr_plus.json", LlmCfg).unwrap()
     print("cfg:", to_json(cfg))
 
     file = JXL_ASSERTS / "s4/signs/电信1.jpg"
