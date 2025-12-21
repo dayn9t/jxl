@@ -1,6 +1,6 @@
 [project]
 name = "jxl"
-version = "0.4.7"
+version = "0.4.9"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -21,8 +21,8 @@ dependencies = [
     "onnx",
     "opencv_python",
     "clip @ git+https://github.com/ultralytics/CLIP.git", # Ultralytics CLIP 依赖
-    "torch>=2.8.0",
-    "torchvision>=0.23.0",
+    "torch",
+    "torchvision",
     "openai",
     "volcengine-python-sdk",
 ]
