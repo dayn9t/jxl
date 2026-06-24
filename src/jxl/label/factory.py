@@ -1,14 +1,16 @@
 from pathlib import Path
-from typing import Type, Optional, Dict
+from typing import Dict, Optional, Type
 
+from rustshed import Err, Ok, Result
+
+from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
+from jxl.label.a2d.sample_set import A2dSampleSet
 from jxl.label.darknet.darknet_set import DarknetSet
 from jxl.label.hop import HopSet
-from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
-from rustshed import Result, Err, Ok
 
 _class_map: Dict[LabelFormat, Type[A2dLabelSet]] = {
     LabelFormat.HOP: HopSet,
-    LabelFormat.A2D: A2dLabelSet,
+    LabelFormat.A2D: A2dSampleSet,
     LabelFormat.DARKNET: DarknetSet,
 }
 

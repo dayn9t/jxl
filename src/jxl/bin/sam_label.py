@@ -6,9 +6,9 @@ from jvi.geo.size2d import SIZE_FHD, Size
 from jvi.video.capture import Capture
 from loguru import logger
 
-from jxl.det.a2d import from_d2d
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yoloe import D2dYoloE
+from jxl.label.a2d.dd import A2dImageLabel
 from jxl.label.meta_dataset import MetaDataset
 from jxl.yolo.util import yolo_set_weights_dir
 
@@ -91,7 +91,7 @@ def process_video(
             )
             continue
 
-        a2d_ret = from_d2d(d2d_ret)
+        a2d_ret = A2dImageLabel.from_d2d(d2d_ret)
 
         p = video_file.parent
         name = f"{p.parent.name}_{p.name}_{video_file.stem}_{frame.number:04d}"

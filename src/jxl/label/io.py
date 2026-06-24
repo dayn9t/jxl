@@ -1,9 +1,11 @@
 from pathlib import Path
+from typing import Final
 
-from jcx.sys.fs import StrPath, with_parent, remake_dir, make_parents
+from jcx.sys.fs import StrPath, files_in, make_parents, remake_dir, with_parent
 from jcx.text.txt_json import load_json
 from jvi.image.image_nda import ImageNda
-from jxl.label.a2d.dd import A2dImageLabel, A2dImageLabels, IMG_EXT, A2dImageLabelPairs
+
+from jxl.label.a2d.dd import IMG_EXT, A2dImageLabel, A2dImageLabelPairs, A2dImageLabels
 from jxl.label.meta import meta_fix
 
 
@@ -16,6 +18,46 @@ def label_path_of(img_file: StrPath, format_name: str, meta_id: int, ext: str) -
     """获取图像对应的标注文件路径"""
     file = Path(img_file).with_suffix(ext)
     return with_parent(file, f"{format_name}_{meta_fix(meta_id)}")
+
+
+LABEL_EXT: Final[str] = ".json"
+"""标注文件扩展名"""
+
+
+def load_image_label_pairs(
+    folder: StrPath, meta_id: int, format_name: str
+) -> A2dImageLabelPairs:
+    """加载目录下指定格式的图像-标注对.
+
+    读取 ``MetaDataset`` 写入的结构::
+
+        {folder}/image/{stem}.jpg
+        {folder}/{format_name}_m{meta_id}/{stem}.json
+
+    Args:
+        folder: 数据集根目录
+        meta_id: 元数据 ID
+        format_name: 标注格式名(目录前缀), 如 ``hop`` / ``a2d``
+
+    Returns:
+        图像与标注对集
+
+    Raises:
+        FileNotFoundError: 标注目录不存在时
+    """
+    root = Path(folder)
+    image_dir = root / "image"
+    label_dir = root / f"{format_name}_{meta_fix(meta_id)}"
+
+    if not label_dir.is_dir():
+        raise FileNotFoundError(f"标注目录不存在: {label_dir}")
+
+    pairs: A2dImageLabelPairs = []
+    for label_file in files_in(label_dir, LABEL_EXT):
+        label = load_json(label_file, A2dImageLabel).unwrap()
+        image_file = image_dir / (label_file.stem + IMG_EXT)
+        pairs.append((image_file, label))
+    return pairs
 
 
 def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:

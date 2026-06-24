@@ -3,15 +3,16 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Optional, TypeAlias
 
-from jcx.sys.fs import with_parent, StrPath, files_in
+from jcx.sys.fs import StrPath, with_parent
 from jcx.text.txt_json import load_json, save_json
 from jvi.gui.record_viewer import FileRecord
-from jxl.label.ias import ias_label_path_of
-from jxl.label.a2d.dd import A2dImageLabelPairs, A2dImageLabel, IMG_EXT
-from jxl.label.io import label_path_of
-from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat, HOP
-from jxl.label.meta import meta_fix
 from rustshed import Option
+
+from jxl.label.a2d.dd import IMG_EXT, A2dImageLabel, A2dImageLabelPairs
+from jxl.label.a2d.label_set import HOP, A2dLabelSet, LabelFormat
+from jxl.label.ias import ias_label_path_of
+from jxl.label.io import label_path_of, load_image_label_pairs
+from jxl.label.meta import meta_fix
 
 HOP_EXT = ".json"  # 标注文件扩展名
 HOP_FIX = "hop"  # HOP名称前缀/后缀
@@ -48,8 +49,8 @@ def hop_del_label(img_file: StrPath, meta_id: int) -> None:
 
 
 def hop_load_labels(folder: StrPath, meta_id: int) -> A2dImageLabelPairs:
-    hs = HopSet(Path(folder), meta_id)
-    return hs.find_pairs()
+    """加载 HOP 格式(`hop_m{meta_id}`)的图像-标注对集."""
+    return load_image_label_pairs(folder, meta_id, HOP_FIX)
 
 
 class LabelFilter(IntEnum):
@@ -123,11 +124,6 @@ class HopSet(A2dLabelSet):
         """检验路径是否是本格式的数据集"""
         return Path(folder, f"{HOP}_m{meta_id}").is_dir()
 
-    def __init__(self, folder: Path, meta_id: int):
-        super().__init__(folder, meta_id)
-        self._image_dir = Path(self._folder, "image")
-        self._label_dir = Path(self._folder, f"hop_m{self._meta_id}")
-
     def __len__(self) -> int:
         assert self
         return 0
@@ -136,18 +132,9 @@ class HopSet(A2dLabelSet):
         """获取标注格式"""
         return LabelFormat.HOP
 
-    def find_pairs(self, pattern: str = "") -> A2dImageLabelPairs:
+    def find_pairs(self, _pattern: str = "") -> A2dImageLabelPairs:
         """加载本格式的数据集"""
-
-        label_files = files_in(self._label_dir, HOP_EXT)
-
-        pairs = []
-        for label_file in label_files:
-            label = load_json(label_file, A2dImageLabel).unwrap()
-            image_file = self._image_dir / (label_file.stem + IMG_EXT)
-            pairs.append((image_file, label))
-
-        return pairs
+        return load_image_label_pairs(self._folder, self._meta_id, HOP_FIX)
 
     def save(self, _root: Path) -> None:
         assert self
