@@ -12,10 +12,13 @@ from jxl.label.a2d.dd import (
     A2dObjectLabels,
 )
 from jxl.label.a2d.label_set import A2dLabelSet, LabelFormat
-from jxl.label.darknet.darknet_dir import DarknetDir
+from jxl.label.darknet.darknet_dir import DarknetDir, darknet_label_path_of
 
 DARKNET_EXT = ".txt"
 """Darknet标注文件扩展名"""
+
+img2label = darknet_label_path_of
+"""图像路径 -> darknet 标注路径(images/x.jpg -> labels/x.txt)"""
 
 
 class DarknetSet(A2dLabelSet):
