@@ -26,6 +26,9 @@ dependencies = [
     "openai",
     "volcengine-python-sdk",
     "insightface>=1.0.1",
+    "faiss-cpu>=1.14.3",
+    "scikit-learn>=1.9.0",
+    "nvidia-cusparselt-cu12>=0.7.1",
 ]
 
 [dependency-groups]
