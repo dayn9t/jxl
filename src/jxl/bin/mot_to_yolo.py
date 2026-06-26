@@ -1,18 +1,19 @@
 #!/home/jiang/py/jxl/.venv/bin/python
-"""MOT17 -> YOLO 格式转换.
+"""MOT(MOT17/MOT20) -> YOLO 格式转换.
 
-读 MOT17 train 序列(gt/gt.txt + img1/*.jpg), 筛 class 1/7(pedestrian + static person)
+读 MOT train 序列(gt/gt.txt + img1/*.jpg), 筛 class 1/7(pedestrian + static person)
 作为单一 person 类, MOT 绝对像素 xywh(左上角) -> YOLO 归一化中心 xywh,
 输出 YOLO images/ + labels/. 文件名 {seq}_{frame:06d} 防多序列冲突.
 
 class 1=pedestrian, 7=static person -> YOLO class 0(person).
 其余(2骑车/3车/4自行车/8 distractor/12 crowd 等)丢弃.
 
-MOT17 每序列有 DPM/FRCNN/SDP 三检测器变体, **图片完全相同**仅 gt 来源异,
-只取 FRCNN 一份(默认)避免图片重复.
+MOT17 每序列有 DPM/FRCNN/SDP 三检测器变体(**图片相同**仅 gt 来源异), 用 --detector FRCNN
+取一份避免重复; MOT20 序列名无检测器后缀(MOT20-01), detector 留空匹配所有 MOT 序列.
 
 用法:
-    mot17_to_yolo /path/MOT17/train /path/out [--detector FRCNN]
+    mot_to_yolo /path/MOT17/train /path/out --detector FRCNN   # MOT17
+    mot_to_yolo /path/MOT20/train /path/out                    # MOT20(无变体后缀)
 """
 
 import shutil
@@ -67,21 +68,21 @@ def to_yolo_line(box: tuple[float, float, float, float], iw: int, ih: int) -> st
 
 @app.command()
 def main(
-    src_dir: Annotated[Path, typer.Argument(help="MOT17/train 目录(含 MOT17-*/序列)")],
+    src_dir: Annotated[Path, typer.Argument(help="MOT train 目录(含 MOT*-*/序列)")],
     out_dir: Annotated[Path, typer.Argument(help="输出 YOLO 目录(images/+labels/)")],
-    detector: Annotated[str, typer.Option(help="检测器变体(DPM/FRCNN/SDP), 图片相同取一份")] = "FRCNN",
+    detector: Annotated[str | None, typer.Option(help="检测器变体(DPM/FRCNN/SDP, MOT17用); 留空匹配所有MOT序列(MOT20)")] = None,
 ) -> None:
-    """遍历 MOT17 train 序列(指定检测器变体), 转 YOLO person 检测格式."""
+    """遍历 MOT train 序列, 转 YOLO person 检测格式."""
     out_img = out_dir / "images"
     out_lbl = out_dir / "labels"
     out_img.mkdir(parents=True, exist_ok=True)
     out_lbl.mkdir(parents=True, exist_ok=True)
 
-    suffix = f"-{detector}"
+    suffix = f"-{detector}" if detector else ""
     seqs = sorted(
-        d for d in src_dir.iterdir() if d.is_dir() and d.name.startswith("MOT17") and d.name.endswith(suffix)
+        d for d in src_dir.iterdir() if d.is_dir() and d.name.startswith("MOT") and d.name.endswith(suffix)
     )
-    assert seqs, f"未在 {src_dir} 找到 MOT17-*{suffix} 序列目录"
+    assert seqs, f"未在 {src_dir} 找到 MOT-*{suffix} 序列目录"
     logger.info("序列 {} 个({}) -> {}", len(seqs), detector, out_dir)
 
     n_img = n_lbl = n_box = 0

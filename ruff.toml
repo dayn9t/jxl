@@ -4,4 +4,4 @@ ignore = ["F403", "F405", "D203", "D213", "COM812", "TRY003", "EM102", "PLC0415"
 
 [lint.per-file-ignores]
 # bin 脚本豁免噪声: 行长/assert/typer参数多/lazy import/import F/缺docstring/异常消息/subprocess
-"src/jxl/bin/*.py" = ["E501", "S101", "PLR0913", "PLC0415", "N812", "D102", "D107", "TRY003", "EM102", "S603", "S607", "S108", "FBT001", "FBT002"]
+"src/jxl/bin/*.py" = ["E501", "S101", "PLR0913", "PLC0415", "N812", "D102", "D107", "TRY003", "EM102", "S603", "S607", "S108", "FBT001", "FBT002", "B006"]
