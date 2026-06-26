@@ -1,9 +1,8 @@
-#!/opt/ias/env/bin/python
+#!/home/jiang/py/jxl/.venv/bin/python
 
 import argparse
 from pathlib import Path
 
-from jcx.util.err import catch_show_err
 from jxl.cls.dataset import dataset_split
 
 
@@ -27,4 +26,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    catch_show_err(main)
+    main()
