@@ -22,7 +22,6 @@ from loguru import logger
 from sklearn.cluster import MiniBatchKMeans
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
-# ruff: noqa: TRY003, EM102
 
 app = typer.Typer(help="整图 core-set 去重(图 person-embedding)")
 

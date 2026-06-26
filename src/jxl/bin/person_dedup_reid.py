@@ -18,7 +18,6 @@ from loguru import logger
 from sklearn.cluster import HDBSCAN
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
-# ruff: noqa: TRY003, EM102
 
 app = typer.Typer(help="person Re-ID 同人聚类(HDBSCAN)")
 
@@ -38,7 +37,7 @@ def main(
 
     hdb = HDBSCAN(min_cluster_size=min_cluster_size, metric="cosine")
     labels = hdb.fit_predict(emb)
-    n_clusters = len(set(int(x) for x in labels if x >= 0))
+    n_clusters = len({int(x) for x in labels if x >= 0})
     n_noise = int((labels < 0).sum())
     logger.info("HDBSCAN(min_size={}): 身份簇={}, 噪声(孤立)={}", min_cluster_size, n_clusters, n_noise)
 

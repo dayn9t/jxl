@@ -37,7 +37,7 @@ if str(TORCHREID_SRC) not in sys.path:
     sys.path.insert(0, str(TORCHREID_SRC))
 
 # typer CLI 惯用模式
-# ruff: noqa: TRY003, EM102, PLC0415, S603, S607
+# ruff: noqa: PLC0415, S603, S607
 
 app = typer.Typer(help="person Re-ID embedding(OSNet)")
 
