@@ -14,6 +14,7 @@ dependencies = [
     "pydantic",
     "typer",
     "loguru",
+    "orjson", # 9-lock 指定 JSON 库; bin/coco_to_yolo 数据转换脚本使用
     "ultralytics>=8.4.65",
     "lap", # for ultralytics
     "numpy", # for ultralytics
@@ -74,3 +75,66 @@ addopts = [
     "--ignore=tests/label/extractor_test.py",
     "--ignore=tests/label/extractor2_test.py",
 ]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+# rustshed / jcx / jvi 自带 py.typed — 严禁放行, 正常 strict 检查
+
+# NON-LOCKED-LIB / NO-STUB: 第三方 ML 栈已安装但无 py.typed stub, 无法静态检查类型,
+# 按 j-python-strict 规则允许 per-module ignore_missing_imports (非 type:ignore 掩盖)。
+[[tool.mypy.overrides]]
+module = [
+    "ultralytics.*",
+    "torch.*",
+    "torchvision.*",
+    "faiss.*",
+    "onnxruntime.*",
+    "onnx.*",
+    "cv2",
+    "sklearn.*",
+    "pandas.*",
+    "albumentations.*",
+    "imageio.*",
+    "safetensors.*",
+    "torchsummary.*",
+    "fire",
+    "colorama",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+# 从 ruff.toml 迁移至 pyproject (单一数据源, 原则 8); ruff.toml 已删除
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "F403", "F405", "D203", "D213", "COM812", "TRY003", "EM102", "PLC0415",
+    "S603", "S607", "RUF100",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# bin 脚本豁免噪声: 行长/assert/typer参数多/lazy import/import F/缺docstring/异常消息/subprocess
+"src/jxl/bin/*.py" = [
+    "E501", "S101", "PLR0913", "PLC0415", "N812", "D102", "D107",
+    "TRY003", "EM102", "S603", "S607", "S108", "FBT001", "FBT002", "B006",
+    # rmb 合成数据管线工具(bin/augment, bin/synth_*, bin/rmb_*)额外豁免:
+    "RUF001", "RUF002", "RUF003",        # 中文全角标点(docstring/注释/字符串)
+    "D100", "D101", "D103", "D205", "D400", "D415", "D301",  # docstring 标点/缺失
+    "B008",       # typer.Option(...) 默认参数(typer 惯例)
+    "T201",       # print(数据工具进度输出)
+    "S311",       # random 非加密(数据增强/合成)
+    "PLR2004",    # magic value(数据处理常见)
+    "N806",       # 函数内常量大写命名
+    "E702",       # 分号多语句
+    "UP042",      # StrEnum 替代(数据工具枚举)
+    "C901", "PLR0911", "PLR0912",  # 复杂度/分支/返回(数据处理函数)
+    # 其余 ruff-ALL 质量建议(数据脚本层合理宽松):
+    "TRY300", "SIM113", "SIM115", "PTH123", "PERF401", "TRY004",
+    "ASYNC240", "FBT003", "E741",
+    "S314",       # VOC xml 为本地受信标注数据, 非 untrusted
+]
+
