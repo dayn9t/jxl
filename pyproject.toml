@@ -59,21 +59,11 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.pytest.ini_options]
-# 失效测试隔离: 这些测试模块引用已物理删除的依赖 (pandas / autogluon / torchsummary /
-# ias / jcx.m / jxl.det.idetector / jxl.det.yolo_old / 第三方 utils), 无法 import, 属
-# pre-existing 死代码, 待 PR-2 死代码清理统一删除/归档。此处从 collection 排除以建立
-# 绿色 pytest 基线, 非静默降级 (依赖已不存在, 无替代路径)。
+# 失效测试隔离: classifier_tch_test 引用未安装的 torchsummary (NON-LOCKED-LIB, NO-STUB),
+# 无法 import。其余原 PR-0 隔离的死代码测试已在 PR-2 删除。非静默降级 (依赖未安装,
+# 无替代路径)。
 addopts = [
-    "--ignore=src/jxl/auto/test/pd_test.py",
-    "--ignore=src/jxl/cls/test/classifier_tab_test.py",
     "--ignore=src/jxl/cls/test/classifier_tch_test.py",
-    "--ignore=src/jxl/seg/cd/test/open_cd_test.py",
-    "--ignore=tests/label/darknet/darknet_test.py",
-    "--ignore=tests/det/yolo/d2d_yolo_test.py",
-    "--ignore=tests/det/yolo/test_iou.py",
-    "--ignore=tests/label/blend_test.py",
-    "--ignore=tests/label/extractor_test.py",
-    "--ignore=tests/label/extractor2_test.py",
 ]
 
 [tool.mypy]
