@@ -62,7 +62,7 @@ class ObjectBlender:
         multiple: int = 10,
         ob_count: int = 3,
         ext: str = ".png",
-        size: Size = Size(1024, 1024),
+        size: Size = Size.new(1024, 1024),
         verbose: bool = False,
     ):
         self._multiple = multiple

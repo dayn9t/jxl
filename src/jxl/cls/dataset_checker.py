@@ -128,7 +128,7 @@ class DatasetChecker:
             print("#%d" % i, conf_files[i])
             im = ImageNda.load(str(file))
             key, _ = trace_image(
-                im, "IC_WIN", auto_close=False, box_size=Size(512, 512)
+                im, "IC_WIN", auto_close=False, box_size=Size.new(512, 512)
             )
             if key == Key.ESC:
                 exit(0)

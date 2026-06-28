@@ -8,10 +8,10 @@ from jxl.label.blend import *
 
 
 def show_random_object_pos():
-    size = Size(512, 512)
+    size = Size.new(512, 512)
     im = ImageNda(size)
     for _i in range(10):
-        r = random_object_pos(size, Size(100, 100))
+        r = random_object_pos(size, Size.new(100, 100))
         rectangle(im, r, random_color())
 
     trace_image(im)

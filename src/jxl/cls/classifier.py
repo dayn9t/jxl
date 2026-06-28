@@ -80,7 +80,7 @@ class ClassifierRes(Protocol):
 
 def vote_weighted(arr: list[ClassifierRes]) -> ClassifierRes:
     """根据概率投票获取最终分类结果"""
-    mat = np.array([a.confidences() for a in arr])
+    mat = np.array([a.confidences() for a in arr], dtype=float)
     v = np.sum(mat, axis=0)
     v /= np.sum(v)
     return ClassifierResList(probs=v.tolist())

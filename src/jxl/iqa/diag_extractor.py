@@ -11,7 +11,7 @@ DIV_COLS = 5
 """HD图像建议分块列数"""
 DIV_ROWS = 3
 """HD图像建议分块行数"""
-DIV_SIZE = Size(256, 240)
+DIV_SIZE = Size.new(256, 240)
 """HD图像建议分块尺寸"""
 
 

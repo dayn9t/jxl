@@ -78,7 +78,7 @@ def get_label(image_file: Path, meta_id: int) -> A2dImageLabel:
     return cur_label.unwrap_or(A2dImageLabel(user_agent="jxl_label"))
 
 
-@dataclass
+@dataclass(frozen=True)
 class LabelRecord(FileRecord):
     """标注记录"""
 

@@ -15,7 +15,7 @@ class Cutter2:
     """时间序列图像切割, 用以提供图图像场景样本"""
 
     def __init__(
-        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size = Size(224, 224)
+        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size = Size.new(224, 224)
     ):
         self.tile_size = tile_size
         self.threshold = 20 * sensitivity / 50  # 距离阈值

@@ -9,8 +9,8 @@ def load_tiles_test():
     prop = "amount"
     rs = load_tiles(folder, meta_id, category, prop)
 
-    size = Size(1536, 864)
-    obj_size = Size(256, 288)
+    size = Size.new(1536, 864)
+    obj_size = Size.new(256, 288)
     w = size.width // obj_size.width
     h = size.height // obj_size.height
     n = w * h
