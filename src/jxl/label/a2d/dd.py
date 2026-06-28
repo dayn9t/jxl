@@ -2,24 +2,24 @@ from copy import deepcopy
 from pathlib import Path
 from typing import *
 
-from jvi.number import align_down
 from jcx.time.dt import now_iso_str
 from jvi.drawing.color import Color, Colors
 from jvi.drawing.shape import polylines
-from jvi.geo.point2d import Points, Point
+from jvi.geo.point2d import Point, Points
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 from jvi.geo.trans import points_ncs_trans_in_win
 from jvi.image.image_nda import ImageNda
 from jvi.image.util import make_roi_surround_color
+from jvi.number import align_down
+from loguru import logger
+from pydantic import BaseModel, Field
+from rustshed import Null, Option, Some
 
-from jxl.det.d2d import D2dResult, D2dObject
-from jxl.label.prop import ProbValue, ProbPropertyMap
+from jxl.det.d2d import D2dObject, D2dResult
 from jxl.io.draw import draw_boxf
 from jxl.label.meta import LabelMeta
-from loguru import logger
-from rustshed import Option, Some, Null
-from pydantic import BaseModel, Field
+from jxl.label.prop import ProbPropertyMap, ProbValue
 
 ID_ERROR: Final[int] = -3
 """该值错误，需要改正"""
@@ -92,7 +92,6 @@ class A2dObjectLabel(BaseModel):
         """绘制标注信息在图上"""
         # color = colors[self.cat]
         # draw_boxf(bgr, self.rect, color, None, line_thickness)
-        pass
 
     def rect(self) -> Rect:
         """获取外包矩形, 外包矩形必须存在"""
@@ -239,15 +238,21 @@ class A2dImageLabel(BaseModel):
             assert color
             label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
             for prop_id, v in ob.properties.items():
-                if "all" not in visible_props and prop_id not in visible_props:
-                    continue
+                # FIXME(jvi-migration): properties 现以 int prop_id 为键; visible_props
+                # 仍是 prop 名称列表, 需经 cfg 解析 prop_id->name 做名称过滤。
+                if "all" not in visible_props:
+                    prop_meta = cfg.prop_meta_by_id(prop_id)
+                    if prop_meta.is_null():
+                        continue
+                    if prop_meta.unwrap().name not in visible_props:
+                        continue
                 p = cfg.prop_value_sign(ob.prob_class.value, prop_id, v.value)
                 match p:
                     case Some(v_name):
                         if len(v_name) > 0:
                             label += " " + v_name + (v.conf_str() if show_conf else "")
                     case _:
-                        print("WARN: 无效属性", ob.prob_class.value, prop_id, v.value)
+                        pass
                     # fmt = ' %s=%d' if type(v) == int else ' %s=%.2f'
                     # label += fmt % (k, v)
             if cfg.label.title_style == 0:
@@ -271,7 +276,7 @@ class A2dImageLabel(BaseModel):
 
     def min_conf(self) -> float:
         """计算最小置信度, TODO: 分属性计算"""
-        confs = map(lambda o: o.min_conf(), self.objects)
+        confs = (o.min_conf() for o in self.objects)
         return min(confs, default=1.0)
 
     def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> Tuple[Rect, Self]:
@@ -311,7 +316,6 @@ class ToA2dObjectLabel(Protocol):
 
     def to_label(self) -> A2dObjectLabel:
         """转换为标注信息"""
-        pass
 
 
 class ToA2dImageLabel(Protocol):
@@ -319,4 +323,3 @@ class ToA2dImageLabel(Protocol):
 
     def to_label(self) -> A2dImageLabel:
         """转换为标注信息"""
-        pass

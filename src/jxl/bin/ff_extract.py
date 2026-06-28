@@ -1,14 +1,13 @@
-from pathlib import Path
-import subprocess
 import logging
-from typing import Union, List
+import subprocess
+from pathlib import Path
 
 
 def extract_frames_from_mkv_using_ffmpeg(
-    src_dir: Union[str, Path],
-    dst_dir: Union[str, Path],
-    frame_rate: Union[int, str] = 1,
-) -> List[Path]:
+    src_dir: str | Path,
+    dst_dir: str | Path,
+    frame_rate: int | str = 1,
+) -> list[Path]:
     """查找目录内所有MKV文件，使用ffmpeg解码为图片并保存
 
     Args:
@@ -29,7 +28,7 @@ def extract_frames_from_mkv_using_ffmpeg(
     mkv_files = list(src_path.glob("*.mkv"))
     logging.info(f"找到 {len(mkv_files)} 个MKV文件")
 
-    processed_files: List[Path] = []
+    processed_files: list[Path] = []
 
     # 处理每个MKV文件
     for mkv_file in mkv_files:
@@ -41,7 +40,7 @@ def extract_frames_from_mkv_using_ffmpeg(
         processed_files.append(mkv_file)
 
         # 构建ffmpeg命令
-        output_pattern = str(output_dir / f"%04d.jpg")
+        output_pattern = str(output_dir / "%04d.jpg")
 
         cmd = [
             "ffmpeg",
@@ -56,21 +55,20 @@ def extract_frames_from_mkv_using_ffmpeg(
 
         # 执行ffmpeg命令
         try:
-            result = subprocess.run(
+            subprocess.run(
                 cmd,
                 check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
             )
             logging.info(f"文件 {mkv_file.name} 处理完成")
         except subprocess.CalledProcessError as e:
-            logging.error(f"处理文件 {mkv_file.name} 时出错: {e.stderr}")
+            logging.exception(f"处理文件 {mkv_file.name} 时出错: {e.stderr}")
 
     return processed_files
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     src_dir = "/mnt/temp/2025_03_24"  # 替换为源MKV文件目录

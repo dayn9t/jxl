@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Optional
 
 from jcx.sys.fs import StrPath
+
 from jxl.label.io import label_path_of
 
 """IAS文件系统相关内容, 不设计具体格式"""
@@ -12,7 +12,7 @@ def ias_label_path_of(img_file: StrPath, meta_id: int) -> Path:
     return label_path_of(img_file, "ias", meta_id, ".json")  # TODO: IAS常量
 
 
-def ias_image_path_of_label(label_file: StrPath, ext: str) -> Optional[Path]:
+def ias_image_path_of_label(label_file: StrPath, ext: str) -> Path | None:
     """标签文件对应的图像路径"""
     p = str(label_file)
     i = p.rfind("_")

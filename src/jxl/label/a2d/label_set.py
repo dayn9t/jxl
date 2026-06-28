@@ -1,7 +1,7 @@
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from enum import IntEnum
 from pathlib import Path
-from typing import Optional, Self
+from typing import Self
 
 from jxl.label.a2d.dd import A2dImageLabelPairs
 
@@ -30,20 +30,21 @@ class LabelFormat(IntEnum):
     """Google标注格式"""
 
     @classmethod
-    def parse(cls, name: str) -> Optional[Self]:
+    def parse(cls, name: str) -> Self | None:
         """解析字符串成枚举, 解析失败则为Null"""
-        return cls._member_map_.get(name.upper())
+        r = cls._member_map_.get(name.upper())
+        return r if isinstance(r, cls) else None
 
 
 class A2dLabelSet(ABC):
     """2D分析标注集合"""
 
     @classmethod
-    def valid_set(cls, folder: Path, meta_id: int) -> bool:
+    def valid_set(cls, folder: Path, meta_id: int) -> bool:  # noqa: ARG003
         """检验路径是否是本格式的数据集"""
         return False
 
-    def __init__(self, folder: Path, meta_id: int):
+    def __init__(self, folder: Path, meta_id: int) -> None:
         self._folder = folder
         self._meta_id = meta_id
 
@@ -53,19 +54,15 @@ class A2dLabelSet(ABC):
     @abstractmethod
     def __len__(self) -> int:
         """获取集合中样本总数"""
-        pass
 
     @abstractmethod
     def format(self) -> LabelFormat:
         """获取标注格式"""
-        pass
 
     @abstractmethod
     def find_pairs(self, pattern: str) -> A2dImageLabelPairs:
         """查找满足条件的标签/图像对"""
-        pass
 
     @abstractmethod
     def save(self, root: Path) -> None:
         """保存本格式的数据集"""
-        pass

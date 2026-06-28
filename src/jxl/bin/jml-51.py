@@ -4,7 +4,7 @@ import fiftyone as fo
 import fiftyone.zoo as foz
 
 
-def load():
+def load() -> None:
     dataset = foz.load_zoo_dataset("quickstart")
     session = fo.launch_app(dataset)
     session.wait()

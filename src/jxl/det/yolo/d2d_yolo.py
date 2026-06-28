@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from jvi.image.image_nda import ImageNda
-from ultralytics import YOLO
+from ultralytics.models.yolo.model import YOLO
 
-from jxl.det.d2d import Detector2D, D2dOpt, D2dResult
+from jxl.det.d2d import D2dOpt, D2dResult, Detector2D
 from jxl.yolo.results import results_list_to_d2d_result
 
 
@@ -18,7 +18,7 @@ class D2dYolo(Detector2D):
         opt: D2dOpt,
         device_name: str = "",
         verbose: bool = False,
-    ):
+    ) -> None:
         super().__init__(model_path, opt, device_name, verbose)
 
         self._model = YOLO(model_path, task="detect")

@@ -1,15 +1,15 @@
 from jcx.text.txt_json import load_json, to_json
+from loguru import logger
 from openai import OpenAI
-import os
 
 from jxl.common import JXL_OAI_DIR
 from jxl.oai.types1 import LlmCfg
 
 
-def main():
+def main() -> None:
     cfg = load_json(JXL_OAI_DIR / "qwen_flash.json", LlmCfg).unwrap()
 
-    print("cfg:", to_json(cfg))
+    logger.info("cfg: {}", to_json(cfg))
 
     client = OpenAI(
         api_key=cfg.api_key,
@@ -29,9 +29,10 @@ def main():
     )
 
     json_string = completion.choices[0].message.content
-    print("model:", completion.model)
-    print("total_tokens:", completion.usage.total_tokens)
-    print(json_string)
+    logger.info("model: {}", completion.model)
+    usage = completion.usage
+    logger.info("total_tokens: {}", usage.total_tokens if usage else 0)
+    logger.info("{}", json_string)
 
 
 if __name__ == "__main__":

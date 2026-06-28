@@ -63,7 +63,8 @@ def main(  # noqa: PLR0913
         if category is None:
             raise typer.BadParameter("使用 --prop 时必须指定 --category")
         cat_id = meta.cat_meta(name=category).id
-        total = dump_label_prop(labels, dst_dir, cat_id, prop, keep_dst_dir, prefix)
+        prop_id = meta.prop_meta_by_name(prop, cat_name=category).unwrap().id
+        total = dump_label_prop(labels, dst_dir, cat_id, prop_id, keep_dst_dir, prefix)
     else:
         total = darknet_dump_labels(labels, dst_dir, crop_roi, keep_dst_dir)
     logger.info("样本({})生成完毕!", total)

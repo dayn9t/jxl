@@ -1,11 +1,13 @@
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, TypeVar, Type, Protocol
+from typing import Protocol, Self
 
 import numpy as np
-from jxl.label.a2d.dd import ProbValue
+from jvi.image.image_nda import ImageNda
+
+from jxl.label.prop import ProbValue
 from jxl.model.types import ModelInfo
 
 
@@ -23,7 +25,7 @@ class ModelFormat(IntEnum):
 class ClassifierOpt:
     """分类器器选项"""
 
-    input_shape: tuple
+    input_shape: tuple[int, ...]
     """输入形状, 1/2/3维"""
     num_classes: int
     """类别数量"""
@@ -42,7 +44,6 @@ class ClassifierRes(Protocol):
 
     def top(self) -> ProbValue:
         """最可能类别"""
-        pass
 
     def top_index(self) -> int:
         """最可能类别索引"""
@@ -54,7 +55,6 @@ class ClassifierRes(Protocol):
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""
-        pass
 
     def at(self, idx: int) -> float:
         """获取指定分类的置信度"""
@@ -62,7 +62,6 @@ class ClassifierRes(Protocol):
 
     def __len__(self) -> int:
         """分类器结果包含对象数量"""
-        pass
 
     def bin(self) -> "ClassifierRes":
         """二值化, 0/非0各一组"""
@@ -97,7 +96,7 @@ def vote_bin(arr: list[ClassifierRes]) -> ClassifierRes:
     return ClassifierResList(probs=[p0, p1])
 
 
-@dataclass
+@dataclass(frozen=True)
 class ClassifierResList(ClassifierRes):
     """分类器返回结果"""
 
@@ -125,29 +124,24 @@ class ClassifierResList(ClassifierRes):
         return len(self.probs)
 
 
-Self = TypeVar("Self", bound="IClassifier")
-
-
 class IClassifier(ABC):
     """分类器"""
 
     model_class = "classifier"
 
     @classmethod
-    def new(cls: Type[Self], info: ModelInfo, model_root: Path) -> Self:
+    def new(cls: type[Self], info: ModelInfo, model_root: Path) -> Self:
         """创建分类器-根据信息"""
         file = model_root / info.file
-        d = cls(file, info.opt, info.device)
-        return d
+        return cls(file, info.opt, info.device)
 
     @abstractmethod
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str) -> None:
         """创建分类器"""
         self._model_path = model_path
         self._opt = opt
         self._device_name = device_name
 
     @abstractmethod
-    def __call__(self, item: Any) -> ClassifierRes:
-        """对数据条目分类, 支持类型:图像, 数组"""
-        pass
+    def __call__(self, item: ImageNda) -> ClassifierRes:
+        """对图像分类"""

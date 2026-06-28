@@ -1,16 +1,15 @@
 #!/opt/ias/env/bin/python
 import random
-from argparse import Namespace, ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import torchvision
 from torch import device as Device
+from torch import nn, optim
 from torch.optim import Adadelta
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets
 
 
@@ -26,8 +25,8 @@ class SiameseNetwork(nn.Module):
     In addition, we aren't using `TripletLoss` as the MNIST dataset is simple, so `BCELoss` can do the trick.
     """
 
-    def __init__(self):
-        super(SiameseNetwork, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
         # get resnet model
         self.resnet = torchvision.models.resnet18(weights=None)
 
@@ -55,15 +54,14 @@ class SiameseNetwork(nn.Module):
         self.resnet.apply(self.init_weights)
         self.fc.apply(self.init_weights)
 
-    def init_weights(self, m):
+    def init_weights(self, m) -> None:
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
 
     def forward_once(self, x):
         output = self.resnet(x)
-        output = output.view(output.size()[0], -1)
-        return output
+        return output.view(output.size()[0], -1)
 
     def forward(self, input1, input2):
         # get two images' features
@@ -77,14 +75,13 @@ class SiameseNetwork(nn.Module):
         output = self.fc(output)
 
         # pass the out of the linear layers to sigmoid layer
-        output = self.sigmoid(output)
+        return self.sigmoid(output)
 
-        return output
 
 
 class APP_MATCHER(Dataset):
-    def __init__(self, root, train, download=False):
-        super(APP_MATCHER, self).__init__()
+    def __init__(self, root, train, download=False) -> None:
+        super().__init__()
 
         # get MNIST dataset
         self.dataset = datasets.MNIST(root, train=train, download=download)
@@ -99,7 +96,7 @@ class APP_MATCHER(Dataset):
 
         self.group_examples()
 
-    def group_examples(self):
+    def group_examples(self) -> None:
         """
         To ease the accessibility of data based on the class, we will use `group_examples` to group
         examples based on class.
@@ -114,10 +111,10 @@ class APP_MATCHER(Dataset):
 
         # group examples based on class
         self.grouped_examples = {}
-        for i in range(0, 10):
-            self.grouped_examples[i] = np.where((np_arr == i))[0]
+        for i in range(10):
+            self.grouped_examples[i] = np.where(np_arr == i)[0]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.data.shape[0]
 
     def __getitem__(self, index):
@@ -225,13 +222,7 @@ def train(
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print(
-                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
-                    epoch,
-                    batch_idx * len(images_1),
-                    len(train_loader.dataset),
-                    100.0 * batch_idx / len(train_loader),
-                    loss.item(),
-                )
+                f"Train Epoch: {epoch} [{batch_idx * len(images_1)}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}"
             )
             if args.dry_run:
                 break
@@ -263,12 +254,7 @@ def atest(model: SiameseNetwork, device: Device, test_loader: DataLoader) -> Non
     # using default settings. After completing the 10th epoch, the average
     # loss is 0.0000 and the accuracy 99.5-100% using default settings.
     print(
-        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-            test_loss,
-            correct,
-            len(test_loader.dataset),
-            100.0 * correct / len(test_loader.dataset),
-        )
+        f"\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({100.0 * correct / len(test_loader.dataset):.0f}%)\n"
     )
 
 

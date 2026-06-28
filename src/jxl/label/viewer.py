@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeAlias
 
 import cv2
 from jcx.time.dt import iso_to_local
@@ -8,6 +7,7 @@ from jvi.drawing.color import LIME
 from jvi.geo.point2d import Point
 from jvi.gui.record_viewer import PImageEntry
 from jvi.image.image_nda import ImageNda
+
 from jxl.label.a2d.dd import A2dImageLabel
 from jxl.label.meta import LabelMeta
 
@@ -50,5 +50,5 @@ class LabelRecord(PImageEntry):
         )
 
 
-LabelRecords: TypeAlias = list[LabelRecord]
+type LabelRecords = list[LabelRecord]
 """标注记录列表"""

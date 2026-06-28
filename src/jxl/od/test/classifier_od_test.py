@@ -1,12 +1,15 @@
 from itertools import pairwise
+from pathlib import Path
 
 from jcx.ui.key import Key
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 from jvi.image.io import load_images_in
-from jvi.image.trace import trace_images, close_all_windows
-from jxl.od.classifier_od import *
-from jxl.iqa.diag_extractor import DiagExtractor, DIV_ROWS, DIV_COLS, DIV_SIZE
+from jvi.image.trace import close_all_windows, trace_images
+
+from jxl.cls.classifier import ClassifierOpt
+from jxl.iqa.diag_extractor import DIV_COLS, DIV_ROWS, DIV_SIZE, DiagExtractor
+from jxl.od.classifier_od import ClassifierOd
 
 
 def main() -> None:
@@ -14,8 +17,6 @@ def main() -> None:
     model_path = model_dir / "moved.joblib"
 
     image_dir = Path("/home/jiang/ws/trash/outside/2022/n1/neg1/31011000602700301")
-    # image_dir = Path('/home/jiang/ws/trash/outside/2022/n1/n/31010102100100201')
-    # image_dir = Path('/home/jiang/ws/trash/outside/2022/n1/n/1')
     opt = ClassifierOpt((DIV_COLS * DIV_ROWS,), 3)
     model = ClassifierOd(model_path, opt)
 
@@ -24,20 +25,22 @@ def main() -> None:
     images = load_images_in(image_dir)
     num_err = 0
     for i, (a, b) in enumerate(pairwise(images)):
-        print(f"#{i} {images[i]}")
+        print(f"#{i} {images[i]}")  # noqa: T201
         v = extractor.extract(a, b).match_vec
 
         r = model(v)
         if r.top_index() == 1:
-            print(f"  r: {r}")
+            print(f"  r: {r}")  # noqa: T201
             num_err += 1
-            key, _ = trace_images([a, b], box_size=Size(1920, 540), auto_close=False)
+            key, _ = trace_images(
+                [a, b], box_size=Size.new(1920, 540), auto_close=False
+            )
             if key == Key.ESC:
                 break
 
     total = len(images) - 1
     ratio = round(num_err / total, 4)
-    print(f"错误率: {num_err}/{total}({ratio * 100}%)")
+    print(f"错误率: {num_err}/{total}({ratio * 100}%)")  # noqa: T201
     close_all_windows()
 
 

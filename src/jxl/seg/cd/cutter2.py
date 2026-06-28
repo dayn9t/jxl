@@ -1,7 +1,6 @@
 """图像序列"""
 
 from pathlib import Path
-from typing import List
 
 from jcx.sys.fs import name_with_parents, stem_append
 from jvi.geo.rectangle import Rect, Rects
@@ -9,15 +8,16 @@ from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
 from jvi.image.trace import trace_image
 from jvi.match.match import ImageMatcher
+from loguru import logger
 
 
 class Cutter2:
     """时间序列图像切割, 用以提供图图像场景样本"""
 
     def __init__(
-        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size = Size.new(224, 224)
-    ):
-        self.tile_size = tile_size
+        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size | None = None
+    ) -> None:
+        self.tile_size = tile_size if tile_size is not None else Size.new(224, 224)
         self.threshold = 20 * sensitivity / 50  # 距离阈值
         self.dst_dir = dst_dir
         self.matcher = ImageMatcher()
@@ -26,10 +26,10 @@ class Cutter2:
         """检测镜头移动"""
         dist = self.matcher.match(im1, im2)
         dist = round(dist, 2)
-        print("dist:", dist)
+        logger.info("dist: {}", dist)
         return dist > self.threshold
 
-    def _cut_tile(self, ims: List[ImageNda], src_file: Path):
+    def _cut_tile(self, ims: list[ImageNda], src_file: Path) -> None:
         """图像切割成块"""
         assert len(ims) > 1
         for im in ims:
@@ -52,10 +52,12 @@ class Cutter2:
             trace_image(dst_im)
             if self._check_moved(dst_rois[0], dst_rois[1]):
                 name = name_with_parents(src_file, 3)  # 文件名=节点_设备_日期_名称
-                file = stem_append(self.dst_dir / name, f"_{i}")
+                if name.is_null():
+                    continue
+                file = stem_append(self.dst_dir / name.unwrap(), f"_{i}")
                 dst_im.save(file)
 
-    def cut_files(self, files: list[Path]):
+    def cut_files(self, files: list[Path]) -> None:
         """切割图片里表"""
         if len(files) < 2:
             return

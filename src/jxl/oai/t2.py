@@ -1,14 +1,15 @@
 from jcx.text.txt_json import load_json, to_json
+from loguru import logger
 from openai import OpenAI
 
 from jxl.common import JXL_OAI_DIR
 from jxl.oai.types1 import LlmCfg
 
 
-def main():
+def main() -> None:
     cfg = load_json(JXL_OAI_DIR / "qwen_plus.json", LlmCfg).unwrap()
 
-    print("cfg:", to_json(cfg))
+    logger.info("cfg: {}", to_json(cfg))
 
     client = OpenAI(
         # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
@@ -27,8 +28,8 @@ def main():
         # 使用Qwen3开源版模型时，若未启用流式输出，请将下行取消注释，否则会报错
         # extra_body={"enable_thinking": False},
     )
-    print("model:", to_json(completion.model))
-    print("completion:", to_json(completion))
+    logger.info("model: {}", to_json(completion.model))
+    logger.info("completion: {}", to_json(completion))
 
 
 if __name__ == "__main__":

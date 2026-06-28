@@ -4,7 +4,7 @@ import typer
 from jvi.image.image_nda import ImageNda
 from loguru import logger
 
-from jxl.det.d2d import D2dResult, D2dOpt, D2dObject
+from jxl.det.d2d import D2dObject, D2dOpt, D2dResult
 from jxl.det.yolo.d2d_yolo import D2dYolo
 from jxl.label.a2d.dd import A2dImageLabel
 from jxl.label.darknet.darknet_set import DarknetSet, darknet_dump_labels

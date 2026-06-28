@@ -13,20 +13,22 @@ import time
 import warnings
 
 import torch
-import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
-import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.datasets as datasets  # type: ignore
-import torchvision.models as models  # type: ignore
-import torchvision.transforms as transforms  # type: ignore
-
 from jcx.m.average_meter import AverageMeter
 from jcx.ui.progress_meter import ProgressMeter
+from torch import nn
+from torch.backends import cudnn
+from torchvision import (
+    datasets,  # type: ignore
+    models,  # type: ignore
+    transforms,  # type: ignore
+)
+
 from jxl.cls.arch import torch_image
 
 model_names = sorted(
@@ -156,7 +158,7 @@ parser.add_argument(
 best_acc1 = 0
 
 
-def main():
+def main() -> None:
     args = parser.parse_args()
 
     args.input_shape = (224, 224)
@@ -170,13 +172,13 @@ def main():
             "This will turn on the CUDNN deterministic setting, "
             "which can slow down your training considerably! "
             "You may see unexpected behavior when restarting "
-            "from checkpoints."
+            "from checkpoints.", stacklevel=2
         )
 
     if args.gpu is not None:
         warnings.warn(
             "You have chosen a specific GPU. This will completely "
-            "disable data parallelism."
+            "disable data parallelism.", stacklevel=2
         )
 
     if args.dist_url == "env://" and args.world_size == -1:
@@ -197,12 +199,12 @@ def main():
         main_worker(args.gpu, ngpus_per_node, args)
 
 
-def main_worker(gpu, ngpus_per_node, args):
+def main_worker(gpu, ngpus_per_node, args) -> None:
     global best_acc1
     args.gpu = gpu
 
     if args.gpu is not None:
-        print("Use GPU: {} for training".format(args.gpu))
+        print(f"Use GPU: {args.gpu} for training")
 
     if args.distributed:
         if args.dist_url == "env://" and args.rank == -1:
@@ -245,13 +247,12 @@ def main_worker(gpu, ngpus_per_node, args):
     elif args.gpu is not None:
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
+    # DataParallel will divide and allocate batch_size to all available GPUs
+    elif args.arch.startswith("alexnet") or args.arch.startswith("vgg"):
+        model.features = torch.nn.DataParallel(model.features)
+        model.cuda()
     else:
-        # DataParallel will divide and allocate batch_size to all available GPUs
-        if args.arch.startswith("alexnet") or args.arch.startswith("vgg"):
-            model.features = torch.nn.DataParallel(model.features)
-            model.cuda()
-        else:
-            model = torch.nn.DataParallel(model).cuda()
+        model = torch.nn.DataParallel(model).cuda()
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
@@ -266,12 +267,12 @@ def main_worker(gpu, ngpus_per_node, args):
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            print(f"=> loading checkpoint '{args.resume}'")
             if args.gpu is None:
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
-                loc = "cuda:{}".format(args.gpu)
+                loc = f"cuda:{args.gpu}"
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint["epoch"]
             best_acc1 = checkpoint["best_acc1"]
@@ -286,7 +287,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 )
             )
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print(f"=> no checkpoint found at '{args.resume}'")
 
     cudnn.benchmark = True
 
@@ -364,7 +365,7 @@ def main_worker(gpu, ngpus_per_node, args):
             )
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args):
+def train(train_loader, model, criterion, optimizer, epoch, args) -> None:
     batch_time = AverageMeter("Time", ":6.3f")
     data_time = AverageMeter("Data", ":6.3f")
     losses = AverageMeter("Loss", ":.4e")
@@ -373,7 +374,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     progress = ProgressMeter(
         len(train_loader),
         [batch_time, data_time, losses, top1, top2],
-        prefix="Epoch: [{}]".format(epoch),
+        prefix=f"Epoch: [{epoch}]",
     )
 
     # switch to train mode
@@ -452,13 +453,13 @@ def validate(val_loader, model, criterion, args):
 
         # TODO: this should also be done with the ProgressMeter
         print(
-            " * Acc@1 {top1.avg:.3f} Acc@2 {top2.avg:.3f}".format(top1=top1, top2=top2)
+            f" * Acc@1 {top1.avg:.3f} Acc@2 {top2.avg:.3f}"
         )
 
     return top1.avg
 
 
-def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar"):
+def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar") -> None:
     torch.save(state, filename)
     if is_best:
         # name = state['arch'] + '_best'
@@ -467,7 +468,7 @@ def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar"):
         torch.save(model, name + ".pth")
 
 
-def adjust_learning_rate(optimizer, epoch, args):
+def adjust_learning_rate(optimizer, epoch, args) -> None:
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     lr = args.lr * (0.1 ** (epoch // 30))
     for param_group in optimizer.param_groups:

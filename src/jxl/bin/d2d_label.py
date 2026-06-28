@@ -29,10 +29,8 @@ def main(
     img_size: int = typer.Option(640, "-s", "--img-size", help="输入图像尺寸"),
     output_size: str = typer.Option("HD", "-o", "--output-size", help="输出图像尺寸"),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="显示详细信息"),
-):
-    """
-    使用Yolo模型检测图像中的对象。
-    """
+) -> None:
+    """使用Yolo模型检测图像中的对象。"""
     out_size = size_parse(output_size)
     print(f"\nOPT: conf_thr={conf_thr} iou_thr={iou_thr}\n")
     print(f"\nOutput: size={out_size}\n")
@@ -48,8 +46,8 @@ def main(
         iou_thr=iou_thr,
     )
     detector = D2dYolo(model, det_opt)
-    wait_ms = int(wait * 1000)
-    image_out = ImageNda(out_size)
+    int(wait * 1000)
+    ImageNda(out_size)
 
     # index = 0
     for src_file in files:

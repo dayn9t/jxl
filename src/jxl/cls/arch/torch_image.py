@@ -1,13 +1,16 @@
 from pathlib import Path
 
 import torch
-import torchvision  # type: ignore
-import torchvision.transforms as transforms  # type: ignore
-from torchvision.models import MobileNetV2  # type: ignore
+import torchvision
+from torch import nn
+from torchvision import transforms
+from torchvision.models import MobileNetV2
+
+StateDict = dict[str, torch.Tensor]
 
 
-def create_resnet18(num_classes: int, state_dict=None, **kwargs):
-    model = torchvision.models.resnet18(num_classes=num_classes, **kwargs)
+def create_resnet18(num_classes: int, state_dict: StateDict | None = None) -> nn.Module:
+    model: nn.Module = torchvision.models.resnet18(num_classes=num_classes)
     if state_dict:
         state_dict["fc.weight"] = state_dict["fc.weight"][:num_classes, :]
         state_dict["fc.bias"] = state_dict["fc.bias"][:num_classes]
@@ -15,8 +18,10 @@ def create_resnet18(num_classes: int, state_dict=None, **kwargs):
     return model
 
 
-def create_mobilenet_v2(num_classes: int, state_dict=None, **kwargs):
-    model = MobileNetV2(num_classes=num_classes, **kwargs)
+def create_mobilenet_v2(
+    num_classes: int, state_dict: StateDict | None = None
+) -> nn.Module:
+    model: nn.Module = MobileNetV2(num_classes=num_classes)
     if state_dict:
         state_dict["classifier.1.weight"] = state_dict["classifier.1.weight"][
             :num_classes, :
@@ -65,7 +70,7 @@ val_trans = transforms.Compose(
 )
 
 
-def create(arch: str, num_classes: int = 1000, pretrained=True, **kwargs):
+def create(arch: str, num_classes: int = 1000, pretrained: bool = True) -> nn.Module:
     """创建 Torch Image 分类模型.
 
     注意：
@@ -77,38 +82,29 @@ def create(arch: str, num_classes: int = 1000, pretrained=True, **kwargs):
     file = model_dir + file
     state_dict = torch.load(file) if pretrained else None
 
-    model = ctor(num_classes, state_dict, **kwargs)
-
-    return model
+    return ctor(num_classes, state_dict)
 
 
-def show_keys(d, name):
-    print("\nname:", name)
-    for k in d.keys():
-        print(k)
-    print("\n")
+
+def show_keys(d: StateDict, name: str) -> None:
+    from loguru import logger
+
+    logger.info("name: {}", name)
+    for k in d:
+        logger.info("{}", k)
 
 
-def load_pth_tar(num_classes: int, model_tar: Path):
+def load_pth_tar(num_classes: int, model_tar: Path) -> nn.Module:
     """加载 pth.tar 模型."""
 
-    weights = torch.load(model_tar)
-    arch = weights["arch"]
+    weights = torch.load(model_tar, weights_only=False)
+    arch: str = weights["arch"]
 
-    # print('type:', type(weights['state_dict']))
-    # show_keys(weights['state_dict'], 'full:')
-
-    ctor, file = model_tab[arch]
+    ctor, _file = model_tab[arch]
     model = ctor(num_classes)
-    # show_keys(model.state_dict(), 'empty:')
-    # print('empty:', model)
 
     model = torch.nn.DataParallel(model)  # NOTE: 为state_dict.keys增加'module'前缀
-    # show_keys(model.state_dict(), 'parallel:')
-    # print('parallel:', model)
 
     model.load_state_dict(weights["state_dict"])
-    # show_keys(model.state_dict(), 'full:')
-    # print('full:', model)
 
     return model.module

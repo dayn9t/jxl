@@ -6,7 +6,7 @@ from pathlib import Path
 from jxl.model.util import show_model
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="深度学习模型工具")
     parser.add_argument("model", type=Path, help="模型文件路径")
 

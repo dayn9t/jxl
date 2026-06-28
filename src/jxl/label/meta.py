@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import List, Optional
 
 from jcx.sys.fs import StrPath, find_in_parts
 from jcx.text.txt_json import load_json
 from jvi.geo.rectangle import PHasRect, Rect
 from jvi.geo.size2d import Size
-from rustshed import Result, Ok, Err, Option, Some, Null
 from pydantic import BaseModel, Field
+from rustshed import Err, Null, Ok, Option, Result, Some
 
 
 class SampleCfg(BaseModel):
@@ -16,9 +15,9 @@ class SampleCfg(BaseModel):
     """TODO"""
     background: str
     """背景颜色"""
-    categories: List[str]
+    categories: list[str]
     """类别条目集合"""
-    properties: List[str]
+    properties: list[str]
     """属性条目集合"""
 
 
@@ -89,11 +88,11 @@ class PropMeta(BaseModel):
     """属性值描述"""
     size: Size
     """属性分类器输入尺寸"""
-    border_extend: Optional[BorderExtend] = None
+    border_extend: BorderExtend | None = None
     color: str = "WHITE"
     """属性默认颜色"""
     # thickness :Optional[int]  # 线粗细
-    values: List[ValueCfg] = Field(default_factory=list)
+    values: list[ValueCfg] = Field(default_factory=list)
     """属性值集合"""
 
     def value_meta(self, value_id: int) -> ValueCfg:
@@ -126,20 +125,20 @@ class PropVar(BaseModel):
     """属性类型名称"""
 
 
-def in_range(value: float, range: Optional[List[float]]) -> bool:
+def in_range(value: float, value_range: list[float] | None) -> bool:
     """检查指值是否在指定范围"""
-    if range is None:
+    if value_range is None:
         return True
-    assert len(range) == 2
-    return range[0] <= value <= range[1]
+    assert len(value_range) == 2
+    return value_range[0] <= value <= value_range[1]
 
 
 class FilterCfg(BaseModel):
     """目标过滤器配置"""
 
-    aspect_radio: Optional[List] = None
+    aspect_radio: list[float] | None = None
     """目标纵横比范围"""
-    area: Optional[List] = None
+    area: list[float] | None = None
     """目标面积范围"""
 
     def check(self, ob: PHasRect) -> Result[None, str]:
@@ -173,12 +172,12 @@ class CatMeta(BaseModel):
     # position :Optional[Rect], default=None)
     # """标签条目图例显示位置"""
 
-    properties: Optional[List[PropVar]] = None
+    properties: list[PropVar] | None = None
     """属性集合"""
-    filter: Optional[FilterCfg] = None
+    filter: FilterCfg | None = None
     """目标过滤器"""
 
-    def prop_type(self, name: str) -> Optional[str]:
+    def prop_type(self, name: str) -> str | None:
         """根据属性名获取属性类型"""
         if self.properties:
             for p in self.properties:
@@ -213,13 +212,13 @@ class LabelMeta(BaseModel):
 
     auto_save: bool
     """自动保存 TODO: 什么用处?"""
-    categories: List[CatMeta]
+    categories: list[CatMeta]
     """类别条目集合"""
-    properties: List[PropMeta]
+    properties: list[PropMeta]
     """属性条目集合"""
 
     def cat_meta(
-        self, id_: Optional[int] = None, name: Optional[str] = None
+        self, id_: int | None = None, name: str | None = None
     ) -> CatMeta:
         """获取类别配置"""
         if id_ is not None:
@@ -230,10 +229,11 @@ class LabelMeta(BaseModel):
             for c in self.categories:
                 if c.name == name:
                     return c
-        raise NotImplementedError("程序BUG")
+        msg = "程序BUG"
+        raise NotImplementedError(msg)
 
     def prop_meta_by_name(
-        self, name: str, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+        self, name: str, cat_id: int | None = None, cat_name: str | None = None
     ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)
@@ -244,10 +244,12 @@ class LabelMeta(BaseModel):
         return Null
 
     def prop_meta_by_id(
-        self, prop_id: int, cat_id: Optional[int] = None, cat_name: Optional[str] = None
+        self, prop_id: int, cat_id: int | None = None, cat_name: str | None = None
     ) -> Option[PropMeta]:
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)
+        if cat.properties is None:
+            return Null
         type_name = cat.properties[prop_id].type
         for p in self.properties:
             if p.name == type_name:
@@ -267,9 +269,9 @@ class LabelMeta(BaseModel):
             case _:
                 return Null
 
-    def cat_key_strs(self) -> List[str]:
+    def cat_key_strs(self) -> list[str]:
         """类别按键描述"""
-        return ["  [%s] %s" % (c.keys, c.description) for c in self.categories]
+        return [f"  [{c.keys}] {c.description}" for c in self.categories]
 
     def key_to_cat(self, key: int) -> Option[int]:
         """用按键查找对应类别"""

@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import Optional, TypeAlias
 
 from jcx.sys.fs import StrPath, with_parent
 from jcx.text.txt_json import load_json, save_json
@@ -45,7 +44,6 @@ def hop_save_label(label: A2dImageLabel, img_file: StrPath, meta_id: int) -> Pat
 def hop_del_label(img_file: StrPath, meta_id: int) -> None:
     label_file = hop_label_path_of(img_file, meta_id)
     label_file.unlink(True)
-    print("删除标注:", label_file)
 
 
 def hop_load_labels(folder: StrPath, meta_id: int) -> A2dImageLabelPairs:
@@ -85,7 +83,7 @@ class LabelRecord(FileRecord):
     label: A2dImageLabel = field(default_factory=A2dImageLabel)
 
 
-LabelRecords: TypeAlias = list[LabelRecord]
+type LabelRecords = list[LabelRecord]
 """文件记录列表"""
 
 
@@ -93,12 +91,11 @@ def load_label_records(
     folder: StrPath,
     meta_id: int,
     label_filter: LabelFilter,
-    pattern: Optional[str] = None,
+    pattern: str | None = None,
     conf_thr: float = 1.0,
 ) -> LabelRecords:
     """加载目录下的图片信息记录"""
     pattern = (pattern or "*") + IMG_EXT
-    print("pattern:", pattern)
     files = sorted(Path(folder, "image").glob(pattern))
     rs = []
     for f in files:

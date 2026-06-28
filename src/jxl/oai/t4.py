@@ -1,20 +1,23 @@
-from jcx.text.txt_json import to_json, load_json
-from openai import OpenAI
 import base64
 import time
+from pathlib import Path
+
+from jcx.text.txt_json import load_json, to_json
+from loguru import logger
+from openai import OpenAI
 
 from jxl.common import JXL_ASSERTS, JXL_OAI_DIR
 from jxl.oai.types1 import LlmCfg
 
 
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
+def encode_image(image_path: Path) -> str:
+    with image_path.open("rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def main():
+def main() -> None:
     cfg = load_json(JXL_OAI_DIR / "qwen/vl_plus.json", LlmCfg).unwrap()
-    print("cfg:", to_json(cfg))
+    logger.info("cfg: {}", to_json(cfg))
 
     file = JXL_ASSERTS / "person/p2.jpg"
     base64_image = encode_image(file)
@@ -55,10 +58,11 @@ def main():
     end_time = time.time()
     elapsed_time = end_time - start_time
 
-    print("model:", completion.model)
-    print("total_tokens:", completion.usage.total_tokens)
-    print("请求时间: {:.2f} 秒".format(elapsed_time))
-    print(completion.choices[0].message.content)
+    logger.info("model: {}", completion.model)
+    usage = completion.usage
+    logger.info("total_tokens: {}", usage.total_tokens if usage else 0)
+    logger.info("请求时间: {:.2f} 秒", elapsed_time)
+    logger.info("{}", completion.choices[0].message.content)
 
 
 if __name__ == "__main__":

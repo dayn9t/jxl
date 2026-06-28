@@ -3,7 +3,7 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class ModelInfo(object):
+class ModelInfo:
     """模型信息"""
 
     model_class: str

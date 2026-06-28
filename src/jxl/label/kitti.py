@@ -1,11 +1,14 @@
 import csv
-from dataclasses import dataclass, astuple
-from typing import List, Any
+from dataclasses import astuple, dataclass
+from pathlib import Path
 
 from jcx.sys.fs import StrPath
 from jvi.geo.rectangle import Rect
-from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels, ProbValue
-from rustshed import Result, Ok
+from loguru import logger
+from rustshed import Err, Ok, Result
+
+from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels
+from jxl.label.prop import ProbValue
 
 """
 # 参考：
@@ -15,7 +18,8 @@ from rustshed import Result, Ok
 """
 
 
-@dataclass
+@dataclass(slots=True)
+# FIXME: KittiLabelInfo 不可冻结 — bbox.setter 需可变修改 left/top/right/bottom 字段。
 class KittiLabelInfo:
     """Kitti标注信息"""
 
@@ -53,7 +57,9 @@ class KittiLabelInfo:
     @property
     def bbox(self) -> Rect:
         """获取外包矩形"""
-        return Rect(self.left, self.top, self.right - self.left, self.bottom - self.top)
+        return Rect.new(
+            self.left, self.top, self.right - self.left, self.bottom - self.top
+        )
 
     @bbox.setter
     def bbox(self, r: Rect) -> None:
@@ -64,12 +70,12 @@ class KittiLabelInfo:
         self.bottom = r.bottom()
 
 
-KittiLabelInfos = List[KittiLabelInfo]
+KittiLabelInfos = list[KittiLabelInfo]
 
 
-def load_kitti(file: StrPath) -> Result[KittiLabelInfos, Any]:
+def load_kitti(file: StrPath) -> Result[KittiLabelInfos, str]:
     """加载KITTI标注信息"""
-    with open(file, "rt") as f:
+    with Path(file).open() as f:
         rows = csv.reader(f, delimiter=" ")
         infos = [
             KittiLabelInfo(
@@ -94,16 +100,16 @@ def load_kitti(file: StrPath) -> Result[KittiLabelInfos, Any]:
     return Ok(infos)
 
 
-def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, Any]:
+def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, str]:
     """加载KITTI标注信息"""
-    with open(txt_file, "w") as fp:
+    with Path(txt_file).open("w") as fp:
         writer = csv.writer(fp, delimiter=" ")
         for o in infos:
             writer.writerow(astuple(o))
     return Ok(True)
 
 
-def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> A2dObjectLabel:
+def from_kitti(kitti: KittiLabelInfo, label_names: list[str]) -> A2dObjectLabel:
     """KITTI标注转通用标注"""
     category = label_names.index(kitti.class_name)
     return A2dObjectLabel(
@@ -114,7 +120,7 @@ def from_kitti(kitti: KittiLabelInfo, label_names: List[str]) -> A2dObjectLabel:
     )
 
 
-def to_kitti(info: A2dObjectLabel, label_names: List[str]) -> KittiLabelInfo:
+def to_kitti(info: A2dObjectLabel, label_names: list[str]) -> KittiLabelInfo:
     """KITTI标注转通用标注"""
     class_name = label_names[info.prob_class.value]
     k = KittiLabelInfo(class_name=class_name)
@@ -122,18 +128,18 @@ def to_kitti(info: A2dObjectLabel, label_names: List[str]) -> KittiLabelInfo:
     return k
 
 
-def import_kitti(file: StrPath, label_names: List[str]) -> Result[A2dObjectLabels, Any]:
+def import_kitti(file: StrPath, label_names: list[str]) -> Result[A2dObjectLabels, str]:
     """导入KITTI标注文件"""
     r = load_kitti(file)
     if r.is_err():
-        return r
+        return Err(r.unwrap_err())
     infos = [from_kitti(k, label_names) for k in r.unwrap()]
     return Ok(infos)
 
 
 def export_kitti(
-    infos: A2dObjectLabels, file: StrPath, label_names: List[str]
-) -> Result[bool, Any]:
+    infos: A2dObjectLabels, file: StrPath, label_names: list[str]
+) -> Result[bool, str]:
     """导出KITTI标注文件"""
     ks = [to_kitti(info, label_names) for info in infos]
     return save_kitti(ks, file)
@@ -142,13 +148,13 @@ def export_kitti(
 def labels_test() -> None:
     infos0 = load_kitti("demo.kitti").unwrap()
     for info in infos0:
-        print(astuple(info))
+        logger.info("{}", astuple(info))
 
     # save_kitti(infos0, "demo1.kitti").unwrap()
 
     infos1 = load_kitti("demo1.kitti").unwrap()
 
-    print(infos0 == infos1)
+    logger.info("{}", infos0 == infos1)
 
 
 if __name__ == "__main__":

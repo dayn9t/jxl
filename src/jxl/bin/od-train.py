@@ -5,10 +5,10 @@ import fire
 import numpy as np
 import pandas as pd
 from jcx.ui.key import Key
+from joblib import dump
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
-from jvi.image.trace import trace_images, close_all_windows
-from joblib import dump
+from jvi.image.trace import close_all_windows, trace_images
 from pandas import DataFrame
 from pyod.models.iforest import IForest
 from pyod.utils.data import evaluate_print

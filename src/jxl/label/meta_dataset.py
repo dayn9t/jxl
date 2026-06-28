@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from jcx.sys.fs import make_parents, copy_file, move_file
+from jcx.sys.fs import copy_file, make_parents, move_file
 from jcx.text.txt_json import save_json
 from jvi.image.image_nda import ImageNda
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ class MetaDataset:
         """获取元数据文件夹名称"""
         return f"{format_name}_m{meta_id}"
 
-    def __init__(self, folder: Path, format_name: str, meta_id: int):
+    def __init__(self, folder: Path, format_name: str, meta_id: int) -> None:
         """创建A2D样本集文件夹管理器"""
         self._folder: Path = folder
         self._meta_id = meta_id

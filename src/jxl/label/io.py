@@ -65,7 +65,6 @@ def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:
     folder = Path(folder)
     rs = []
     tail = label_tail(meta_id, ".todo")
-    print("tail:", tail)
 
     files = sorted(folder.rglob("*" + tail))
     for lbl_file in files:
@@ -74,11 +73,11 @@ def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:
     return rs
 
 
-def dump_label_prop(
+def dump_label_prop(  # noqa: PLR0913
     label_pairs: A2dImageLabelPairs,
     dst: Path,
     category_id: int,
-    prop_name: str,
+    prop_id: int,
     keep_dst_dir: bool,
     prefix: str,
 ) -> int:
@@ -93,7 +92,7 @@ def dump_label_prop(
         n = 0
         for o in label.objects:
             if o.prob_class.value == category_id:
-                cat = o.prop(prop_name).value
+                cat = o.prop(prop_id).value
                 if cat < 0:
                     continue
                 n += 1

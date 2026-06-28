@@ -1,8 +1,8 @@
-import cv2  # type: ignore
-
+import cv2
 from jvi.drawing.color import COLORS7, Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
+
 from jxl.label.prop import ProbValue
 
 
@@ -13,7 +13,8 @@ def draw_boxi(
     # TODO: 移除cv2调用
     bgr = image.data()
     tl = thickness or round(0.002 * (bgr.shape[0] + bgr.shape[1]) / 2) + 1
-    c1, c2 = (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height)
+    c1 = (int(rect.x), int(rect.y))
+    c2 = (int(rect.x + rect.width), int(rect.y + rect.height))
     cv2.rectangle(bgr, c1, c2, color.bgr(), thickness=tl, lineType=cv2.LINE_AA)
     if label:
         tf = max(tl - 1, 1)  # font thickness
@@ -55,7 +56,7 @@ def draw_box(
 
 def draw_class_item(bgr: ImageNda, item: ProbValue, thickness: int = 3) -> None:
     """绘制分类条目"""
-    rect = Rect(0.1, 0.1, 0.8, 0.8)
+    rect = Rect.new(0.1, 0.1, 0.8, 0.8)
     color = COLORS7[item.value]
     label = str(int(item.conf * 100))
     draw_boxf(bgr, rect, color, label, thickness)

@@ -16,11 +16,10 @@ from jvi.image.proc import resize
 from jxl.det.d2d import D2dOpt, draw_d2d_objects
 from jxl.det.yolo.d2d_yolo import D2dYolo
 
-
 # params:/home/jiang/ws/trash/cans/model_dir/can.pt /var/ias/snapshot/shtm/n1/work/2040600111/2021-04-18
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Yolo检测器")
     parser.add_argument("model", type=Path, help="模型文件路径")
     parser.add_argument("src_dir", type=Path, help="图像来源目录")

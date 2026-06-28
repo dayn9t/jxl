@@ -1,15 +1,15 @@
 import shutil
+import sys
 from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
-from colorama import Fore, Style
 from jcx.sys.fs import dirs_in, files_in
 from jcx.ui.key import Key
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
-from jvi.image.trace import trace_image, close_all_windows
+from jvi.image.trace import close_all_windows, trace_image
+
 from jxl.cls.classifier import ClassifierOpt, IClassifier
 from jxl.cls.classifier_y8 import ClassifierY8
 
@@ -26,7 +26,7 @@ class ConfFile:
     """文件路径"""
 
     def __str__(self) -> str:
-        return "conf=%.2f, class=%d file=%s" % (self.conf, self.index, str(self.file))
+        return f"conf={self.conf:.2f}, class={self.index} file={self.file}"
 
 
 class DatasetChecker:
@@ -39,7 +39,7 @@ class DatasetChecker:
         max_conf: float,
         top_num: int = 10,
         ext: str = ".jpg",
-    ):
+    ) -> None:
         self.top_num = top_num
         self.ext = ext
         self.max_conf = max_conf
@@ -51,35 +51,26 @@ class DatasetChecker:
         # print('classifier opt:', cls_opt)
         self.classifier = ClassifierY8(model, cls_opt)
 
-    def check(self, dataset: Path, class_id: Optional[int]) -> None:
+    def check(self, dataset: Path, class_id: int | None) -> None:
         """数据审核"""
 
         if self.review:
-            print(
-                "数据集审核工具，可以用按键[0~9]，修改错误分类, [DEL] 删除错误样本, [ESC] 退出"
-            )
+            pass
 
-        print("样本来源: %s\n" % dataset)
-        if class_id is None:
-            class_dirs = dirs_in(dataset)
-        else:
-            class_dirs = [dataset / str(class_id)]
+        class_dirs = dirs_in(dataset) if class_id is None else [dataset / str(class_id)]
 
         total = 0
         err = 0
         for class_dir in class_dirs:
             n, e = self.deal_class(class_dir, self.classifier, self.max_conf)
             if n < 1:
-                print("[ERROR] %s 下不存在样本" % class_dir)
+                pass
             else:
-                r = 100 * e / n
-                color = Fore.RED if r > 10 else ""
-                print(f"  - 错误率：{color}{e}/{n} {r:.2f}%" + Style.RESET_ALL)
+                100 * e / n
             total += n
             err += e
         if total > 0:
-            r = 100 * err / total
-            print("\n整体错误率：%d/%d %.2f%%\n" % (err, total, r))
+            100 * err / total
 
         close_all_windows()
 
@@ -92,22 +83,19 @@ class DatasetChecker:
         count = len(files)
 
         class_id = int(class_dir.name)
-        print("类别：%d (%d)" % (class_id, count))
-        conf_files: List[ConfFile] = []
+        conf_files: list[ConfFile] = []
         err = 0
         for file in files:
             im = ImageNda.try_load(file)  # BGR
             if im.is_err():
-                print("[ERROR] 无法加载:", file)
                 continue
             ret = classifier(im.unwrap())
             # print('ret:', ret)
             if len(ret) < 1:
-                print("[ERROR] 无效分类结果:", file)
                 continue
             if ret.top_index() != class_id:
                 if self.verbose:
-                    print("[WARN] 分类结果错误:", ret.top_index(), file)
+                    pass
                 err += 1
                 conf_files.append(
                     ConfFile(-ret.top_confidence(), ret.top_index(), file)
@@ -122,23 +110,20 @@ class DatasetChecker:
 
         return count, err
 
-    def view_wrongs(self, conf_files: List[ConfFile]) -> None:
+    def view_wrongs(self, conf_files: list[ConfFile]) -> None:
         for i in range(min(self.top_num, len(conf_files))):
             file = conf_files[i].file
-            print("#%d" % i, conf_files[i])
             im = ImageNda.load(str(file))
             key, _ = trace_image(
                 im, "IC_WIN", auto_close=False, box_size=Size.new(512, 512)
             )
             if key == Key.ESC:
-                exit(0)
+                sys.exit(0)
             elif key == Key.DEL:
                 file.unlink(missing_ok=True)
-                print("  删除：%s" % str(file))
             elif ord("0") <= key <= ord("9"):
                 dst_class = key - ord("0")
                 dst_dir = file.parent.parent / str(dst_class)
-                print("  移动：%s -> %s" % (file, dst_dir))
                 try:
                     shutil.move(str(file), str(dst_dir))
                 except shutil.Error:

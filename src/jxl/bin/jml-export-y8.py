@@ -1,6 +1,5 @@
 import torch
-from safetensors.torch import load_file, save_file
-from torch import Tensor
+from safetensors.torch import save_file
 
 
 def rename(name: str) -> str:
@@ -29,13 +28,12 @@ def rename(name: str) -> str:
     name = name.replace("model.19.", "fpn.n5.")
     name = name.replace("model.21.m.", "fpn.n6.bottleneck.")
     name = name.replace("model.21.", "fpn.n6.")
-    name = name.replace("model.22.", "head.")
-    return name
+    return name.replace("model.22.", "head.")
 
 
 def show(tensors: dict, title: str) -> None:
     print(title, type(tensors), len(tensors.items()))
-    for k, v in tensors.items():
+    for _k, _v in tensors.items():
         # print('\t', str(k), v.shape)
         pass
 

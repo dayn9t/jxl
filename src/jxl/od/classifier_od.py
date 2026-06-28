@@ -1,13 +1,14 @@
 from pathlib import Path
 
 import numpy as np
-from jxl.cls.classifier import (
-    ClassifierRes,
-    IClassifier,
-    ClassifierOpt,
-    ClassifierResList,
-)
 from joblib import load
+
+from jxl.cls.classifier import (
+    ClassifierOpt,
+    ClassifierRes,
+    ClassifierResList,
+    IClassifier,
+)
 
 
 class ClassifierOd(IClassifier):
@@ -15,7 +16,7 @@ class ClassifierOd(IClassifier):
 
     model_class = "outlier"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = "") -> None:
         super().__init__(model_path, opt, device_name)
 
         self._model = load(str(model_path))
@@ -25,12 +26,15 @@ class ClassifierOd(IClassifier):
         assert isinstance(s, str)
         return s
 
-    def __call__(self, vec: list[float]) -> ClassifierRes:
+    def __call__(self, vec: list[float]) -> ClassifierRes:  # type: ignore[override]
+        # FIXME(LSP): ClassifierOd 是向量异常检测, __call__ 入参为 list[float] 而非
+        # IClassifier 约定的 ImageNda — 二者是不同输入契约, 此 override 为合理特化。
         """分类输入向量"""
         assert self._opt.input_shape == (len(vec),)
         arr = np.array([vec])
         res = self._model.predict_proba(arr)
-        assert isinstance(res, np.ndarray) and len(res) == 1
+        assert isinstance(res, np.ndarray)
+        assert len(res) == 1
         assert len(res[0]) == 2
 
         return ClassifierResList(probs=res[0].tolist())

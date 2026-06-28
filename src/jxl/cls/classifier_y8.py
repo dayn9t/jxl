@@ -2,21 +2,25 @@ from pathlib import Path
 
 import torch
 from jvi.image.image_nda import ImageNda
-from jxl.cls.classifier import ClassifierRes, IClassifier, ClassifierOpt
-from jxl.label.a2d.dd import ProbValue
-from ultralytics import YOLO
+from loguru import logger
 from ultralytics.engine.results import Results
+from ultralytics.models.yolo.model import YOLO
+
+from jxl.cls.classifier import ClassifierOpt, ClassifierRes, IClassifier
+from jxl.label.prop import ProbValue
 
 
 class ClassifierResY8(ClassifierRes):
     """图片分类器结果"""
 
     def __init__(self, rs: Results) -> None:
-        assert isinstance(rs.probs.data, torch.Tensor)
-        self.probs = rs.probs.data
+        probs = rs.probs
+        assert probs is not None
+        assert isinstance(probs.data, torch.Tensor)
+        self.probs = probs.data
 
         m = torch.max(self.probs, 0)
-        self.top1 = ProbValue(m.indices.item(), m.values.item())
+        self.top1 = ProbValue(int(m.indices.item()), float(m.values.item()))
         self.top1_name = rs.names[self.top1.value]
 
     def top(self) -> ProbValue:
@@ -36,7 +40,7 @@ class ClassifierY8(IClassifier):
 
     model_class = "image_net2"
 
-    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = ""):
+    def __init__(self, model_path: Path, opt: ClassifierOpt, device_name: str = "") -> None:
         super().__init__(model_path, opt, device_name)
 
         self._model = YOLO(model_path, task="classify")
@@ -69,13 +73,12 @@ def main() -> None:
     opt = ClassifierOpt((224, 224), 1000)
     path = Path("yolov8n-cls.pt")
     image: ImageNda = ImageNda.load("../../jvi/static/lena.jpg")
-    # image = ImageNda.load('bus.jpg')
 
     model = ClassifierY8(path, opt, "cuda")
     res = model(image)
 
-    print(model)
-    print(res.top(), res.confidences())
+    logger.info("{}", model)
+    logger.info("{} {}", res.top(), res.confidences())
 
 
 if __name__ == "__main__":

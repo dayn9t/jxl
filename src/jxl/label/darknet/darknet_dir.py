@@ -2,21 +2,20 @@ from pathlib import Path
 from typing import *
 
 from jcx.sys.fs import files_in
-from jcx.text.txt_json import load_txt, save_txt
+from jcx.text.io import save_txt
+from jcx.text.txt_json import load_txt
 from jvi.geo.rectangle import Rect
 from loguru import logger
 from pydantic import BaseModel
 from rustshed import *
 
-from jxl.label.a2d.dd import A2dObjectLabel, A2dImageLabel
+from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel
 
 DARKNET_EXT = ".txt"  # 标注文件扩展名
 
 
 class DarknetObjectLabel(BaseModel):
-    """
-    表示Darknet标注文件中的一行数据。
-    """
+    """表示Darknet标注文件中的一行数据。"""
 
     class_id: int
     """类别ID，表示对象的类别"""
@@ -43,7 +42,8 @@ class DarknetObjectLabel(BaseModel):
         parts = line.strip().split()
         if len(parts) != 5:
             logger.warning(f"Invalid line format: {line.strip()}")
-            raise ValueError("Line must contain 5 space-separated values.")
+            msg = "Line must contain 5 space-separated values."
+            raise ValueError(msg)
 
         class_id, x_center, y_center, width, height = map(float, parts)
         return cls(
@@ -94,9 +94,7 @@ class DarknetObjectLabel(BaseModel):
 
 
 class DarknetImageLabel(BaseModel):
-    """
-    表示Darknet一个标注文件中的信息。
-    """
+    """表示Darknet一个标注文件中的信息。"""
 
     objects: List[DarknetObjectLabel]
     """包含的对象列表"""
@@ -190,7 +188,7 @@ class DarknetDir:
         """检验路径是否是本格式的数据集"""
         return Path(folder / "images").is_dir() and Path(folder / "labels").is_dir()
 
-    def __init__(self, folder: Path):
+    def __init__(self, folder: Path) -> None:
         self.pairs = darknet_load_pairs(folder)
 
     def __len__(self) -> int:
@@ -244,10 +242,9 @@ def darknet_load_pairs(folder: Path) -> DarknetImageLabelPairs:
 
 def darknet_label_path_of(image_file: Path) -> Path:
     """从图片文件获取对应的标注文件路径"""
-    label_file = (image_file.parent.parent / "labels" / image_file.name).with_suffix(
+    return (image_file.parent.parent / "labels" / image_file.name).with_suffix(
         DARKNET_EXT
     )
-    return label_file
 
 
 def darknet_save_pairs(pairs: DarknetImageLabelPairs) -> None:

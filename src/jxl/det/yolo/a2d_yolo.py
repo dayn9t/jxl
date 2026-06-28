@@ -1,11 +1,14 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from jvi.image.image_nda import ImageNda
-from ultralytics import YOLO
+from ultralytics.models.yolo.model import YOLO
 
-from jxl.det.a2d import Analyzer2D, A2dOpt, A2dResult, from_d2d
-from jxl.det.d2d import D2dResult
+from jxl.det.a2d import A2dOpt, A2dResult, Analyzer2D, from_d2d
 from jxl.det.yolo.d2d_yolo import D2dYolo
+
+if TYPE_CHECKING:
+    from jxl.det.d2d import D2dResult
 
 
 class A2dYolo(Analyzer2D):
@@ -15,7 +18,7 @@ class A2dYolo(Analyzer2D):
 
     def __init__(
         self, model_dir: Path, opt: A2dOpt, device_name: str = "", verbose: bool = False
-    ):
+    ) -> None:
         """创建分类器, 为 cls.new 提供模板"""
         super().__init__(model_dir, opt, device_name, verbose)
 

@@ -1,5 +1,6 @@
 from jcx.text.txt_json import load_json
-from openai import OpenAI, api_key
+from loguru import logger
+from openai import OpenAI
 from pydantic import BaseModel
 
 from jxl.common import JXL_OAI_DIR
@@ -12,8 +13,7 @@ class CalendarEvent(BaseModel):
     participants: list[str]
 
 
-def main():
-    # cfg =  load_json(JXL_OAI_DIR / "doubao_vl.json", LlmCfg).unwrap()
+def main() -> None:
     cfg = load_json(JXL_OAI_DIR / "qwen_plus.json", LlmCfg).unwrap()
 
     client = OpenAI(api_key=cfg.api_key, base_url=cfg.base_url)
@@ -31,10 +31,8 @@ def main():
     )
 
     event = response.output_parsed
-    # print("model:", response.model)
-    # print("total_tokens:", response.usage.total_tokens)
-    print(response)
-    print(event)
+    logger.info("{}", response)
+    logger.info("{}", event)
 
 
 if __name__ == "__main__":

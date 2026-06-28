@@ -4,8 +4,9 @@ import argparse
 from pathlib import Path
 
 from jvi.gui.record_viewer import RecordViewer
-from jxl.label.factory import open_label_set
+
 from jxl.label.a2d.label_set import LabelFormat
+from jxl.label.factory import open_label_set
 from jxl.label.meta import find_meta
 from jxl.label.viewer import LabelRecord
 

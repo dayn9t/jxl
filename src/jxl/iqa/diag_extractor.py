@@ -1,8 +1,7 @@
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
-from jvi.image.proc import resize_roi
-from jvi.image.proc import to_gray, laplacian_edge
+from jvi.image.proc import laplacian_edge, resize_roi, to_gray
 from jvi.image.stat import hist_vector, hue_hist
 from jvi.match.match import ImageMatcher
 from pydantic import BaseModel
@@ -20,7 +19,7 @@ def sharpness(image: ImageNda) -> list[float]:
     assert image.channel_num() == 3
     lap = laplacian_edge(to_gray(image))
     # calc_show_hist(lap, 16)
-    return hist_vector(lap).tolist()  # type: ignore
+    return [float(x) for x in hist_vector(lap).tolist()]
 
 
 def match(im1: ImageNda, im2: ImageNda) -> float:

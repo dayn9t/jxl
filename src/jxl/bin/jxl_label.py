@@ -3,27 +3,28 @@
 import argparse
 from copy import deepcopy
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from jcx.time.dt import now_iso_str
-from jcx.ui.key import Key, Flag
-from jvi.drawing.color import WHITE, YELLOW_GREEN, LIME
-from jvi.drawing.shape import polylines, cross, put_text
+from jcx.ui.key import Flag, Key
+from jvi.drawing.color import LIME, WHITE, YELLOW_GREEN
+from jvi.drawing.shape import cross, polylines, put_text
 from jvi.geo.point2d import Point, Points, closest_point
 from jvi.geo.polygon import Polygon
 from jvi.gui.record_viewer import RecordViewer
 from jvi.image.image_nda import ImageNda
-from jxl.label.hop import (
-    hop_load_label,
-    import_label,
-    hop_save_label,
-    hop_del_label,
-    load_label_records,
-    LabelFilter,
-)
+from rustshed import Null, Option, Some
+
 from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel, A2dObjectLabels
+from jxl.label.hop import (
+    LabelFilter,
+    hop_del_label,
+    hop_load_label,
+    hop_save_label,
+    import_label,
+    load_label_records,
+)
 from jxl.label.meta import LabelMeta, find_meta
-from rustshed import Option, Null, Some
 
 NEAR_R2: Final[float] = 0.05**2 / 4  # TODO:
 """点的邻域半径平方"""
@@ -35,9 +36,9 @@ class Labeler(RecordViewer):
         meta: LabelMeta,
         meta_id: int,
         snapshot_dir: Path,
-        visible_props: List[str],
+        visible_props: list[str],
         verbose: bool,
-    ):
+    ) -> None:
         super().__init__("labeler", meta.view_size)
         self.meta_id = meta_id
         self.snapshot_dir = snapshot_dir
@@ -304,10 +305,7 @@ class Labeler(RecordViewer):
         print("抓图:", dst)
 
     def on_draw(self, canvas: ImageNda, _pos: Point) -> None:
-        if self.show_all_category:
-            cat_filter = -1
-        else:
-            cat_filter = self.cur_category
+        cat_filter = -1 if self.show_all_category else self.cur_category
         self.cur_label.draw_on(
             canvas, self.label_meta, self.visible_props, cat_filter=cat_filter
         )
@@ -333,7 +331,7 @@ class Labeler(RecordViewer):
         d2_min = NEAR_R2
         obj: Option[A2dObjectLabel] = Null
         for o in self.cur_label.objects:
-            d2, p = closest_point(cursor, o.polygon)
+            d2, _p = closest_point(cursor, o.polygon)
             if d2 < d2_min:
                 d2_min = d2
                 obj = Some(o)

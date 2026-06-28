@@ -5,7 +5,6 @@ from pathlib import Path
 import fire  # type: ignore
 from autogluon.tabular import TabularDataset, TabularPredictor  # type: ignore
 
-
 # label = 'signature'
 
 

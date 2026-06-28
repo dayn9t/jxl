@@ -9,12 +9,13 @@ import torch
 from jcx.ui.key import Key
 from jvi.image.image_nda import ImageNda
 from jvi.image.trace import trace_image
+
 from jxl.cls.classifier import ClassifierOpt
 from jxl.cls.classifier_tch import ClassifierTch
 from jxl.io.draw import draw_class_item
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="图像分类器")
     parser.add_argument("model_path", type=str, help="模型文件路径")
     parser.add_argument("source", type=str, help="数据源，文件/目录")

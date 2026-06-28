@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Tuple
 
 from jcx.sys.fs import make_subdir
 from jvi.drawing.color import YOLO_GRAY
@@ -25,11 +24,11 @@ class DarknetSet(A2dLabelSet):
     """Darknet标注格式数据集"""
 
     @classmethod
-    def valid_set(cls, folder: Path, meta_id: int) -> bool:
+    def valid_set(cls, folder: Path, meta_id: int) -> bool:  # noqa: ARG003
         """检验路径是否是本格式的数据集"""
         return DarknetDir.valid_dir(folder)
 
-    def __init__(self, folder: Path, meta_id: int = 0):
+    def __init__(self, folder: Path, meta_id: int = 0) -> None:
         super().__init__(folder, meta_id)
 
         self.darknet_dir = DarknetDir(folder)
@@ -47,19 +46,19 @@ class DarknetSet(A2dLabelSet):
         pairs = self.darknet_dir.find_pairs(pattern)
         return [(path, label.to_label()) for path, label in pairs]
 
-    def save(self, root: Path) -> None:
+    def save(self, root: Path) -> None:  # noqa: ARG002
         self.darknet_dir.save()
 
 
 def darknet_export_objects(objects: A2dObjectLabels, txt_file: Path) -> None:
     """保存标注对象集"""
-    with open(txt_file, "w") as fp:
+    with Path(txt_file).open("w") as fp:
         for o in objects:
             c = o.prob_class.value
             if c < 0:  # TODO: 类别过滤
                 continue
             f = o.rect().cs_list()
-            fp.write("%d %f %f %f %f\n" % (c, f[0], f[1], f[2], f[3]))
+            fp.write(f"{c} {f[0]} {f[1]} {f[2]} {f[3]}\n")
 
 
 def darknet_dump_labels(
@@ -74,14 +73,15 @@ def darknet_dump_labels(
     labels_dir = make_subdir(folder, "labels", remake)
     images_dir = make_subdir(folder, "images", remake)
 
-    print("\n开始生成样本(%d)：" % len(labels))
     total = 0
-    for image, label in labels:
+    for image, raw_label in labels:
         src: ImageNda = ImageNda.load(image)
+        label = raw_label
 
         if crop_roi:
-            rect, label = label.crop_by_roi(src.size())
+            rect, cropped = label.crop_by_roi(src.size())
             src = src.roi(rect)
+            label = cropped
         name = image.stem
         jpg = images_dir / f"{name}.jpg"
         txt = labels_dir / f"{name}.txt"
@@ -129,8 +129,8 @@ def calc_iou(det_rect: Rect, label_rect: Rect) -> float:
 
 
 def find_bbox_matches(
-    det_rects: List[Rect], label_rects: List[Rect], iou_threshold: float = 0.5
-) -> List[Tuple[int, int, float]]:
+    det_rects: list[Rect], label_rects: list[Rect], iou_threshold: float = 0.5
+) -> list[tuple[int, int, float]]:
     """查找检测框和标注框之间的匹配对。
 
     Args:

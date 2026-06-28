@@ -3,19 +3,18 @@
 import argparse
 from pathlib import Path
 
-import cv2  # type: ignore
 from ias.io import pack_source
 from jcx.util.err import mand
 from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
-from jvi.geo.size2d import Size, SIZE_FHD, size_parse
+from jvi.geo.size2d import SIZE_FHD, Size, size_parse
 from jvi.image.io import load_image_pairs_in
 
 epilog = """
 Examples:
 
     cd-cut src_dir dst_dir
-    
+
 """
 
 SIZE = SIZE_FHD

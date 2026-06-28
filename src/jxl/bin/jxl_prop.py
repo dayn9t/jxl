@@ -8,13 +8,14 @@ from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
 from jvi.gui.record_viewer import RecordViewer
 from jvi.image.image_nda import ImageNda
+
 from jxl.label.meta import LabelMeta, find_meta
-from jxl.label.tile import TileRecord, TileObject, load_tiles, TileObjects
+from jxl.label.tile import TileObject, TileObjects, TileRecord, load_tiles
 
 
 class PropLabeler(RecordViewer):
-    def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str):
-        super().__init__("labeler-%s-%s" % (cat_name, prop_name), meta.view_size)
+    def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str) -> None:
+        super().__init__(f"labeler-{cat_name}-{prop_name}", meta.view_size)
         self.meta = meta
         self.cat_name = cat_name
         self.prop_name = prop_name
@@ -66,7 +67,7 @@ class PropLabeler(RecordViewer):
             return False
         value_cfg = r.unwrap()
         obj = self.cur_object()
-        obj.set_prop(self.prop_name, value_cfg.id, value_cfg.conf)
+        obj.set_prop(self.prop_meta.id, value_cfg.id, value_cfg.conf)
         print(f"类别属性: {self.prop_name}={value_cfg}")
         self.tile_index += 1
         self.tile_index %= len(self.record().objects)
@@ -75,7 +76,7 @@ class PropLabeler(RecordViewer):
     def on_draw(self, canvas: ImageNda, _pos: Point) -> None:
         rec: TileRecord = self.record()
         for i, o in enumerate(rec.objects):
-            o.draw_label(self.prop_name, canvas, i == self.tile_index, self.prop_meta)
+            o.draw_label(self.prop_meta.id, canvas, i == self.tile_index, self.prop_meta)
 
     def on_left_button_down(self, cursor: Point, flags: int) -> None:
         """顶点/区域选择，节点区域左键保存选中区域内样本"""
@@ -132,11 +133,12 @@ def main() -> None:
     meta = find_meta(opt.meta_id, opt.folder).unwrap()
 
     cat = meta.cat_meta(name=opt.category).id
+    prop_id = meta.prop_meta_by_name(opt.property, cat_name=opt.category).unwrap().id
     rs = load_tiles(
         opt.folder,
         opt.meta_id,
         cat,
-        opt.property,
+        prop_id,
         opt.exclude_conf,
         opt.min_prop,
         opt.sort_by_conf,

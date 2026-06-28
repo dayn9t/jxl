@@ -30,7 +30,7 @@ class D2dOpt(BaseModel):
     配置2D目标检测器的各项参数, 如输入图像尺寸、置信度阈值等.
     """
 
-    input_shape: tuple = (640, 640)
+    input_shape: tuple[int, int] = (640, 640)
     """输入形状, 默认为(640, 640)"""
     conf_thr: float = 0.5
     """置信度阈值, 小于此阈值的检测结果将被过滤, 默认为0.5"""

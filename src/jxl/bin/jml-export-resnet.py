@@ -1,6 +1,5 @@
 import torch
-from safetensors.torch import load_file, save_file
-from torch import Tensor
+from safetensors.torch import save_file
 
 
 def export_safetensors() -> None:

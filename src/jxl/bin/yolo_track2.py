@@ -1,18 +1,14 @@
 import cv2
 
-from ultralytics import YOLO
-
 # !/opt/ias/env/bin/python
-
-
 from jcx.sys.fs import find
 from jvi.image.image_nda import ImageNda
+from ultralytics import YOLO
 
 
 def main() -> None:
     model_file = "/opt/howell/s4/current/ias/model/2025-03-05_sign.pt"
     # video_path = "/mnt/temp/C2_2025_03_05T10_09_47_L.mkv"
-    video_path = "/mnt/temp/C2_2025_03_05T10_14_48_L.mkv"
 
     src_dir = "/home/jiang/py/jxl/assets/s4/snapshots"
 
@@ -21,7 +17,7 @@ def main() -> None:
     files = find(src_dir, ".jpg")
 
     # Loop through the video frames
-    for i, file in enumerate(files):
+    for _i, file in enumerate(files):
         # Read a frame from the video
         image_in = ImageNda.load(file)
         results = model.track(image_in.data(), persist=True)

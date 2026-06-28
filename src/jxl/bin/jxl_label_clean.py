@@ -5,8 +5,9 @@ import shutil
 from pathlib import Path
 
 from jcx.sys.fs import files_in
-from jxl.label.hop import HOP_EXT
+
 from jxl.label.a2d.dd import IMG_EXT
+from jxl.label.hop import HOP_EXT
 
 
 def main() -> None:
@@ -24,7 +25,7 @@ def main() -> None:
     labels = set()
     for d in folder.glob("hop_m*"):
         if d.is_dir():
-            s = set([f.stem for f in files_in(d, HOP_EXT)])
+            s = {f.stem for f in files_in(d, HOP_EXT)}
             print(f"- 加载标注目录: {d.relative_to(folder)}({len(s)})")
             labels.update(s)
 
