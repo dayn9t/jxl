@@ -45,15 +45,18 @@ def _detect(
     iou: float,
     device: str,
 ) -> dict[str, list[Box]]:
-    """通用 ultralytics 检测 → {stem: [Box]}。Box 坐标取 boxes.xyxyn（归一化）。
+    """通用 ultralytics 检测 → {stem: [Box]}。用 res.path 反查 stem，杜绝 stream 错位。
 
+    stream 模式下 ultralytics 对损坏图可能静默跳过（yield 少于输入数）；
+    用 res.path 反查保证 stem↔框 正确配对，未返回的图在 run 里计为 skipped。
     person.pt 单类 YOLO 直接 predict；YOLOE 由调用方先 set_classes 再传入。
+    Box 坐标取 boxes.xyxyn（归一化）。
     """
     kwargs: dict[str, object] = {"conf": conf, "iou": iou, "verbose": False, "stream": True}
     if device:
         kwargs["device"] = device
     out: dict[str, list[Box]] = {}
-    for path, res in zip(paths, model.predict([str(p) for p in paths], **kwargs), strict=False):
+    for res in model.predict([str(p) for p in paths], **kwargs):
         boxes: list[Box] = []
         if res.boxes is not None and len(res.boxes):
             xy = res.boxes.xyxyn
@@ -61,7 +64,7 @@ def _detect(
             for i in range(len(xy)):
                 b = xy[i].tolist()
                 boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(cf[i])))
-        out[path.stem] = boxes
+        out[Path(res.path).stem] = boxes
     return out
 
 
@@ -106,6 +109,12 @@ def run(  # noqa: PLR0913
     device: Annotated[str, typer.Option("--device", help="cuda:0 / cpu，空=自动")] = "",
 ) -> None:
     """双检测 person.pt + YOLOE → 框级比对 → 难例 YOLO 集 + report。"""
+    if not 0.0 <= iou <= 1.0:
+        typer.secho(f"--iou 须在 [0,1]: {iou}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    if not 0.0 <= conf <= 1.0:
+        typer.secho(f"--conf 须在 [0,1]: {conf}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
     if not person_model.is_file():
         typer.secho(f"person 模型不存在: {person_model}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
@@ -130,21 +139,28 @@ def run(  # noqa: PLR0913
 
     counts: Counter[str] = Counter()
     by_video: dict[str, Counter[str]] = {}
+    skipped = 0
     for img in imgs:
         stem = img.stem
-        pb = person_map.get(stem, [])
-        yb = yoloe_map.get(stem, [])
-        cls = classify_sample(pb, yb, iou)
+        pb = person_map.get(stem)
+        yb = yoloe_map.get(stem)
+        if pb is None and yb is None:
+            # 两检测器都未返回（损坏图被 ultralytics 静默跳过）→ 计 skipped，不分类
+            skipped += 1
+            continue
+        cls = classify_sample(pb or [], yb or [], iou)
         counts[cls.value] += 1
+        # by_video 分组依赖 mkv_keyframes 的 {video_stem}_{idx:06d} 命名
         video = stem.rsplit("_", 1)[0] if "_" in stem else stem
         by_video.setdefault(video, Counter())[cls.value] += 1
         if cls is SampleClass.POSITIVE:
-            write_yolo_sample(out_dir, img, yb)
+            write_yolo_sample(out_dir, img, yb or [])
         elif cls is SampleClass.NEGATIVE:
             write_yolo_sample(out_dir, img, None)
 
     report = {
         "total_frames": len(imgs),
+        "skipped": skipped,
         "positive": counts.get("positive", 0),
         "negative": counts.get("negative", 0),
         "dropped_empty": counts.get("drop_empty", 0),
@@ -154,7 +170,8 @@ def run(  # noqa: PLR0913
     (out_dir / "mining_report.json").write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2))
     typer.secho(
         f"正样本 {report['positive']} | 负样本 {report['negative']} | "
-        f"丢弃(空/一致) {report['dropped_empty']}/{report['dropped_agree']} → {out_dir}",
+        f"丢弃(空/一致) {report['dropped_empty']}/{report['dropped_agree']} | "
+        f"跳过 {skipped} → {out_dir}",
         fg=typer.colors.GREEN,
     )
 

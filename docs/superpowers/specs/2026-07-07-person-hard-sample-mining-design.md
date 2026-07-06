@@ -17,7 +17,7 @@
 | 决策点 | 选择 | 理由 |
 |---|---|---|
 | 第二检测器 | YOLOE-11l（本地 GPU） | 量大，VLM API 不可行；11l 通用强模型补 26n 弱点 |
-| 第二检测器类别来源 | `yoloe-11l-seg.pt` 默认 COCO class 0 (person) | person 是 COCO 原生类，训练充分，比 `set_classes` 开放词汇对齐更稳 |
+| 第二检测器类别来源 | YOLOE `set_classes(["person"], get_text_pe)` 开放词汇 | YOLOE 为 prompt-based 模型，不 set_classes 不输出目标（实测默认 COCO 类无效）；set_classes 后稳定检出。参考 `d2d_yoloe.py`、`rmb_yolo_ground.py`。原设计"默认 COCO class 0"实测不工作，已修正 |
 | 抽帧方式 | 编码关键帧 I-frame（ffmpeg 无损全量） | 贴合"解压每一幅 key frame"原意，不做二次抽样 |
 | 比对方式 | 框级 IoU 贪心匹配 | "偏离较大"指位置/大小偏差，需框级而非计数 |
 | IoU 匹配阈值 | 默认 0.3（`--iou` 可调） | "放宽精度"——轻微偏差不算分歧 |
@@ -49,6 +49,8 @@ mkv 目录                              person.pt (YOLO26n, 监控专精)
 两阶段 CLI：抽帧独立（通用工具，可复用）；挖掘 bin 内部一次运行完成双检测 + 比对 + 输出（本地推理快，不做中间 NDJSON 落盘）。
 
 ## 4. 组件设计
+
+> **实现注记**：Functional Core（纯函数）实际提取到 lib `src/jxl/det/hardmine.py`（获 mypy strict 类型保障 + 充分单测），`person_mine.py` 只留 Imperative Shell（bin 被 mypy exclude）。spec 的壳/核分离意图不变，物理位置见 plan File Structure。
 
 ### Bin 1：`src/jxl/bin/mkv_keyframes.py`（通用抽帧，~80 行）
 
@@ -119,7 +121,7 @@ SampleClass = Literal["drop_empty", "drop_agree", "positive", "negative"]
 
 ## 7. 测试策略
 
-纯函数单测 `tests/bin/person_mine_test.py`，**不依赖模型/GPU**：
+纯函数单测 `tests/det/hardmine_test.py`（Functional Core 在 `src/jxl/det/hardmine.py`），**不依赖模型/GPU**：
 
 - `xyxy_iou`：已知框对验证 IoU 值（含相交/包含/相离）
 - `greedy_match`：构造框集，验证 `(matched, unmatched_a, unmatched_b)` 划分

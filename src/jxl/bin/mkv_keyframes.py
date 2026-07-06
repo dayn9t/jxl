@@ -20,8 +20,8 @@ app = typer.Typer(add_completion=False, help="mkv → 编码关键帧(I-frame)�
 _MKV_EXT = ".mkv"
 
 
-def extract_keyframes(src_dir: Path, dst_dir: Path) -> list[Path]:
-    """递归找 mkv → ffmpeg 提取 I 帧 → 扁平 jpg。返回处理的 mkv 列表。"""
+def extract_keyframes(src_dir: Path, dst_dir: Path) -> tuple[list[Path], list[Path]]:
+    """递归找 mkv → ffmpeg 提取 I 帧 → 扁平 jpg。返回 (succeeded, failed)。"""
     if not shutil.which("ffmpeg"):
         typer.secho("未找到 ffmpeg，请先安装。", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
@@ -30,6 +30,8 @@ def extract_keyframes(src_dir: Path, dst_dir: Path) -> list[Path]:
         typer.secho(f"未找到 mkv: {src_dir}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
     dst_dir.mkdir(parents=True, exist_ok=True)
+    succeeded: list[Path] = []
+    failed: list[Path] = []
     for mkv in mkvs:
         out_pattern = str(dst_dir / f"{mkv.stem}_%06d.jpg")
         cmd = [
@@ -39,14 +41,22 @@ def extract_keyframes(src_dir: Path, dst_dir: Path) -> list[Path]:
             "-q:v", "2",
             out_pattern,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=600)  # noqa: S603
+        except subprocess.TimeoutExpired:
+            failed.append(mkv)
+            typer.secho(f"ffmpeg 超时 {mkv.name}", fg=typer.colors.YELLOW, err=True)
+            continue
         if result.returncode != 0:
+            failed.append(mkv)
             typer.secho(
                 f"ffmpeg 失败 {mkv.name}: {result.stderr[-300:]}",
                 fg=typer.colors.YELLOW,
                 err=True,
             )
-    return mkvs
+        else:
+            succeeded.append(mkv)
+    return succeeded, failed
 
 
 @app.command()
@@ -54,9 +64,14 @@ def main(
     src_dir: Annotated[Path, typer.Argument(help="mkv 源目录（递归）")],
     dst_dir: Annotated[Path, typer.Argument(help="输出图片目录")],
 ) -> None:
-    """递归抽取所有 mkv 的编码关键帧到扁平 jpg 目录。"""
-    mkvs = extract_keyframes(src_dir, dst_dir)
-    typer.secho(f"处理 {len(mkvs)} 个 mkv → {dst_dir}", fg=typer.colors.GREEN)
+    """递归抽取所有 mkv 的编码关键帧到扁平 jpg 目录。全失败时非零退出。"""
+    succeeded, failed = extract_keyframes(src_dir, dst_dir)
+    typer.secho(
+        f"成功 {len(succeeded)} / 失败 {len(failed)} → {dst_dir}",
+        fg=typer.colors.GREEN if succeeded else typer.colors.RED,
+    )
+    if not succeeded:
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

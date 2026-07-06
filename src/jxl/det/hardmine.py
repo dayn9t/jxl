@@ -2,6 +2,9 @@
 
 纯函数: 双检测器框级比对 + 难例分类 + YOLO 标注生成。
 供 bin/person_mine.py（Imperative Shell）调用。无 IO/模型依赖，充分单测。
+
+注: xyxy_iou 几何逻辑与 bin/rmb_eval_grounding.py:21 同源（该处签名 list[float]，
+此处收紧为 4-tuple 强类型化）。若修 IoU bug 需两处同步；未来统一可抽 det/box_utils.py。
 """
 from __future__ import annotations
 
@@ -79,8 +82,11 @@ def to_yolo_label(boxes: list[Box], cls_id: int = 0) -> str:
         x1, y1, x2, y2, _conf = box
         ax1, ax2 = min(x1, x2), max(x1, x2)
         ay1, ay2 = min(y1, y2), max(y1, y2)
-        cx, cy = (ax1 + ax2) / 2, (ay1 + ay2) / 2
-        w, h = ax2 - ax1, ay2 - ay1
+        # clamp 到 [0,1]：防 boxes.xyxyn 边界微负/>1 污染训练标注
+        cx = max(0.0, min(1.0, (ax1 + ax2) / 2))
+        cy = max(0.0, min(1.0, (ay1 + ay2) / 2))
+        w = max(0.0, min(1.0, ax2 - ax1))
+        h = max(0.0, min(1.0, ay2 - ay1))
         lines.append(f"{cls_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}")
     return "\n".join(lines)
 

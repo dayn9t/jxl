@@ -118,3 +118,16 @@ def test_classify_positive_extra_person() -> None:
     yoloe = [(0.1, 0.1, 0.5, 0.5, 0.9)]
     person = [(0.1, 0.1, 0.5, 0.5, 0.9), (0.7, 0.7, 0.9, 0.9, 0.8)]
     assert classify_sample(person, yoloe, IOU_THR) == SampleClass.POSITIVE
+
+
+def test_classify_positive_completely_disjoint() -> None:
+    # 双方各有框但彼此完全不相干（IoU=0 全未配对）→ 分歧正样本
+    person = [(0.1, 0.1, 0.3, 0.3, 0.9)]
+    yoloe = [(0.7, 0.7, 0.9, 0.9, 0.8)]
+    assert classify_sample(person, yoloe, IOU_THR) == SampleClass.POSITIVE
+
+
+def test_to_yolo_label_clamps_out_of_range() -> None:
+    # 坐标越界（<0 / >1）→ clamp 到 [0,1]
+    boxes = [(-0.1, -0.1, 1.2, 1.2, 0.9)]
+    assert to_yolo_label(boxes, cls_id=0) == "0 0.550000 0.550000 1.000000 1.000000"
