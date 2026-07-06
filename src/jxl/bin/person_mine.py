@@ -44,12 +44,12 @@ def _detect(
     conf: float,
     iou: float,
     device: str,
-    classes: list[int] | None = None,
 ) -> dict[str, list[Box]]:
-    """通用 ultralytics 检测 → {stem: [Box]}。Box 坐标取 boxes.xyxyn（归一化）。"""
+    """通用 ultralytics 检测 → {stem: [Box]}。Box 坐标取 boxes.xyxyn（归一化）。
+
+    person.pt 单类 YOLO 直接 predict；YOLOE 由调用方先 set_classes 再传入。
+    """
     kwargs: dict[str, object] = {"conf": conf, "iou": iou, "verbose": False, "stream": True}
-    if classes is not None:
-        kwargs["classes"] = classes
     if device:
         kwargs["device"] = device
     out: dict[str, list[Box]] = {}
