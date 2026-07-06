@@ -30,7 +30,6 @@ from jxl.det.hardmine import (
 
 app = typer.Typer(add_completion=False, help="Person 难例挖掘: 双检测器比对 → 难例 YOLO 集。")
 
-PERSON_CLS = 0  # COCO person 类 id（yoloe-11l-seg.pt 默认 COCO 80 类）
 _IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 
 
@@ -64,6 +63,23 @@ def _detect(
                 boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(cf[i])))
         out[path.stem] = boxes
     return out
+
+
+def detect_yoloe(
+    paths: list[Path],
+    model_path: Path,
+    conf: float,
+    iou: float,
+    device: str,
+) -> dict[str, list[Box]]:
+    """YOLOE 开放词汇检测 person: set_classes('person') 后 predict。
+
+    YOLOE 为 prompt-based 模型，必须先 set_classes + get_text_pe 提供文本提示，
+    否则 predict 不输出目标（与普通 YOLO 固定 COCO 类不同）。参考 d2d_yoloe.py。
+    """
+    model = YOLOE(str(model_path))
+    model.set_classes(["person"], model.get_text_pe(["person"]))
+    return _detect(model, paths, conf, iou, device)
 
 
 def write_yolo_sample(out_dir: Path, img_path: Path, boxes: list[Box] | None) -> None:
@@ -110,7 +126,7 @@ def run(  # noqa: PLR0913
         fg=typer.colors.CYAN,
     )
     person_map = _detect(YOLO(str(person_model)), imgs, conf, iou, device)
-    yoloe_map = _detect(YOLOE(str(yoloe_model)), imgs, conf, iou, device, classes=[PERSON_CLS])
+    yoloe_map = detect_yoloe(imgs, yoloe_model, conf, iou, device)
 
     counts: Counter[str] = Counter()
     by_video: dict[str, Counter[str]] = {}
