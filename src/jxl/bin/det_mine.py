@@ -1,0 +1,304 @@
+#!/home/jiang/py/jxl/.venv/bin/python
+"""Det-Mine: N 模型加权争议分 + cascade 难例挖掘。
+
+target(person.pt 等) + 多校验器(YOLOE/GroundingDINO/RF-DETR) 同检 → hardmine.score_sample
+算争议分 → cascade 分流: L0 全一致丢弃 / L1 低争议自动标注 / L2-L3 高争议进 review 候选集。
+类别参数化(--target), 跨架构校验器错例不重叠, 多数共识(K) + 模型权重加权。
+
+用法:
+    det_mine <frames_dir> <out_dir> \
+        --target person --target-model /opt/howell/iap/current/ias/model/person.pt \
+        --validators yoloe,gdino,rfdetr --consensus 2 \
+        --validator-weights rfdetr:0.4,gdino:0.35,yoloe:0.25 --review-top 0.3 --device cuda:0
+"""
+
+import shutil
+from pathlib import Path
+from typing import Annotated
+
+import cv2
+import orjson
+import typer
+from ultralytics import YOLO, YOLOE
+
+from jxl.det.hardmine import (
+    Box,
+    score_sample,
+    to_yolo_label,
+)
+
+app = typer.Typer(add_completion=False, help="Det-Mine: N 模型加权争议分 + cascade 难例挖掘。")
+
+VALIDATOR_BACKENDS = {"yoloe", "gdino", "rfdetr"}
+_IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
+_YOLOE_DEFAULT = Path("/home/jiang/py/jxl/models/yoloe-11l-seg.pt")
+
+
+def gather_images(src: Path) -> list[Path]:
+    """递归收集候选帧图片。"""
+    return sorted(p for p in src.rglob("*") if p.suffix.lower() in _IMG_EXTS)
+
+
+def _detect(
+    model: YOLO | YOLOE,
+    paths: list[Path],
+    conf: float,
+    iou: float,
+    device: str,
+) -> dict[str, list[Box]]:
+    """通用 ultralytics 检测 → {stem: [Box]}。用 res.path 反查 stem，杜绝 stream 错位。
+
+    Box 坐标取 boxes.xyxyn（归一化）。target.pt 单类 YOLO 直接 predict；
+    YOLOE 由调用方先 set_classes 再传入。
+    """
+    kwargs: dict[str, object] = {"conf": conf, "iou": iou, "verbose": False, "stream": True}
+    if device:
+        kwargs["device"] = device
+    out: dict[str, list[Box]] = {}
+    for res in model.predict([str(p) for p in paths], **kwargs):
+        boxes: list[Box] = []
+        if res.boxes is not None and len(res.boxes):
+            xy = res.boxes.xyxyn
+            cf = res.boxes.conf
+            for i in range(len(xy)):
+                b = xy[i].tolist()
+                boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(cf[i])))
+        out[Path(res.path).stem] = boxes
+    return out
+
+
+def detect_yoloe(
+    paths: list[Path],
+    model_path: Path,
+    conf: float,
+    iou: float,
+    device: str,
+    classes_name: str = "person",
+) -> dict[str, list[Box]]:
+    """YOLOE 开放词汇检测: set_classes([classes_name]) 后 predict。
+
+    YOLOE 为 prompt-based 模型，必须先 set_classes + get_text_pe，否则不输出。
+    """
+    model = YOLOE(str(model_path))
+    model.set_classes([classes_name], model.get_text_pe([classes_name]))
+    return _detect(model, paths, conf, iou, device)
+
+
+def detect_gdino(
+    paths: list[Path],
+    model_name: str,
+    text: str,
+    device: str,
+) -> dict[str, list[Box]]:
+    """Grounding DINO 开放词汇检测: text prompt → {stem: [Box]}。
+
+    Box 坐标归一化到 [0,1]。API 以 transformers 版本为准
+    (post_process_grounded_object_detection)。
+    """
+    import torch  # noqa: PLC0415
+    from PIL import Image  # noqa: PLC0415
+    from transformers import (  # noqa: PLC0415
+        AutoProcessor,
+        GroundingDinoForObjectDetection,
+    )
+
+    processor = AutoProcessor.from_pretrained(model_name)
+    model = GroundingDinoForObjectDetection.from_pretrained(model_name)
+    dev = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    model = model.to(dev).eval()
+    text_prompt = f"{text} ."
+    out: dict[str, list[Box]] = {}
+    for path in paths:
+        try:
+            image = Image.open(path).convert("RGB")
+        except OSError:
+            continue
+        inputs = processor(images=image, text=text_prompt, return_tensors="pt").to(dev)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        results = processor.post_process_grounded_object_detection(
+            outputs,
+            inputs.input_ids,
+            threshold=0.25,
+            text_threshold=0.25,
+            target_sizes=[image.size[::-1]],
+        )[0]
+        w, h = image.size
+        boxes: list[Box] = []
+        for box, score in zip(results["boxes"], results["scores"], strict=False):
+            x1, y1, x2, y2 = box.tolist()
+            boxes.append((x1 / w, y1 / h, x2 / w, y2 / h, float(score)))
+        out[path.stem] = boxes
+    return out
+
+
+def detect_rfdetr(
+    paths: list[Path],
+    model: object,
+    class_id: int,
+    conf: float,
+) -> dict[str, list[Box]]:
+    """RF-DETR COCO 检测: 筛 class_id (COCO person=0) → {stem: [Box]}。
+
+    model 由 caller 构造 (rfdetr RFDETRBase/Large)，本函数仅 predict。
+    API 以 rfdetr 版本为准 (model.predict → supervision Detections)。
+    """
+    out: dict[str, list[Box]] = {}
+    for path in paths:
+        frame = cv2.imread(str(path))
+        if frame is None:
+            continue
+        detections = model.predict(frame, threshold=conf)
+        h, w = frame.shape[:2]
+        boxes: list[Box] = []
+        for i in range(len(detections)):
+            if int(detections.class_id[i]) != class_id:
+                continue
+            x1, y1, x2, y2 = detections.xyxy[i].tolist()
+            boxes.append((x1 / w, y1 / h, x2 / w, y2 / h, float(detections.confidence[i])))
+        out[path.stem] = boxes
+    return out
+
+
+def _parse_weights(s: str) -> dict[str, float]:
+    """'rfdetr:0.4,gdino:0.35' → {'rfdetr': 0.4, ...}"""
+    out: dict[str, float] = {}
+    for kv in s.split(","):
+        kv = kv.strip()
+        if not kv:
+            continue
+        name, _, val = kv.partition(":")
+        out[name.strip()] = float(val)
+    return out
+
+
+@app.command()
+def run(  # noqa: PLR0913
+    frames_dir: Annotated[Path, typer.Argument(help="候选帧目录（递归）")],
+    out_dir: Annotated[Path, typer.Argument(help="输出目录")],
+    target: Annotated[str, typer.Option("--target", help="目标类(决定 prompt/set_classes/cls_id 名)")] = "person",
+    target_model: Annotated[Path, typer.Option("--target-model", help="被校验专用 YOLO 权重")] = Path(
+        "/opt/howell/iap/current/ias/model/person.pt"
+    ),
+    cls_id: Annotated[int, typer.Option("--cls-id", help="YOLO 标注类 id")] = 0,
+    validators: Annotated[str, typer.Option("--validators", help="校验器组合(逗号分隔)")] = "yoloe,gdino,rfdetr",
+    weights: Annotated[str, typer.Option("--validator-weights", help="权重 name:w,...")] = "rfdetr:0.4,gdino:0.35,yoloe:0.25",
+    yoloe_model: Annotated[Path, typer.Option("--yoloe-model", help="YOLOE 权重")] = _YOLOE_DEFAULT,
+    gdino_model: Annotated[str, typer.Option("--gdino-model", help="Grounding DINO HF 模型名")] = "IDEA-Research/grounding-dino-tiny",
+    rfdetr_variant: Annotated[str, typer.Option("--rfdetr-variant", help="RF-DETR 变体 base/large")] = "base",
+    iou: Annotated[float, typer.Option("--iou", help="IoU 匹配阈值")] = 0.3,
+    consensus: Annotated[int, typer.Option("--consensus", help="共识校验器数 K")] = 2,
+    review_top: Annotated[float, typer.Option("--review-top", help="高争议进 review 的比例")] = 0.3,
+    conf: Annotated[float, typer.Option("--conf", help="检测置信度")] = 0.25,
+    device: Annotated[str, typer.Option("--device", help="cuda:0/cpu")] = "",
+) -> None:
+    """N 模型加权争议分 + cascade: L0 丢弃 / L1 自动标注 / L2-L3 review 候选集。"""
+    if not 0.0 <= iou <= 1.0 or not 0.0 <= conf <= 1.0:
+        typer.secho("--iou/--conf 须在 [0,1]", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    vlist = [v.strip() for v in validators.split(",") if v.strip()]
+    bad = [v for v in vlist if v not in VALIDATOR_BACKENDS]
+    if bad:
+        typer.secho(f"未知 validator: {bad}（可选 {VALIDATOR_BACKENDS}）", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    if consensus > len(vlist):
+        typer.secho(f"--consensus {consensus} > 校验器数 {len(vlist)}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    if not target_model.is_file():
+        typer.secho(f"target 模型不存在: {target_model}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    wmap = _parse_weights(weights)
+
+    imgs = gather_images(frames_dir)
+    if not imgs:
+        typer.secho(f"候选目录无图: {frames_dir}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    (out_dir / "images").mkdir(parents=True)
+    (out_dir / "labels").mkdir(parents=True)
+    (out_dir / "review").mkdir(parents=True)
+
+    typer.secho(
+        f"det_mine target={target} validators={vlist} frames={len(imgs)}",
+        fg=typer.colors.CYAN,
+    )
+    target_map = _detect(YOLO(str(target_model)), imgs, conf, iou, device)
+    vmaps: dict[str, dict[str, list[Box]]] = {}
+    if "yoloe" in vlist:
+        vmaps["yoloe"] = detect_yoloe(imgs, yoloe_model, conf, iou, device, target)
+    if "gdino" in vlist:
+        vmaps["gdino"] = detect_gdino(imgs, gdino_model, target, device)
+    if "rfdetr" in vlist:
+        from rfdetr import RFDETRBase, RFDETRLarge  # noqa: PLC0415
+
+        cls = {"base": RFDETRBase, "large": RFDETRLarge}.get(rfdetr_variant, RFDETRBase)
+        vmaps["rfdetr"] = detect_rfdetr(imgs, cls(), class_id=0, conf=conf)
+
+    # 评分 + cascade 分流
+    scored: list[tuple[Path, float, list[Box], int, int, dict[str, list[Box]], list[Box]]] = []
+    skipped = 0
+    for img in imgs:
+        stem = img.stem
+        tb = target_map.get(stem)
+        vs = {vn: vmaps[vn].get(stem, []) for vn in vlist}
+        if tb is None and all(not vs[vn] for vn in vlist):
+            skipped += 1
+            continue
+        r = score_sample(tb or [], vs, wmap, iou, consensus)
+        scored.append((img, r.score, r.boxes, r.fp_count, r.fn_count, vs, tb or []))
+
+    nonzero = sorted([s for s in scored if s[1] > 0], key=lambda x: x[1], reverse=True)
+    review_n = int(len(nonzero) * review_top)
+    review_stems = {s[0].stem for s in nonzero[:review_n]}
+
+    l0 = l1 = l2 = 0
+    manifest_lines: list[str] = []
+    for img, score, boxes, fpc, fnc, vs, tb in scored:
+        if score == 0:
+            l0 += 1
+            continue
+        if img.stem in review_stems:
+            shutil.copy2(img, out_dir / "review" / img.name)
+            rec = {
+                "image": img.name,
+                "score": score,
+                "target": tb,
+                "validators": vs,
+                "fp_count": fpc,
+                "fn_count": fnc,
+            }
+            manifest_lines.append(orjson.dumps(rec).decode())
+            l2 += 1
+        else:
+            shutil.copy2(img, out_dir / "images" / img.name)
+            (out_dir / "labels" / (img.stem + ".txt")).write_text(
+                to_yolo_label(boxes, cls_id=cls_id), encoding="utf-8"
+            )
+            l1 += 1
+
+    (out_dir / "review" / "manifest.jsonl").write_text(
+        "\n".join(manifest_lines) + ("\n" if manifest_lines else ""), encoding="utf-8"
+    )
+    report = {
+        "target": target,
+        "total_frames": len(imgs),
+        "skipped": skipped,
+        "L0_drop": l0,
+        "L1_auto": l1,
+        "review": l2,
+        "validators": vlist,
+        "weights": wmap,
+        "iou": iou,
+        "consensus": consensus,
+        "review_top": review_top,
+    }
+    (out_dir / "mining_report.json").write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2))
+    typer.secho(
+        f"L0 丢 {l0} | L1 自动 {l1} | review {l2} | skip {skipped} → {out_dir}",
+        fg=typer.colors.GREEN,
+    )
+
+
+if __name__ == "__main__":
+    app()
