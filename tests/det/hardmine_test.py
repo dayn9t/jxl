@@ -229,3 +229,36 @@ def test_score_sample_partial_miss_one_validator() -> None:
     assert r.fn_count == 1
     assert abs(r.score - 0.6) < 1e-9
     assert r.boxes[0] == validators["gdino"][0]  # RF-DETR 缺→GDINO 回退
+
+
+def test_find_consensus_positions_multiple() -> None:
+    # 两个不同位置各 3 校验器认同 → 2 个共识位置
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.3, 0.3, 0.9), (0.6, 0.6, 0.8, 0.8, 0.8)],
+        "gdino": [(0.1, 0.1, 0.3, 0.3, 0.95), (0.6, 0.6, 0.8, 0.8, 0.85)],
+        "rfdetr": [(0.12, 0.12, 0.32, 0.32, 0.99), (0.62, 0.62, 0.82, 0.82, 0.9)],
+    }
+    positions = find_consensus_positions(validators, IOU_THR, 2)
+    assert len(positions) == 2
+
+
+def test_find_consensus_positions_k_exceeds_validators() -> None:
+    # k=3 但仅 2 校验器 → 永不可能共识 → 空
+    validators = {"yoloe": [(0.1, 0.1, 0.5, 0.5, 0.9)], "gdino": [(0.1, 0.1, 0.5, 0.5, 0.95)]}
+    assert find_consensus_positions(validators, IOU_THR, 3) == []
+
+
+def test_score_sample_fp_and_fn_simultaneously() -> None:
+    # target 1 框(无人认→fp) + 漏检 1 共识位置(全员认→fn) → 同时
+    target = [(0.1, 0.1, 0.2, 0.2, 0.9)]  # 左上小框, 无校验器认同
+    validators = {
+        "yoloe": [(0.6, 0.6, 0.8, 0.8, 0.9)],
+        "gdino": [(0.6, 0.6, 0.8, 0.8, 0.95)],
+        "rfdetr": [(0.62, 0.62, 0.82, 0.82, 0.99)],
+    }
+    r = score_sample(target, validators, WEIGHTS, IOU_THR, 2)
+    assert r.fp_count == 1
+    assert r.fn_count == 1
+    # fp = (1.0-0)/1.0 = 1.0; fn = 1.0/1.0 = 1.0; score = 2.0
+    assert abs(r.score - 2.0) < 1e-9
+    assert len(r.boxes) == 1  # 漏检共识 → 1 标注框
