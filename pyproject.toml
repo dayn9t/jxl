@@ -36,6 +36,8 @@ dependencies = [
     "albumentations>=1.4,<2.0",  # 2.x 改 API(GaussNoise var_limit / BboxParams), 锁 1.x
     "imageio[ffmpeg]>=2.34",
     "pillow>=10.0",
+    "transformers",    # Grounding DINO 开放词汇检测器 (det_mine validator)
+    "rfdetr",          # RF-DETR COCO SOTA 检测器 (det_mine validator)
 ]
 
 [dependency-groups]
