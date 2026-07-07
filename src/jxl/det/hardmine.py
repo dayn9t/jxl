@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import NamedTuple
 
 # 归一化 xyxy + 置信度: (x1, y1, x2, y2, conf), 坐标 ∈ [0,1]
 Box = tuple[float, float, float, float, float]
@@ -70,6 +71,116 @@ def greedy_match(
     unmatched_a = [i for i in range(len(boxes_a)) if i not in used_a]
     unmatched_b = [i for i in range(len(boxes_b)) if i not in used_b]
     return matched, unmatched_a, unmatched_b
+
+
+def find_consensus_positions(
+    validators: dict[str, list[Box]],
+    iou_thr: float,
+    k: int,
+) -> list[tuple[Box, dict[str, Box]]]:
+    """跨校验器贪心聚类: 找 ≥k 个校验器 IoU 重叠的共识位置。
+
+    按 conf 降序以每个框为种子，向其他校验器找 IoU 最高的未消费框配对；
+    支持校验器数 ≥k 则记为一个共识位置。
+    Returns: [(representative_box, {validator_name: box}), ...]
+    """
+    candidates = sorted(
+        (
+            (name, idx, box)
+            for name, boxes in validators.items()
+            for idx, box in enumerate(boxes)
+        ),
+        key=lambda x: x[2][4],
+        reverse=True,
+    )
+    consumed: dict[str, set[int]] = {name: set() for name in validators}
+    positions: list[tuple[Box, dict[str, Box]]] = []
+    for name_s, idx_s, box_s in candidates:
+        if idx_s in consumed[name_s]:
+            continue
+        supporters: dict[str, Box] = {name_s: box_s}
+        consumed[name_s].add(idx_s)
+        for name_o, boxes_o in validators.items():
+            if name_o == name_s:
+                continue
+            best_idx: int | None = None
+            best_iou = iou_thr
+            for idx_o, box_o in enumerate(boxes_o):
+                if idx_o in consumed[name_o]:
+                    continue
+                iov = xyxy_iou(box_s[:4], box_o[:4])
+                if iov >= best_iou:
+                    best_iou = iov
+                    best_idx = idx_o
+            if best_idx is not None:
+                supporters[name_o] = boxes_o[best_idx]
+                consumed[name_o].add(best_idx)
+        if len(supporters) >= k:
+            positions.append((box_s, supporters))
+    return positions
+
+
+def pick_by_priority(supporters: dict[str, Box], priority: list[str]) -> Box | None:
+    """按优先级返回第一个存在的校验器框（标注框回退选框用）。"""
+    for name in priority:
+        if name in supporters:
+            return supporters[name]
+    return None
+
+
+class ScoreResult(NamedTuple):
+    """score_sample 的返回: 争议分 + 共识标注框 + 分项计数。"""
+
+    score: float
+    boxes: list[Box]
+    fp_count: int
+    fn_count: int
+
+
+def score_sample(
+    target_boxes: list[Box],
+    validators: dict[str, list[Box]],
+    weights: dict[str, float],
+    iou_thr: float,
+    k: int,
+) -> ScoreResult:
+    """N 模型加权争议分 + 共识标注框。
+
+    fp = Σ target框(认同票<k): (W_total − W_认同)/W_total  (疑似 target 误检)
+    fn = Σ 共识漏检位置: W_认同/W_total                   (target 漏, 校验器共识)
+    score = fp + fn; 0=全一致; 越大越争议。
+    boxes = 共识位置按 weights 降序回退选框(供 L1 自动标注, RF-DETR>GDINO>YOLOE)。
+    """
+    priority = sorted(weights.keys(), key=lambda n: weights[n], reverse=True)
+    w_total = sum(weights.values()) or 1.0
+
+    fp = 0.0
+    fp_count = 0
+    for tbox in target_boxes:
+        w_agree = 0.0
+        votes = 0
+        for vname, vboxes in validators.items():
+            if any(xyxy_iou(tbox[:4], vb[:4]) >= iou_thr for vb in vboxes):
+                votes += 1
+                w_agree += weights.get(vname, 0.0)
+        if votes < k:
+            fp += (w_total - w_agree) / w_total
+            fp_count += 1
+
+    fn = 0.0
+    fn_count = 0
+    boxes: list[Box] = []
+    for pos_box, supporters in find_consensus_positions(validators, iou_thr, k):
+        covered = any(xyxy_iou(pos_box[:4], tb[:4]) >= iou_thr for tb in target_boxes)
+        if not covered:
+            w_agree = sum(weights.get(n, 0.0) for n in supporters)
+            fn += w_agree / w_total
+            fn_count += 1
+        picked = pick_by_priority(supporters, priority)
+        if picked is not None:
+            boxes.append(picked)
+
+    return ScoreResult(score=fp + fn, boxes=boxes, fp_count=fp_count, fn_count=fn_count)
 
 
 def to_yolo_label(boxes: list[Box], cls_id: int = 0) -> str:

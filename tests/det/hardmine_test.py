@@ -4,12 +4,17 @@ from __future__ import annotations
 from jxl.det.hardmine import (
     SampleClass,
     classify_sample,
+    find_consensus_positions,
     greedy_match,
+    pick_by_priority,
+    score_sample,
     to_yolo_label,
     xyxy_iou,
 )
 
 IOU_THR = 0.3
+WEIGHTS = {"yoloe": 0.25, "gdino": 0.35, "rfdetr": 0.4}
+PRIORITY = ["rfdetr", "gdino", "yoloe"]
 
 
 def test_xyxy_iou_identical() -> None:
@@ -131,3 +136,96 @@ def test_to_yolo_label_clamps_out_of_range() -> None:
     # 坐标越界（<0 / >1）→ clamp 到 [0,1]
     boxes = [(-0.1, -0.1, 1.2, 1.2, 0.9)]
     assert to_yolo_label(boxes, cls_id=0) == "0 0.550000 0.550000 1.000000 1.000000"
+
+
+def test_find_consensus_positions_all_agree() -> None:
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.5, 0.5, 0.9)],
+        "gdino": [(0.1, 0.1, 0.5, 0.5, 0.95)],
+        "rfdetr": [(0.12, 0.12, 0.52, 0.52, 0.99)],
+    }
+    positions = find_consensus_positions(validators, IOU_THR, 2)
+    assert len(positions) == 1
+    assert set(positions[0][1].keys()) == {"yoloe", "gdino", "rfdetr"}
+
+
+def test_find_consensus_positions_split() -> None:
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.3, 0.3, 0.9)],
+        "gdino": [(0.1, 0.1, 0.3, 0.3, 0.95)],
+        "rfdetr": [(0.7, 0.7, 0.9, 0.9, 0.99)],
+    }
+    positions = find_consensus_positions(validators, IOU_THR, 2)
+    assert len(positions) == 1
+    assert set(positions[0][1].keys()) == {"yoloe", "gdino"}
+
+
+def test_find_consensus_positions_below_k() -> None:
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.2, 0.2, 0.9)],
+        "gdino": [(0.4, 0.4, 0.5, 0.5, 0.95)],
+        "rfdetr": [(0.7, 0.7, 0.8, 0.8, 0.99)],
+    }
+    assert find_consensus_positions(validators, IOU_THR, 2) == []
+
+
+def test_find_consensus_positions_empty() -> None:
+    assert find_consensus_positions({"yoloe": [], "gdino": []}, IOU_THR, 2) == []
+
+
+def test_pick_by_priority_first() -> None:
+    s = {"yoloe": (0.1, 0.1, 0.5, 0.5, 0.9), "rfdetr": (0.12, 0.12, 0.52, 0.52, 0.99)}
+    assert pick_by_priority(s, PRIORITY) == s["rfdetr"]
+
+
+def test_pick_by_priority_fallback() -> None:
+    s = {"yoloe": (0.1, 0.1, 0.5, 0.5, 0.9)}
+    assert pick_by_priority(s, PRIORITY) == s["yoloe"]
+
+
+def test_pick_by_priority_none() -> None:
+    assert pick_by_priority({}, PRIORITY) is None
+
+
+def test_score_sample_full_agreement() -> None:
+    box = [(0.1, 0.1, 0.5, 0.5, 0.9)]
+    validators = {"yoloe": box, "gdino": box, "rfdetr": box}
+    r = score_sample(box, validators, WEIGHTS, IOU_THR, 2)
+    assert r.score == 0.0
+    assert r.fp_count == 0
+    assert r.fn_count == 0
+    assert len(r.boxes) == 1
+
+
+def test_score_sample_target_missed() -> None:
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.5, 0.5, 0.9)],
+        "gdino": [(0.1, 0.1, 0.5, 0.5, 0.95)],
+        "rfdetr": [(0.12, 0.12, 0.52, 0.52, 0.99)],
+    }
+    r = score_sample([], validators, WEIGHTS, IOU_THR, 2)
+    assert r.fn_count == 1
+    assert abs(r.score - 1.0) < 1e-9  # 全员认同, W_agree/W_total=1.0
+    assert r.boxes[0] == validators["rfdetr"][0]  # RF-DETR 优先
+
+
+def test_score_sample_target_false_positive() -> None:
+    target = [(0.1, 0.1, 0.5, 0.5, 0.9)]
+    validators = {"yoloe": [], "gdino": [], "rfdetr": []}
+    r = score_sample(target, validators, WEIGHTS, IOU_THR, 2)
+    assert r.fp_count == 1
+    assert abs(r.score - 1.0) < 1e-9  # 无人认同, (W_total-0)/W_total=1.0
+    assert r.boxes == []
+
+
+def test_score_sample_partial_miss_one_validator() -> None:
+    # target 漏, 但仅 yoloe+gdino 认同(2/3) → fn = (0.25+0.35)/1.0 = 0.6
+    validators = {
+        "yoloe": [(0.1, 0.1, 0.5, 0.5, 0.9)],
+        "gdino": [(0.1, 0.1, 0.5, 0.5, 0.95)],
+        "rfdetr": [],
+    }
+    r = score_sample([], validators, WEIGHTS, IOU_THR, 2)
+    assert r.fn_count == 1
+    assert abs(r.score - 0.6) < 1e-9
+    assert r.boxes[0] == validators["gdino"][0]  # RF-DETR 缺→GDINO 回退
