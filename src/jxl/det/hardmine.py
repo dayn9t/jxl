@@ -1,7 +1,7 @@
 """Cross-detector 难例挖掘核心算法（Functional Core）。
 
 纯函数: 双检测器框级比对 + 难例分类 + YOLO 标注生成。
-供 bin/person_mine.py（Imperative Shell）调用。无 IO/模型依赖，充分单测。
+供 bin/det_mine.py（Imperative Shell）调用。无 IO/模型依赖，充分单测。
 
 注: xyxy_iou 几何逻辑与 bin/rmb_eval_grounding.py:21 同源（该处签名 list[float]，
 此处收紧为 4-tuple 强类型化）。若修 IoU bug 需两处同步；未来统一可抽 det/box_utils.py。
