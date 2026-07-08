@@ -1,4 +1,4 @@
 # 非站立增强实验(基线 + CrowdHuman L1 多模型共识 + 视频提取难例)
 name = "non-standing-boost"
-datasets = ["sgcc", "MOT17", "MOT20", "COCO", "CrowdHuman-L1", "video-extract"]
+datasets = ["sgcc", "MOT17", "MOT20", "COCO", "CrowdHuman-L1"]
 split = [8, 1, 1]
