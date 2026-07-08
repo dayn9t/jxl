@@ -51,7 +51,7 @@ def main(
         images = images[:limit]
     logger.info("输入 {} 张图 -> {}", len(images), dst_dir)
 
-    total = written = skipped = 0
+    total = written = skipped = skipped_empty = 0
     for i, img_path in enumerate(images, 1):
         label_path = label_dir / (img_path.stem + LBL_EXT)
         if not label_path.is_file():
@@ -77,6 +77,11 @@ def main(
                 continue
             rect = Rect(x=x1, y=y1, width=rw, height=rh)  # 归一化, roi() 自动转像素
             crop = image.roi(rect)
+            ch, cw = crop.data().shape[0], crop.data().shape[1]
+            if cw < 1 or ch < 1:
+                # 极小 bbox 经 roi round 后尺寸为 0, 无法保存, 跳过(远景小人)
+                skipped_empty += 1
+                continue
             crop.save(dst_dir / f"{img_path.stem}_p{idx}{IMG_EXT}")
             idx += 1
             written += 1
@@ -86,7 +91,11 @@ def main(
             logger.info("进度 {}/{} 图, crop={}", i, len(images), written)
 
     logger.info(
-        "完成: 图={} person/crop={} 跳过(无label)={}", len(images), written, skipped
+        "完成: 图={} person/crop={} 跳过(无label={}, 空/极小crop={})",
+        len(images),
+        written,
+        skipped,
+        skipped_empty,
     )
 
 
