@@ -1,0 +1,4 @@
+# 基线实验(原 person.pt 训练集构成, 无 CrowdHuman)
+name = "baseline"
+datasets = ["sgcc", "MOT17", "MOT20", "COCO"]
+split = [8, 1, 1]
