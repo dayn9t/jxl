@@ -2,25 +2,31 @@
 """P2 豆包 vision grounding 复检 det_mine review 集 → YOLO labels。
 
 读 det_mine review/manifest.jsonl，对每图豆包 grounding(text "person")→ bbox，
-输出 YOLO labels(cls=0)。复用 rmb_ground 的 load_backend + parse_detections。
-key 从配置文件读(--cfg, rmb_ground 模式), 绝不硬编码。
+输出 YOLO labels(cls=0) + _errors.jsonl(错误图, 供重试)。复用 rmb_ground 的
+load_backend/parse_detections/encode_image。key 从配置文件读(--cfg), 绝不硬编码。
+
+NOTE: ground_one 与 rmb_ground.ground_one 结构重复(仅 PROMPT 异), 后续可参数化
+提取共用函数(S2, 本次未重构)。
 
 用法:
     doubao_relabel <review_manifest.jsonl> <review_images_dir> <out_labels_dir> \
         --cfg <llm.json> --model doubao-seed-2-0-lite-260215
 """
 import asyncio
-import base64
-import io
 import json
 from pathlib import Path
 from typing import Annotated
 
 import httpx
 import typer
-from PIL import Image
 
-from jxl.bin.rmb_ground import Backend, load_backend, parse_detections  # noqa: E402
+from jxl.bin.rmb_ground import (
+    Backend,
+    Detection,
+    encode_image,
+    load_backend,
+    parse_detections,
+)
 
 app = typer.Typer(add_completion=False, help="P2 豆包 grounding 复检 review 集 → YOLO labels。")
 
@@ -31,18 +37,6 @@ PROMPT = """检测图中所有 person 的位置。严格只输出一个 JSON 数
 - 若无人, 输出 []
 仅输出 JSON 数组。"""
 
-MAX_IMG_SIDE = 1024
-
-
-def encode_image(path: Path) -> tuple[str, int, int]:
-    with Image.open(path) as im:
-        img = im.convert("RGB")
-        if max(img.size) > MAX_IMG_SIDE:
-            img.thumbnail((MAX_IMG_SIDE, MAX_IMG_SIDE))
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=92)
-    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode(), img.width, img.height
-
 
 async def ground_one(
     client: httpx.AsyncClient,
@@ -51,7 +45,7 @@ async def ground_one(
     base_url: str,
     api_key: str,
     model: str,
-) -> tuple[Path, list, str | None]:
+) -> tuple[Path, list[Detection], str | None]:
     async with sem:
         try:
             data_url, w, h = await asyncio.to_thread(encode_image, path)
@@ -85,11 +79,14 @@ def main(  # noqa: PLR0913
     concurrency: Annotated[int, typer.Option("--concurrency")] = 6,
     limit: Annotated[int, typer.Option("--limit", help="只处理前N张(0=全部)")] = 0,
 ) -> None:
-    """读 review manifest → 豆包 grounding → YOLO labels(cls=0)。"""
+    """读 review manifest → 豆包 grounding → YOLO labels(cls=0) + _errors.jsonl。"""
+    if not manifest.is_file():
+        typer.secho(f"manifest 不存在: {manifest}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
     base_url, api_key, use_model = load_backend(Backend.DOUBAO, model, cfg)
     out_labels.mkdir(parents=True, exist_ok=True)
-    recs = [json.loads(line) for line in manifest.read_text(encoding="utf-8").splitlines() if line.strip()]
-    paths = [images_dir / r["image"] for r in recs]
+    recs: list[dict] = [json.loads(line) for line in manifest.read_text(encoding="utf-8").splitlines() if line.strip()]
+    paths: list[Path] = [images_dir / r["image"] for r in recs if r.get("image")]
     if limit:
         paths = paths[:limit]
     if not paths:
@@ -99,8 +96,8 @@ def main(  # noqa: PLR0913
 
     sem = asyncio.Semaphore(concurrency)
 
-    async def run() -> list:
-        results = []
+    async def run() -> list[tuple[Path, list[Detection], str | None]]:
+        results: list[tuple[Path, list[Detection], str | None]] = []
         async with httpx.AsyncClient() as client:
             tasks = [ground_one(client, sem, p, base_url, api_key, use_model) for p in paths]
             done = 0
@@ -114,11 +111,13 @@ def main(  # noqa: PLR0913
     results = asyncio.run(run())
     results.sort(key=lambda r: str(r[0]))
     n_ok = n_empty = n_err = 0
+    err_lines: list[str] = []
     for path, dets, err in results:
         lbl = out_labels / (path.stem + ".txt")
         if err:
             n_err += 1
-            continue  # 错误图: 不写 label(跳过)
+            err_lines.append(json.dumps({"image": path.name, "error": err}, ensure_ascii=False))
+            continue  # 错误图: 不写 label, 落 _errors.jsonl 供重试
         lines = []
         for d in dets:
             x1, y1, x2, y2 = d.bbox
@@ -131,6 +130,8 @@ def main(  # noqa: PLR0913
             n_ok += 1
         else:
             n_empty += 1
+    if err_lines:
+        (out_labels / "_errors.jsonl").write_text("\n".join(err_lines) + "\n", encoding="utf-8")
     typer.secho(f"有框 {n_ok} | 空(无人) {n_empty} | 错误 {n_err} → {out_labels}", fg=typer.colors.GREEN)
 
 
