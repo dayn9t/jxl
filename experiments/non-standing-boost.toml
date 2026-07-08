@@ -1,4 +1,5 @@
 # 非站立增强实验(基线 + CrowdHuman L1 多模型共识 + 视频提取难例)
+# sgcc 已做前景感知去重(SemDeDup cos>=0.95, 20124->18384, 去 video-extract 静止冗余+监控同人多次)
 name = "non-standing-boost"
-datasets = ["sgcc", "MOT17", "MOT20", "COCO", "CrowdHuman-L1"]
+datasets = ["sgcc_dedup", "MOT17", "MOT20", "COCO", "CrowdHuman-L1"]
 split = [8, 1, 1]
