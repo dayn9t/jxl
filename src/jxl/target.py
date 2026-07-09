@@ -14,7 +14,7 @@ class TargetProfile(BaseModel):
 
     name: str
     yolo_text: str
-    rfdetr_cls_id: int | None
+    rfdetr_cls_id: int | None = None
     vlm_prompt: str
     weights: str
     output_cls_id: int = 0
