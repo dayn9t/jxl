@@ -1,16 +1,17 @@
 #!/home/jiang/py/jxl/.venv/bin/python
 """P2 豆包 vision grounding 复检 det_mine review 集 → YOLO labels。
 
-读 det_mine review/manifest.jsonl，对每图豆包 grounding(text "person")→ bbox，
-输出 YOLO labels(cls=0) + _errors.jsonl(错误图, 供重试)。复用 rmb_ground 的
+读 det_mine review/manifest.jsonl，对每图豆包 grounding(prompt 由 --target 加载
+的 TargetProfile.vlm_prompt 驱动) → bbox，输出 YOLO labels(cls=prof.output_cls_id)
++ _errors.jsonl(错误图, 供重试)。复用 rmb_ground 的
 load_backend/parse_detections/encode_image。key 从配置文件读(--cfg), 绝不硬编码。
 
-NOTE: ground_one 与 rmb_ground.ground_one 结构重复(仅 PROMPT 异), 后续可参数化
+NOTE: ground_one 与 rmb_ground.ground_one 结构重复(prompt 已参数化), 后续可
 提取共用函数(S2, 本次未重构)。
 
 用法:
     doubao_relabel <review_manifest.jsonl> <review_images_dir> <out_labels_dir> \
-        --cfg <llm.json> --model doubao-seed-2-0-lite-260215
+        --cfg <llm.json> --target person --model doubao-seed-2-0-lite-260215
 """
 import asyncio
 import json
@@ -27,15 +28,9 @@ from jxl.bin.rmb_ground import (
     load_backend,
     parse_detections,
 )
+from jxl.target import load_target
 
 app = typer.Typer(add_completion=False, help="P2 豆包 grounding 复检 review 集 → YOLO labels。")
-
-PROMPT = """检测图中所有 person 的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
-每个 person 一个对象: {"label":"person","bbox":[x1,y1,x2,y2],"conf":0-1}
-- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
-- 列出所有可见人(含部分遮挡)
-- 若无人, 输出 []
-仅输出 JSON 数组。"""
 
 
 async def ground_one(
@@ -45,6 +40,7 @@ async def ground_one(
     base_url: str,
     api_key: str,
     model: str,
+    prompt: str,
 ) -> tuple[Path, list[Detection], str | None]:
     async with sem:
         try:
@@ -55,7 +51,7 @@ async def ground_one(
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         payload = {"model": model, "messages": [{"role": "user", "content": [
-            {"type": "text", "text": PROMPT},
+            {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": data_url}},
         ]}], "temperature": 0.1, "max_tokens": 1024}
         try:
@@ -78,8 +74,14 @@ def main(  # noqa: PLR0913
     model: Annotated[str, typer.Option("--model", help="覆盖模型名")] = "doubao-seed-2-0-lite-260215",
     concurrency: Annotated[int, typer.Option("--concurrency")] = 6,
     limit: Annotated[int, typer.Option("--limit", help="只处理前N张(0=全部)")] = 0,
+    target: Annotated[str, typer.Option("--target", help="--target <name> 加载 targets/<name>.toml")] = "",
+    target_profile: Annotated[Path, typer.Option("--target-profile", help="显式 profile 路径")] = Path(),
 ) -> None:
-    """读 review manifest → 豆包 grounding → YOLO labels(cls=0) + _errors.jsonl。"""
+    """读 review manifest → 豆包 grounding → YOLO labels(cls=prof.output_cls_id) + _errors.jsonl。"""
+    if not target and not target_profile.name:
+        msg = "需指定 --target 或 --target-profile"
+        raise typer.BadParameter(msg)
+    prof = load_target(target, target_profile if target_profile.name else None)
     if not manifest.is_file():
         typer.secho(f"manifest 不存在: {manifest}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
@@ -99,7 +101,7 @@ def main(  # noqa: PLR0913
     async def run() -> list[tuple[Path, list[Detection], str | None]]:
         results: list[tuple[Path, list[Detection], str | None]] = []
         async with httpx.AsyncClient() as client:
-            tasks = [ground_one(client, sem, p, base_url, api_key, use_model) for p in paths]
+            tasks = [ground_one(client, sem, p, base_url, api_key, use_model, prof.vlm_prompt) for p in paths]
             done = 0
             for coro in asyncio.as_completed(tasks):
                 results.append(await coro)
@@ -124,7 +126,7 @@ def main(  # noqa: PLR0913
             x1, x2 = min(x1, x2), max(x1, x2)
             y1, y2 = min(y1, y2), max(y1, y2)
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
-            lines.append(f"0 {cx:.6f} {cy:.6f} {x2 - x1:.6f} {y2 - y1:.6f}")
+            lines.append(f"{prof.output_cls_id} {cx:.6f} {cy:.6f} {x2 - x1:.6f} {y2 - y1:.6f}")
         lbl.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
         if lines:
             n_ok += 1
@@ -132,7 +134,7 @@ def main(  # noqa: PLR0913
             n_empty += 1
     if err_lines:
         (out_labels / "_errors.jsonl").write_text("\n".join(err_lines) + "\n", encoding="utf-8")
-    typer.secho(f"有框 {n_ok} | 空(无人) {n_empty} | 错误 {n_err} → {out_labels}", fg=typer.colors.GREEN)
+    typer.secho(f"有框 {n_ok} | 空(无框) {n_empty} | 错误 {n_err} → {out_labels}", fg=typer.colors.GREEN)
 
 
 if __name__ == "__main__":
