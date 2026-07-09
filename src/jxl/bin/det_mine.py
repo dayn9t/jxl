@@ -20,6 +20,7 @@ from typing import Annotated
 import cv2
 import orjson
 import typer
+from click.core import ParameterSource
 from ultralytics import YOLO, YOLOE
 
 from jxl.det.hardmine import (
@@ -27,6 +28,7 @@ from jxl.det.hardmine import (
     score_sample,
     to_yolo_label,
 )
+from jxl.target import load_target
 
 app = typer.Typer(add_completion=False, help="Det-Mine: N 模型加权争议分 + cascade 难例挖掘。")
 
@@ -191,9 +193,11 @@ def _parse_weights(s: str) -> dict[str, float]:
 
 @app.command()
 def run(  # noqa: PLR0913
+    ctx: typer.Context,
     frames_dir: Annotated[Path, typer.Argument(help="候选帧目录（递归）")],
     out_dir: Annotated[Path, typer.Argument(help="输出目录")],
-    target: Annotated[str, typer.Option("--target", help="目标类(决定 prompt/set_classes 名)")] = "person",
+    target: Annotated[str, typer.Option("--target", help="目标 profile 名(targets/<name>.toml); 空则用旧默认 person")] = "",
+    target_profile: Annotated[Path, typer.Option("--target-profile", help="显式 profile toml 路径(优先于 --target)")] = Path(),
     target_model: Annotated[Path, typer.Option("--target-model", help="被校验专用 YOLO 权重")] = Path(
         "/opt/howell/iap/current/ias/model/person.pt"
     ),
@@ -213,6 +217,34 @@ def run(  # noqa: PLR0913
     force: Annotated[bool, typer.Option("--force", help="强制覆盖非 det_mine 产物的输出目录")] = False,
 ) -> None:
     """N 模型加权争议分 + cascade: L0 丢弃 / L1 自动标注 / L2-L3 review 候选集。"""
+    vlist = [v.strip() for v in validators.split(",") if v.strip()]
+    # target_text: 实际用于 YOLOE set_classes / GDINO prompt 的文本; 无 profile 时回退旧默认
+    target_text = target or "person"
+    # 加载 TargetProfile(--target/--target-profile): 单一数据源覆盖默认; 显式 CLI 参数仍优先
+    if target or target_profile.name:
+        prof = load_target(target, target_profile if target_profile.name else None)
+        if ctx.get_parameter_source("target_model") != ParameterSource.COMMANDLINE:
+            target_model = Path(prof.weights)
+        if ctx.get_parameter_source("cls_id") != ParameterSource.COMMANDLINE:
+            cls_id = prof.output_cls_id
+        if ctx.get_parameter_source("rfdetr_cls_id") != ParameterSource.COMMANDLINE:
+            rfdetr_cls_id = prof.rfdetr_cls_id
+        target_text = prof.yolo_text
+        # RF-DETR None 跳过(spec §5): rfdetr_cls_id=None 时自动剔除 rfdetr 校验器
+        if prof.rfdetr_cls_id is None and "rfdetr" in vlist:
+            if ctx.get_parameter_source("validators") == ParameterSource.COMMANDLINE:
+                msg = "profile.rfdetr_cls_id=None 与 --validators 含 rfdetr 冲突"
+                raise typer.BadParameter(msg, ctx=ctx)
+            vlist = [v for v in vlist if v != "rfdetr"]
+            # 同步剔除 weights 中 rfdetr, 避免 validator/weights 不一致警告
+            weights = ",".join(
+                p for p in weights.split(",") if p.strip() and not p.strip().startswith("rfdetr")
+            )
+            typer.secho(
+                "提示: profile rfdetr_cls_id=None, 自动跳过 RF-DETR 校验器",
+                fg=typer.colors.CYAN,
+            )
+
     # 参数校验
     if not 0.0 <= iou <= 1.0 or not 0.0 <= conf <= 1.0:
         typer.secho("--iou/--conf 须在 [0,1]", fg=typer.colors.RED, err=True)
@@ -223,7 +255,6 @@ def run(  # noqa: PLR0913
     if rfdetr_variant not in _RFDETR_VARIANTS:
         typer.secho(f"--rfdetr-variant 须 ∈ {_RFDETR_VARIANTS}: {rfdetr_variant}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
-    vlist = [v.strip() for v in validators.split(",") if v.strip()]
     bad = [v for v in vlist if v not in VALIDATOR_BACKENDS]
     if bad:
         typer.secho(f"未知 validator: {bad}（可选 {VALIDATOR_BACKENDS}）", fg=typer.colors.RED, err=True)
@@ -267,15 +298,15 @@ def run(  # noqa: PLR0913
     (out_dir / "review").mkdir(parents=True)
 
     typer.secho(
-        f"det_mine target={target} validators={vlist} frames={len(imgs)}",
+        f"det_mine target={target_text} validators={vlist} frames={len(imgs)}",
         fg=typer.colors.CYAN,
     )
     target_map = _detect(YOLO(str(target_model)), imgs, conf, iou, device)
     vmaps: dict[str, dict[str, list[Box]]] = {}
     if "yoloe" in vlist:
-        vmaps["yoloe"] = detect_yoloe(imgs, yoloe_model, conf, iou, device, target)
+        vmaps["yoloe"] = detect_yoloe(imgs, yoloe_model, conf, iou, device, target_text)
     if "gdino" in vlist:
-        vmaps["gdino"] = detect_gdino(imgs, gdino_model, target, conf, device)
+        vmaps["gdino"] = detect_gdino(imgs, gdino_model, target_text, conf, device)
     if "rfdetr" in vlist:
         from rfdetr import RFDETRBase, RFDETRLarge  # noqa: PLC0415
 
@@ -336,7 +367,7 @@ def run(  # noqa: PLR0913
         "\n".join(manifest_lines) + ("\n" if manifest_lines else ""), encoding="utf-8"
     )
     report = {
-        "target": target,
+        "target": target_text,
         "total_frames": len(imgs),
         "skipped": skipped,
         "L0_drop": l0,
