@@ -1,13 +1,13 @@
 #!/home/jiang/py/jxl/.venv/bin/python
-"""从 YOLO 标注数据集截取 person crop(原图分辨率, 紧贴 bbox, 无 padding).
+"""从 YOLO 标注数据集截取前景 crop(任意类别 bbox, 原图分辨率, 紧贴 bbox, 无 padding).
 
-遍历 samples/{images,labels}, 把每个 person 的 bbox(归一化) 区域按原图分辨率
-裁出为独立 jpg, 存到输出目录. 一图多 person 产多 crop, 命名 <原图stem>_p<序号>.
+遍历 samples/{images,labels}, 把指定类别(--person-class)的 bbox(归一化) 区域
+按原图分辨率裁出为独立 jpg, 存到输出目录. 一图多目标产多 crop, 命名 <原图stem>_p<序号>.
 用于后续分类器(年龄/性别/身份)训练.
 
 典型用法:
-    person_crop /path/to/samples /path/to/crops
-    person_crop /path/to/samples /path/to/crops --limit 100   # 小批量验证
+    crop_foreground /path/to/samples /path/to/crops
+    crop_foreground /path/to/samples /path/to/crops --limit 100   # 小批量验证
 """
 
 from pathlib import Path
@@ -22,7 +22,7 @@ from loguru import logger
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
 # ruff: noqa: TRY003, EM102
 
-app = typer.Typer(help="截取 person crop(原图分辨率, 紧贴 bbox)")
+app = typer.Typer(help="截取前景 crop(任意类别 bbox, 原图分辨率, 紧贴 bbox)")
 
 IMG_EXT = ".jpg"
 """图像文件扩展名"""
@@ -36,10 +36,10 @@ YOLO_FIELDS = 5
 def main(
     src_dir: Annotated[Path, typer.Argument(help="samples 目录(含 images/ + labels/)")],
     dst_dir: Annotated[Path, typer.Argument(help="输出 crops 目录")],
-    person_class: Annotated[int, typer.Option(help="person 的 YOLO 类别 id")] = 0,
+    person_class: Annotated[int, typer.Option(help="要截取目标的 YOLO 类别 id(默认 0)")] = 0,
     limit: Annotated[int, typer.Option(help="只处理前 N 张图(0=全部)")] = 0,
 ) -> None:
-    """从 YOLO samples 截取每个 person bbox 为独立 crop(原图分辨率, 不 resize)."""
+    """从 YOLO samples 截取每个目标 bbox 为独立 crop(原图分辨率, 不 resize)."""
     image_dir = src_dir / "images"
     label_dir = src_dir / "labels"
     if not image_dir.is_dir() or not label_dir.is_dir():
@@ -79,7 +79,7 @@ def main(
             crop = image.roi(rect)
             ch, cw = crop.data().shape[0], crop.data().shape[1]
             if cw < 1 or ch < 1:
-                # 极小 bbox 经 roi round 后尺寸为 0, 无法保存, 跳过(远景小人)
+                # 极小 bbox 经 roi round 后尺寸为 0, 无法保存, 跳过(远景小目标)
                 skipped_empty += 1
                 continue
             crop.save(dst_dir / f"{img_path.stem}_p{idx}{IMG_EXT}")
@@ -91,7 +91,7 @@ def main(
             logger.info("进度 {}/{} 图, crop={}", i, len(images), written)
 
     logger.info(
-        "完成: 图={} person/crop={} 跳过(无label={}, 空/极小crop={})",
+        "完成: 图={} crop={} 跳过(无label={}, 空/极小crop={})",
         len(images),
         written,
         skipped,
