@@ -17,7 +17,7 @@ import typer
 
 app = typer.Typer(add_completion=False, help="前缀 symlink 组合各样本集 → 训练池。")
 
-_DATASETS_ROOT = Path("/home/jiang/ws/sgcc/person/datasets")
+_DATASETS_ROOT: Path | None = None  # 去 /person/ 硬编码: 必须显式 --datasets-root
 _IMG_EXTS = (".jpg", ".jpeg", ".png")
 
 
@@ -41,9 +41,12 @@ def build_link_map(
 def main(
     config: Annotated[Path, typer.Argument(help="experiment .toml 配置")],
     out_dir: Annotated[Path, typer.Argument(help="输出训练池目录")],
-    datasets_root: Annotated[Path, typer.Option("--datasets-root", help="datasets/ 根")] = _DATASETS_ROOT,
+    datasets_root: Annotated[Path | None, typer.Option("--datasets-root", help="datasets/ 根")] = _DATASETS_ROOT,
 ) -> None:
     """读 toml 配置 → 前缀 symlink 各样本集 images+labels → out_dir/."""
+    if datasets_root is None:
+        typer.secho("--datasets-root 必填(原默认含 /person/ 已移除)", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
     with config.open("rb") as f:
         cfg = tomllib.load(f)
     if "datasets" not in cfg or not cfg["datasets"]:
