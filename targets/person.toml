@@ -1,0 +1,11 @@
+name = "person"
+yolo_text = "person"
+rfdetr_cls_id = 0
+vlm_prompt = """检测图中所有 person 的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个 person 一个对象: {"label":"person","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 列出所有可见人(含部分遮挡)
+- 若无人, 输出 []
+仅输出 JSON 数组。"""
+weights = "/opt/howell/iap/current/ias/model/person.pt"
+output_cls_id = 0
