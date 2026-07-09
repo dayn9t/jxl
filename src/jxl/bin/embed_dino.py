@@ -1,14 +1,14 @@
 #!/home/jiang/py/jxl/.venv/bin/python
-"""DINOv2 embedding 提取(person crop, SSL 前景特征).
+"""DINOv2 embedding 提取(前景 crop, SSL 前景特征).
 
 对目录下所有图像提取 DINOv2(自监督) embedding, L2 归一化,
 存 .npy + 同名 .txt(文件名列表, 顺序对齐). 用于后续 SemDeDup/HDBSCAN 去重.
-SSL 特征对 person 细粒度远优于 ImageNet supervised(SemDeDup 原论文强调).
+SSL 特征对前景细粒度远优于 ImageNet supervised(SemDeDup 原论文强调).
 
 模型走 HuggingFace(facebook/dinov2-small 等价 vits14, 384d), 绕开 GitHub release 限速.
 
 典型用法:
-    person_embed /path/to/person_crops /path/to/embeddings.npy
+    embed_dino /path/to/crops /path/to/embeddings.npy
 """
 
 from pathlib import Path

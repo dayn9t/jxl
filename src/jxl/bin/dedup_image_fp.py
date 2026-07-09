@@ -1,16 +1,16 @@
 #!/home/jiang/py/jxl/.venv/bin/python
 """整图姿态指纹去重(场景A).
 
-监控背景完全相同, 整图 pHash/CLIP 被背景主导. 改用 person 姿态指纹:
-每张图 = 其 person crop 的 SemDeDup 簇 id 集合(frozenset). 相同姿态组合的图视为重复
-(同人同姿态的相邻帧), 留一张代表. 簇 id 来自场景B person_dedup 的 sem_cluster_map.
+监控背景完全相同, 整图 pHash/CLIP 被背景主导. 改用前景姿态指纹:
+每张图 = 其前景 crop 的 SemDeDup 簇 id 集合(frozenset). 相同姿态组合的图视为重复
+(同实例同姿态的相邻帧), 留一张代表. 簇 id 来自场景B dedup_sem 的 sem_cluster_map.
 整图 + .txt 标注一起留.
 
-无 person crop 的图(负样本/空标, 或退化极小 bbox)原样保留: 前景去重只作用于有 person
+无前景 crop 的图(负样本/空标, 或退化极小 bbox)原样保留: 前景去重只作用于有前景
 的正样本, 负样本对训练(假阳抑制)重要, 不应丢弃.
 
 典型用法:
-    samples_dedup /path/person_crops_dedup /path/samples /path/samples_dedup
+    dedup_image_fp /path/crops_dedup /path/samples /path/samples_dedup
 """
 
 import re
@@ -29,7 +29,7 @@ from loguru import logger
 app = typer.Typer(help="整图姿态指纹去重(忽略相同背景)")
 
 CROP_RE = re.compile(r"(.*)_p\d+\.jpg$")
-"""person crop 文件名: <原图stem>_p<序号>.jpg"""
+"""前景 crop 文件名: <原图stem>_p<序号>.jpg"""
 
 
 @app.command()
@@ -37,13 +37,13 @@ def main(
     dedup_dir: Annotated[
         Path,
         typer.Argument(
-            help="person_crops_dedup 目录(含 sem_cluster_map.npy + sem_cluster_files.txt)"
+            help="crops_dedup 目录(含 sem_cluster_map.npy + sem_cluster_files.txt)"
         ),
     ],
     samples_dir: Annotated[Path, typer.Argument(help="samples 目录(images + labels)")],
     out_dir: Annotated[Path, typer.Argument(help="去重后输出(samples_dedup)")],
 ) -> None:
-    """用 person 姿态簇集合做图指纹, 相同指纹图留 1 代表."""
+    """用前景姿态簇集合做图指纹, 相同指纹图留 1 代表."""
     sem_path = dedup_dir / "sem_cluster_map.npy"
     files_path = dedup_dir / "sem_cluster_files.txt"
     if not sem_path.is_file() or not files_path.is_file():

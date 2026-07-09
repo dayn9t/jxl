@@ -1,17 +1,17 @@
 #!/home/jiang/py/jxl/.venv/bin/python
-"""person crop 去重(SemDeDup 近重复 + k-means core-set 选代表).
+"""前景 crop 去重(SemDeDup 近重复 + k-means core-set 选代表).
 
-DINOv2 是通用视觉模型, 区分不了人身份(实测 39370 crop 聚成 1 大簇),
+DINOv2 是通用视觉模型, 区分不了实例身份(实测 39370 crop 聚成 1 大簇),
 但能可靠区分姿态/角度. 故采用研究方案 Stage1+2:
 1. SemDeDup: Faiss 余弦近邻(cos>=th) + 并查集, 去近重复姿态/角度, 每簇留 1 代表.
 2. k-means core-set: 在 SemDeDup 代表上聚类(k=目标数), 每 cluster 取离 centroid 最近样本,
    保姿态/场景多样性, 压到目标子集.
 输出 sem_cluster_map.npy(全 crop -> sem 簇 id, 供场景A整图姿态指纹去重) + 目标数代表 crop.
 
-身份级同人合并需 Re-ID 模型(OSNet/ArcFace), DINOv2 不支持, 留作可选增强.
+身份级同实例合并需 Re-ID 模型(OSNet/ArcFace), DINOv2 不支持, 留作可选增强.
 
 典型用法:
-    person_dedup /path/embeddings.npy /path/person_crops /path/person_crops_dedup --target 8000
+    dedup_sem /path/embeddings.npy /path/crops /path/crops_dedup --target 8000
 """
 
 from pathlib import Path
@@ -25,7 +25,7 @@ from sklearn.cluster import MiniBatchKMeans
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
 
-app = typer.Typer(help="person crop 去重(SemDeDup + k-means core-set)")
+app = typer.Typer(help="前景 crop 去重(SemDeDup + k-means core-set)")
 
 
 class UnionFind:
@@ -47,7 +47,7 @@ class UnionFind:
 @app.command()
 def main(
     embeddings_npy: Annotated[Path, typer.Argument(help="embeddings.npy")],
-    crops_dir: Annotated[Path, typer.Argument(help="person_crops 源目录")],
+    crops_dir: Annotated[Path, typer.Argument(help="crops 源目录")],
     out_dir: Annotated[Path, typer.Argument(help="去重后代表输出目录")],
     sem_threshold: Annotated[float, typer.Option(help="SemDeDup 余弦阈值")] = 0.95,
     target: Annotated[int, typer.Option(help="core-set 目标样本数")] = 8000,

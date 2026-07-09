@@ -1,13 +1,13 @@
 #!/home/jiang/py/jxl/.venv/bin/python
-"""整图 core-set 去重(场景A, 图 person-embedding, 强制减量).
+"""整图 core-set 去重(场景A, 图前景 embedding, 强制减量).
 
 Re-ID(torchreid/insightface) 受阻时的可靠兜底:
-图 embedding = 该图所有 person crop 的 DINOv2 均值(person 聚焦, 忽略相同背景),
+图 embedding = 该图所有前景 crop 的 DINOv2 均值(前景聚焦, 忽略相同背景),
 k-means 在图 embedding 上聚 k 簇, 每 cluster 取离 centroid 最近的图为代表,
-强制压到目标数(默认 5700, 即 -60%). 保姿态/场景多样, 不专门合并同人(需 Re-ID).
+强制压到目标数(默认 5700, 即 -60%). 保姿态/场景多样, 不专门合并同实例(需 Re-ID).
 
 典型用法:
-    samples_core /path/embeddings.npy /path/samples /path/samples_core --target 5700
+    coreset_image /path/embeddings.npy /path/samples /path/samples_core --target 5700
 """
 
 import re
@@ -23,20 +23,20 @@ from sklearn.cluster import MiniBatchKMeans
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
 
-app = typer.Typer(help="整图 core-set 去重(图 person-embedding)")
+app = typer.Typer(help="整图 core-set 去重(图前景 embedding)")
 
 CROP_RE = re.compile(r"(.*)_p\d+\.jpg$")
-"""person crop 文件名: <原图stem>_p<序号>.jpg"""
+"""前景 crop 文件名: <原图stem>_p<序号>.jpg"""
 
 
 @app.command()
 def main(
-    embeddings_npy: Annotated[Path, typer.Argument(help="person_crops 的 embeddings.npy")],
+    embeddings_npy: Annotated[Path, typer.Argument(help="crops 的 embeddings.npy")],
     samples_dir: Annotated[Path, typer.Argument(help="samples 目录(images + labels)")],
     out_dir: Annotated[Path, typer.Argument(help="去重输出(samples_core)")],
     target: Annotated[int, typer.Option(help="目标代表数")] = 5700,
 ) -> None:
-    """图 person-embedding k-means core-set, 强制减量到 target."""
+    """图前景 embedding k-means core-set, 强制减量到 target."""
     emb = np.load(embeddings_npy).astype(np.float32)
     files = embeddings_npy.with_suffix(".txt").read_text(encoding="utf-8").splitlines()
     assert len(files) == len(emb), f"emb {len(emb)} != files {len(files)}"
