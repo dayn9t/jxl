@@ -2,14 +2,13 @@
 
 纯函数: 双检测器框级比对 + 难例分类 + YOLO 标注生成。
 供 bin/det_mine.py（Imperative Shell）调用。无 IO/模型依赖，充分单测。
-
-注: xyxy_iou 几何逻辑与 bin/rmb_eval_grounding.py:21 同源（该处签名 list[float]，
-此处收紧为 4-tuple 强类型化）。若修 IoU bug 需两处同步；未来统一可抽 det/box_utils.py。
 """
 from __future__ import annotations
 
 from enum import StrEnum
 from typing import NamedTuple
+
+from jxl.det.box_utils import xyxy_iou
 
 # 归一化 xyxy + 置信度: (x1, y1, x2, y2, conf), 坐标 ∈ [0,1]
 Box = tuple[float, float, float, float, float]
@@ -22,21 +21,6 @@ class SampleClass(StrEnum):
     DROP_AGREE = "drop_agree"  # 两检测器框完全配对（一致）→ 丢弃
     POSITIVE = "positive"  # YOLOE 有框且与 person.pt 分歧 → 正样本（YOLOE 框）
     NEGATIVE = "negative"  # YOLOE 无框、person.pt 有框（误检）→ 负样本（空 txt）
-
-
-def xyxy_iou(
-    a: tuple[float, float, float, float],
-    b: tuple[float, float, float, float],
-) -> float:
-    """两归一化 xyxy 框 (x1,y1,x2,y2) 的 IoU。无交集/零面积返回 0。"""
-    ax1, ay1, ax2, ay2 = a
-    bx1, by1, bx2, by2 = b
-    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
-    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
-    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
-    inter = iw * ih
-    ua = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - inter
-    return inter / ua if ua > 0 else 0.0
 
 
 def greedy_match(

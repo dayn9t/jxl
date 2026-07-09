@@ -12,21 +12,12 @@ from pathlib import Path
 
 import typer
 
+from jxl.det.box_utils import xyxy_iou
+
 app = typer.Typer(add_completion=False, help="评估 grounding vs GT：IoU/召回/精度/F1/面额准确率。")
 
 CANON = ["1yuan", "5yuan", "10yuan", "20yuan", "50yuan", "100yuan"]
 _DENOM_RE = re.compile(r"(?<!\d)(100|50|20|10|5|1)(?!\d)")
-
-
-def xyxy_iou(a: list[float], b: list[float]) -> float:
-    ax1, ay1, ax2, ay2 = a
-    bx1, by1, bx2, by2 = b
-    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
-    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
-    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
-    inter = iw * ih
-    ua = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - inter
-    return inter / ua if ua > 0 else 0.0
 
 
 def denom_of(label: str) -> str | None:
