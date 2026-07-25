@@ -20,7 +20,6 @@ from jvi.image.image_nda import ImageNda
 from loguru import logger
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
-# ruff: noqa: TRY003, EM102
 
 app = typer.Typer(help="截取前景 crop(任意类别 bbox, 原图分辨率, 紧贴 bbox)")
 

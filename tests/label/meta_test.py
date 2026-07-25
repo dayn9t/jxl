@@ -1,5 +1,4 @@
 import pytest
-
 from jcx.sys.fs import files_in
 from jcx.text.txt_json import load_json
 

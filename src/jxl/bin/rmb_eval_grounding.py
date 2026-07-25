@@ -49,7 +49,7 @@ def run(
 ) -> None:
     """汇总定位与面额指标。"""
     gts = load_gt(label_dir)
-    rows = [json.loads(l) for l in grounding.read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = [json.loads(line) for line in grounding.read_text(encoding="utf-8").splitlines() if line.strip()]
     n_gt = n_det = tp = denom_ok = denom_total = n_imgs = n_err = 0
     matched_iou: list[float] = []
     for r in rows:

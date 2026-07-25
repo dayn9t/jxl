@@ -28,7 +28,7 @@ def run(
     out: Path = typer.Option(Path("assets/sources_selected"), "--out"),
     per_denom: int = typer.Option(30, "--per-denom", help="每面额选多少张。"),
 ) -> None:
-    rows = [json.loads(l) for l in ndjson.read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = [json.loads(line) for line in ndjson.read_text(encoding="utf-8").splitlines() if line.strip()]
     by_denom: dict[str, list[tuple[int, dict]]] = {d: [] for d in CANON}
     for r in rows:
         if r.get("error") or not r.get("is_real_rmb"):

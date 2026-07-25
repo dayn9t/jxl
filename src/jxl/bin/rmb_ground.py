@@ -19,7 +19,7 @@ import base64
 import io
 import json
 import re
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import httpx
@@ -32,7 +32,7 @@ app = typer.Typer(add_completion=False, help="VLM grounding：定位纸币输出
 MAX_IMG_SIDE = 1024  # grounding 需较高分辨率保定位精度
 
 
-class Backend(str, Enum):
+class Backend(StrEnum):
     QWEN35 = "qwen35"
     DOUBAO = "doubao"
     QWEN = "qwen"
@@ -228,10 +228,8 @@ def run(
         results: list[tuple[Path, list[Detection], str | None]] = []
         async with httpx.AsyncClient() as client:
             tasks = [ground_one(client, sem, p, base_url, api_key, use_model) for p in imgs]
-            done = 0
-            for coro in asyncio.as_completed(tasks):
+            for done, coro in enumerate(asyncio.as_completed(tasks), 1):
                 results.append(await coro)
-                done += 1
                 if done % 10 == 0 or done == len(imgs):
                     typer.echo(f"  进度 {done}/{len(imgs)}")
         return results

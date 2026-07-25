@@ -27,7 +27,8 @@ BG_OUT = "assets/backgrounds_960"
 
 
 def collect_ids() -> list[int]:
-    d = json.load(open(INSTANCES))
+    with open(INSTANCES) as f:
+        d = json.load(f)
     cat_imgs: dict[int, set[int]] = {}
     for a in d["annotations"]:
         cat_imgs.setdefault(a["category_id"], set()).add(a["image_id"])
@@ -64,10 +65,12 @@ def to960(raw_dir: Path) -> int:
             W, H = im.size
             if max(W, H) / min(W, H) > 1.6:
                 if W >= H:
-                    h = W // 2; ov = int(h * 0.1)
+                    h = W // 2
+                    ov = int(h * 0.1)
                     gs = [im.crop((0, 0, h + ov, H)), im.crop((h - ov, 0, W, H))]
                 else:
-                    h = H // 2; ov = int(h * 0.1)
+                    h = H // 2
+                    ov = int(h * 0.1)
                     gs = [im.crop((0, 0, W, h + ov)), im.crop((0, h - ov, W, H))]
             else:
                 gs = [im]
@@ -91,16 +94,15 @@ async def main() -> None:
         ids = ids[:args.limit]
     print(f"待下载 {len(ids)} 张")
 
-    raw_dir = Path(RAW_OUT); raw_dir.mkdir(exist_ok=True)
+    raw_dir = Path(RAW_OUT)
+    raw_dir.mkdir(exist_ok=True)
     sem = asyncio.Semaphore(args.concurrency)
     ok = 0
     async with httpx.AsyncClient() as client:
         tasks = [asyncio.create_task(fetch(client, i, raw_dir, sem)) for i in ids]
-        done = 0
-        for coro in asyncio.as_completed(tasks):
+        for done, coro in enumerate(asyncio.as_completed(tasks), 1):
             if await coro:
                 ok += 1
-            done += 1
             if done % 200 == 0 or done == len(ids):
                 print(f"  下载 {done}/{len(ids)} 成功 {ok}")
     print(f"下载完成 {ok}/{len(ids)} → {raw_dir}")

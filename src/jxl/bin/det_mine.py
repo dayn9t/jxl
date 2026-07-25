@@ -114,9 +114,9 @@ def detect_gdino(
     返回 dict（caller 据 None 判断损坏，避免被当"无框"污染打分）。
     Box 坐标归一化到 [0,1]。API 以 transformers 版本为准。
     """
-    import torch  # noqa: PLC0415
-    from PIL import Image  # noqa: PLC0415
-    from transformers import (  # noqa: PLC0415
+    import torch
+    from PIL import Image
+    from transformers import (
         AutoProcessor,
         GroundingDinoForObjectDetection,
     )
@@ -192,7 +192,7 @@ def _parse_weights(s: str) -> dict[str, float]:
 
 
 @app.command()
-def run(  # noqa: PLR0913
+def run(
     ctx: typer.Context,
     frames_dir: Annotated[Path, typer.Argument(help="候选帧目录（递归）")],
     out_dir: Annotated[Path, typer.Argument(help="输出目录")],
@@ -308,7 +308,7 @@ def run(  # noqa: PLR0913
     if "gdino" in vlist:
         vmaps["gdino"] = detect_gdino(imgs, gdino_model, target_text, conf, device)
     if "rfdetr" in vlist:
-        from rfdetr import RFDETRBase, RFDETRLarge  # noqa: PLC0415
+        from rfdetr import RFDETRBase, RFDETRLarge
 
         cls = RFDETRBase if rfdetr_variant == "base" else RFDETRLarge
         vmaps["rfdetr"] = detect_rfdetr(imgs, cls(), class_id=rfdetr_cls_id, conf=conf)

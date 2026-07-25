@@ -1,0 +1,6 @@
+# jxl git attributes
+#
+# *.kitti 测试 fixture 是文本格式（KITTI 标注），demo1.kitti 在工作树曾出现 CRLF 与 HEAD
+# LF 不一致（Task2 rsync 带回 ml baseline；Task2 review M2 登记到 LOG.md）。
+# 强制 LF 归一，避免跨平台 checkout 后行尾漂移再次触发 git diff 噪声。
+*.kitti text eol=lf

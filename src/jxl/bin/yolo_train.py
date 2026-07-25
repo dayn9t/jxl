@@ -26,13 +26,12 @@ from loguru import logger
 from ultralytics import YOLO
 
 # typer CLI 惯用模式: bool Option 默认值与参数校验异常消息豁免噪声规则
-# ruff: noqa: FBT002, TRY003, EM102
 
 app = typer.Typer(help="YOLO 目标检测训练(ultralytics, 含 YOLO26)")
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     data: Annotated[Path, typer.Argument(help="dataset.yaml 路径")],
     model: Annotated[
         str,

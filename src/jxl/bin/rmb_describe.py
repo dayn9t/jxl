@@ -20,7 +20,7 @@ import json
 import os
 import re
 from collections import Counter
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import httpx
@@ -36,37 +36,56 @@ IMG_EXTS = {".jpg", ".jpeg", ".png"}
 MAX_IMG_SIDE = 768  # 缩到最长边 768，省 token、加速；钱币纹理判定足够
 
 
-class Denomination(str, Enum):
-    Y1 = "1"; Y5 = "5"; Y10 = "10"; Y20 = "20"; Y50 = "50"; Y100 = "100"
+class Denomination(StrEnum):
+    Y1 = "1"
+    Y5 = "5"
+    Y10 = "10"
+    Y20 = "20"
+    Y50 = "50"
+    Y100 = "100"
     UNKNOWN = "unknown"
 
 
-class Side(str, Enum):
-    FRONT = "front"; BACK = "back"; FOLDED = "folded"; UNKNOWN = "unknown"
+class Side(StrEnum):
+    FRONT = "front"
+    BACK = "back"
+    FOLDED = "folded"
+    UNKNOWN = "unknown"
 
 
-class Completeness(str, Enum):
-    FULL = "full"; PARTIAL = "partial"
+class Completeness(StrEnum):
+    FULL = "full"
+    PARTIAL = "partial"
 
 
-class ViewAngle(str, Enum):
-    FLAT = "flat"; TILTED = "tilted"; OBLIQUE = "oblique"
+class ViewAngle(StrEnum):
+    FLAT = "flat"
+    TILTED = "tilted"
+    OBLIQUE = "oblique"
 
 
-class BgComplexity(str, Enum):
-    PLAIN = "plain"; SIMPLE = "simple"; COMPLEX = "complex"
+class BgComplexity(StrEnum):
+    PLAIN = "plain"
+    SIMPLE = "simple"
+    COMPLEX = "complex"
 
 
-class Lighting(str, Enum):
-    EVEN = "even"; SHADOW = "shadow"; GLARE = "glare"
+class Lighting(StrEnum):
+    EVEN = "even"
+    SHADOW = "shadow"
+    GLARE = "glare"
 
 
-class Sharpness(str, Enum):
-    HIGH = "high"; MEDIUM = "medium"; LOW = "low"
+class Sharpness(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
 
 
-class Suitability(str, Enum):
-    GOOD = "good"; OK = "ok"; BAD = "bad"
+class Suitability(StrEnum):
+    GOOD = "good"
+    OK = "ok"
+    BAD = "bad"
 
 
 class NoteDescription(BaseModel):
@@ -243,10 +262,8 @@ def run(
         results: list[tuple[Path, NoteDescription | None, str | None]] = []
         async with httpx.AsyncClient() as client:
             tasks = [describe_one(client, sem, p, url, model, key) for p in imgs]
-            done = 0
-            for coro in asyncio.as_completed(tasks):
+            for done, coro in enumerate(asyncio.as_completed(tasks), 1):
                 results.append(await coro)
-                done += 1
                 if done % 20 == 0 or done == len(imgs):
                     typer.echo(f"  进度 {done}/{len(imgs)}")
         return results

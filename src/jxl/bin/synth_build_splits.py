@@ -31,7 +31,8 @@ def main() -> None:
     rng.shuffle(imgs)
     n = len(imgs)
     r = [float(x) for x in args.ratios.split(",")]
-    n_train = int(n * r[0]); n_val = int(n * r[1])
+    n_train = int(n * r[0])
+    n_val = int(n * r[1])
     splits = {
         "train": imgs[:n_train],
         "val": imgs[n_train:n_train + n_val],

@@ -22,7 +22,7 @@ def run(
     out: Path = typer.Option(Path("assets/grounding_review"), "--out"),
     limit: int = typer.Option(20, "--limit", help="最多画多少张。"),
 ) -> None:
-    rows = [json.loads(l) for l in grounding.read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = [json.loads(line) for line in grounding.read_text(encoding="utf-8").splitlines() if line.strip()]
     out.mkdir(parents=True, exist_ok=True)
     n = 0
     for r in rows:

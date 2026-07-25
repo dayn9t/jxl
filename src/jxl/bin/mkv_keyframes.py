@@ -42,7 +42,7 @@ def extract_keyframes(src_dir: Path, dst_dir: Path) -> tuple[list[Path], list[Pa
             out_pattern,
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=600)  # noqa: S603
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=600)
         except subprocess.TimeoutExpired:
             failed.append(mkv)
             typer.secho(f"ffmpeg 超时 {mkv.name}", fg=typer.colors.YELLOW, err=True)

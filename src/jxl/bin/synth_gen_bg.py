@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 import typer
 
-from jxl.bin.rmb_kling_recompose import (  # noqa: E402
+from jxl.bin.rmb_kling_recompose import (
     LIGHTING,
     SURFACES,
     _extract_images,
@@ -90,10 +90,8 @@ def run(
         results: list[dict] = []
         async with httpx.AsyncClient() as client:
             tasks = [gen_bg(client, key, sem, prompts[i], out, i) for i in range(n)]
-            done = 0
-            for coro in asyncio.as_completed(tasks):
+            for done, coro in enumerate(asyncio.as_completed(tasks), 1):
                 results.append(await coro)
-                done += 1
                 if done % 5 == 0 or done == n:
                     typer.echo(f"  进度 {done}/{n}")
         return results

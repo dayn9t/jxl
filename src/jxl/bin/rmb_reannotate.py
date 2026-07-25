@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 import typer
 
-from jxl.bin.rmb_ground import Backend, ground_one, load_backend  # noqa: E402
+from jxl.bin.rmb_ground import Backend, ground_one, load_backend
 
 app = typer.Typer(add_completion=False, help="可灵生成图 reannotation + 面额校验 → YOLO。")
 

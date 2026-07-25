@@ -1,5 +1,8 @@
+from jvi.geo.rectangle import Rect
+from jvi.geo.size2d import Size
 from jvi.gui.record_viewer import RecordViewer
-from jxl.label.tile import *
+
+from jxl.label.tile import TileRecord, load_tiles
 
 
 def load_tiles_test():
@@ -7,7 +10,7 @@ def load_tiles_test():
     meta_id = 31
     category = 1
     prop = "amount"
-    rs = load_tiles(folder, meta_id, category, prop)
+    rs = load_tiles(folder, meta_id, category, prop)  # type: ignore[call-arg, arg-type]
 
     size = Size.new(1536, 864)
     obj_size = Size.new(256, 288)
@@ -15,11 +18,11 @@ def load_tiles_test():
     h = size.height // obj_size.height
     n = w * h
 
-    rects = [r.erode(8) for r in Rect.from_size(size).to_tiles(w, h, need_round=True)]
+    rects = [r.erode(8) for r in Rect.from_size(size).to_tiles(w, h, need_round=True)]  # type: ignore[arg-type]
 
-    rs = [TileRecord.new(size, rects, rs[i : i + n]) for i in range(0, len(rs), n)]
+    rs = [TileRecord.new(size, rects, rs[i : i + n]) for i in range(0, len(rs), n)]  # type: ignore[call-arg, misc, call-overload]
 
-    win = RecordViewer("tiles")
+    win: RecordViewer = RecordViewer("tiles")
     win.set_records(rs)
 
     print("image number:", win.image_count())

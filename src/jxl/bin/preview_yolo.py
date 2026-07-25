@@ -29,7 +29,8 @@ def main() -> None:
     imgdir = src / "images" / args.split if args.split else src / "images"
     lbldir = src / "labels" / args.split if args.split else src / "labels"
     imgs = sorted(imgdir.glob("*.jpg"))
-    rng = random.Random(args.seed); rng.shuffle(imgs)
+    rng = random.Random(args.seed)
+    rng.shuffle(imgs)
     imgs = imgs[:args.n]
 
     cw, ch = 360, 290
@@ -45,7 +46,8 @@ def main() -> None:
                 p = line.split()
                 if len(p) < 5:
                     continue
-                c = int(p[0]); x, y, w, h = map(float, p[1:5])
+                c = int(p[0])
+                x, y, w, h = map(float, p[1:5])
                 W, H = im.size
                 ld.rectangle([W * (x - w / 2), H * (y - h / 2), W * (x + w / 2), H * (y + h / 2)],
                              outline=COLORS[c % 6], width=3)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from jxl.det.hardmine import (
+    Box,
     SampleClass,
     classify_sample,
     find_consensus_positions,
@@ -211,7 +212,7 @@ def test_score_sample_target_missed() -> None:
 
 def test_score_sample_target_false_positive() -> None:
     target = [(0.1, 0.1, 0.5, 0.5, 0.9)]
-    validators = {"yoloe": [], "gdino": [], "rfdetr": []}
+    validators: dict[str, list[Box]] = {"yoloe": [], "gdino": [], "rfdetr": []}
     r = score_sample(target, validators, WEIGHTS, IOU_THR, 2)
     assert r.fp_count == 1
     assert abs(r.score - 1.0) < 1e-9  # 无人认同, (W_total-0)/W_total=1.0

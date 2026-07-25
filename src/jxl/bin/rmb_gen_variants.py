@@ -17,8 +17,8 @@ import httpx
 import typer
 from PIL import Image
 
-from jxl.bin.rmb_ground import Backend, load_backend  # noqa: E402
-from jxl.bin.rmb_kling_recompose import _extract_images, _poll, _submit  # noqa: E402
+from jxl.bin.rmb_ground import Backend, load_backend
+from jxl.bin.rmb_kling_recompose import _extract_images, _poll, _submit
 
 app = typer.Typer(add_completion=False, help="可灵钱币变体生成+面额复检。")
 
@@ -119,11 +119,9 @@ def run(
                 async with sem:
                     f, d, vn, vp, od = j
                     return await gen_variant(client, kkey, dkey, dmodel, f, d, vn, vp, od)
-            done = 0
-            for coro in asyncio.as_completed([task(j) for j in jobs]):
+            for done, coro in enumerate(asyncio.as_completed([task(j) for j in jobs]), 1):
                 if await coro:
                     ok += 1
-                done += 1
                 if done % 20 == 0 or done == len(jobs):
                     typer.echo(f"  进度 {done}/{len(jobs)} 成功 {ok}")
         return ok

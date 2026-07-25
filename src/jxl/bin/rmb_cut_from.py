@@ -40,7 +40,8 @@ def collect_items(root: Path, split: str, bad: set[str],
             p = line.split()
             if len(p) < 5:
                 continue
-            c = int(p[0]); cx, cy, w, h = map(float, p[1:5])
+            c = int(p[0])
+            cx, cy, w, h = map(float, p[1:5])
             area = w * h
             short = min(w, h)
             ar = max(w, h) / short if short > 0 else 999.0
@@ -58,8 +59,10 @@ def crop_block(im: Image.Image, cx: float, cy: float, w: float, h: float, pad: f
     W, H = im.size
     x1, y1 = (cx - w / 2) * W, (cy - h / 2) * H
     x2, y2 = (cx + w / 2) * W, (cy + h / 2) * H
-    x1 -= (x2 - x1) * pad; y1 -= (y2 - y1) * pad
-    x2 += (x2 - x1) * pad; y2 += (y2 - y1) * pad
+    x1 -= (x2 - x1) * pad
+    y1 -= (y2 - y1) * pad
+    x2 += (x2 - x1) * pad
+    y2 += (y2 - y1) * pad
     return im.crop((max(0, x1), max(0, y1), min(W, x2), min(H, y2)))
 
 
@@ -81,7 +84,12 @@ def main() -> None:
     model = YOLOE(MODEL)
     model.set_classes(["banknote"], model.get_text_pe(["banknote"]))
 
-    bad = set(json.load(open(args.bad, encoding="utf-8"))) if Path(args.bad).exists() else set()
+    bad_path = Path(args.bad)
+    if bad_path.exists():
+        with bad_path.open(encoding="utf-8") as f:
+            bad: set[str] = set(json.load(f))
+    else:
+        bad = set()
     out = Path(args.out)
     for d in CANON:
         (out / d).mkdir(parents=True, exist_ok=True)
@@ -119,7 +127,8 @@ def main() -> None:
                 rgba.putalpha(Image.fromarray(mask).filter(ImageFilter.GaussianBlur(1.5)))
                 d = ID2D[c]
                 rgba.save(out / d / f"rmb_{stem}_{i}.png")
-                ok += 1; per_denom[d] += 1
+                ok += 1
+                per_denom[d] += 1
             print(f"  {b + len(chunk)}/{len(blocks)}  累计召回 {ok}")
 
     print(f"\n抠图成功 {ok}/{total} (召回率 {ok / total * 100:.1f}%) → {out}")

@@ -66,7 +66,7 @@ async def ground_one(
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     manifest: Annotated[Path, typer.Argument(help="det_mine review/manifest.jsonl")],
     images_dir: Annotated[Path, typer.Argument(help="review 图目录")],
     out_labels: Annotated[Path, typer.Argument(help="输出 YOLO labels 目录")],
@@ -102,10 +102,8 @@ def main(  # noqa: PLR0913
         results: list[tuple[Path, list[Detection], str | None]] = []
         async with httpx.AsyncClient() as client:
             tasks = [ground_one(client, sem, p, base_url, api_key, use_model, prof.vlm_prompt) for p in paths]
-            done = 0
-            for coro in asyncio.as_completed(tasks):
+            for done, coro in enumerate(asyncio.as_completed(tasks), 1):
                 results.append(await coro)
-                done += 1
                 if done % 50 == 0 or done == len(paths):
                     typer.echo(f"  进度 {done}/{len(paths)}")
         return results

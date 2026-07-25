@@ -24,7 +24,7 @@ app = typer.Typer(add_completion=False, help="CrowdHuman odgt → YOLO person �
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     odgt: Annotated[Path, typer.Argument(help="annotation.odgt")],
     images_dir: Annotated[Path, typer.Argument(help="解压后的 Images 目录")],
     out_dir: Annotated[Path, typer.Argument(help="输出 YOLO 集目录")],
