@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """person Re-ID embedding(OSNet-x0_75, MSMT17 权重).
 
 身份级 embedding(同人近、不同人远), 供同人 HDBSCAN 聚类.
@@ -29,15 +29,20 @@ from torchvision import transforms
 TORCHREID_SRC = Path("/tmp/torchreid_src")
 if not TORCHREID_SRC.exists():
     subprocess.run(
-        ["git", "clone", "--depth", "1",
-         "https://github.com/KaiyangZhou/deep-person-reid.git", str(TORCHREID_SRC)],
+        [
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            "https://github.com/KaiyangZhou/deep-person-reid.git",
+            str(TORCHREID_SRC),
+        ],
         check=True,
     )
 if str(TORCHREID_SRC) not in sys.path:
     sys.path.insert(0, str(TORCHREID_SRC))
 
 # typer CLI 惯用模式
-# ruff: noqa: PLC0415, S603, S607
 
 app = typer.Typer(help="person Re-ID embedding(OSNet)")
 
@@ -58,18 +63,26 @@ def main(
     out_npy: Annotated[Path, typer.Argument(help="输出 reid embedding .npy")],
     weights: Annotated[Path, typer.Option(help="OSNet 权重 .pth")] = DEFAULT_WEIGHTS,
     model_name: Annotated[str, typer.Option(help="OSNet 模型名")] = "osnet_x0_75",
-    num_classes: Annotated[int, typer.Option(help="权重类别数(MSMT17 combineall)")] = 4101,
+    num_classes: Annotated[
+        int, typer.Option(help="权重类别数(MSMT17 combineall)")
+    ] = 4101,
     batch: Annotated[int, typer.Option(help="batch size")] = 64,
     device: Annotated[str, typer.Option(help="设备 cuda/cpu")] = "cuda",
 ) -> None:
     """提 person crop 的 OSNet Re-ID embedding(512d 身份特征, L2 归一化)."""
     from torchreid import models
 
-    dev = torch.device(device if torch.cuda.is_available() else "cpu")
+    if device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "CUDA requested but unavailable; refusing silent CPU fallback"
+        )
+    dev = torch.device(device)
     logger.info("加载 {} 权重 {} -> {}", model_name, weights.name, dev)
-    net = models.build_model(
-        name=model_name, num_classes=num_classes, pretrained=False
-    ).to(dev).eval()
+    net = (
+        models.build_model(name=model_name, num_classes=num_classes, pretrained=False)
+        .to(dev)
+        .eval()
+    )
     state = torch.load(weights, map_location="cpu", weights_only=False)
     if isinstance(state, dict) and "state_dict" in state:
         state = state["state_dict"]

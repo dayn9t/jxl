@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 # 设计
 # - 参照: /home/jiang/ml/fair/examples/imagenet/main.py
@@ -13,21 +13,19 @@ import time
 import warnings
 
 import torch
+import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+import torchvision.datasets as datasets
+import torchvision.models as models
+import torchvision.transforms as transforms
 from jcx.m.average_meter import AverageMeter
 from jcx.ui.progress_meter import ProgressMeter
-from torch import nn
-from torch.backends import cudnn
-from torchvision import (
-    datasets,  # type: ignore
-    models,  # type: ignore
-    transforms,  # type: ignore
-)
 
 from jxl.cls.arch import torch_image
 
@@ -158,7 +156,7 @@ parser.add_argument(
 best_acc1 = 0
 
 
-def main() -> None:
+def main():
     args = parser.parse_args()
 
     args.input_shape = (224, 224)
@@ -199,7 +197,7 @@ def main() -> None:
         main_worker(args.gpu, ngpus_per_node, args)
 
 
-def main_worker(gpu, ngpus_per_node, args) -> None:
+def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
     args.gpu = gpu
 
@@ -223,8 +221,8 @@ def main_worker(gpu, ngpus_per_node, args) -> None:
     model = torch_image.create(args.arch, args.num_classes, args.pretrained)
 
     if not torch.cuda.is_available():
-        print("using CPU, this will be slow")
-    elif args.distributed:
+        raise RuntimeError("CUDA unavailable; refusing silent CPU fallback")
+    if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
@@ -247,12 +245,13 @@ def main_worker(gpu, ngpus_per_node, args) -> None:
     elif args.gpu is not None:
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
-    # DataParallel will divide and allocate batch_size to all available GPUs
-    elif args.arch.startswith("alexnet") or args.arch.startswith("vgg"):
-        model.features = torch.nn.DataParallel(model.features)
-        model.cuda()
     else:
-        model = torch.nn.DataParallel(model).cuda()
+        # DataParallel will divide and allocate batch_size to all available GPUs
+        if args.arch.startswith("alexnet") or args.arch.startswith("vgg"):
+            model.features = torch.nn.DataParallel(model.features)
+            model.cuda()
+        else:
+            model = torch.nn.DataParallel(model).cuda()
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
@@ -365,7 +364,7 @@ def main_worker(gpu, ngpus_per_node, args) -> None:
             )
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args) -> None:
+def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter("Time", ":6.3f")
     data_time = AverageMeter("Data", ":6.3f")
     losses = AverageMeter("Loss", ":.4e")
@@ -452,14 +451,12 @@ def validate(val_loader, model, criterion, args):
                 progress.display(i)
 
         # TODO: this should also be done with the ProgressMeter
-        print(
-            f" * Acc@1 {top1.avg:.3f} Acc@2 {top2.avg:.3f}"
-        )
+        print(f" * Acc@1 {top1.avg:.3f} Acc@2 {top2.avg:.3f}")
 
     return top1.avg
 
 
-def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar") -> None:
+def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar"):
     torch.save(state, filename)
     if is_best:
         # name = state['arch'] + '_best'
@@ -468,7 +465,7 @@ def save_checkpoint(state, is_best, model, filename="checkpoint.pth.tar") -> Non
         torch.save(model, name + ".pth")
 
 
-def adjust_learning_rate(optimizer, epoch, args) -> None:
+def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     lr = args.lr * (0.1 ** (epoch // 30))
     for param_group in optimizer.param_groups:

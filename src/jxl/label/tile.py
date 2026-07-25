@@ -10,6 +10,7 @@ from jvi.geo.rectangle import Rect, Rects
 from jvi.geo.size2d import Size
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import resize
+from loguru import logger
 from rustshed import Null, Option, Some
 
 from jxl.io.draw import draw_boxi
@@ -21,7 +22,7 @@ from jxl.label.hop import (
     load_label_records,
 )
 from jxl.label.meta import PropMeta
-from jxl.label.prop import ProbValue
+from jxl.label.prop import CONF_EXCLUDE, PROP_EXCLUDE, ProbValue
 
 
 @dataclass
@@ -51,8 +52,7 @@ class TileObject:
 
     def prop_of(self, prop_id: int) -> ProbValue:
         """获取对象属性值/置信度对"""
-        v = ProbValue(0, 0)
-        return self.obj.properties.get(prop_id, v)
+        return self.obj.prop(prop_id)
 
     def draw_on(self, canvas: ImageNda, cfg: PropMeta) -> None:
         """绘制瓦片"""
@@ -69,11 +69,9 @@ class TileObject:
         dst = canvas.roi(self.dst_rect)
         resize(self.image.unwrap(), dst)
 
-    def draw_label(
-        self, prop_id: int, canvas: ImageNda, active: bool, prop_meta: PropMeta
-    ) -> None:
+    def draw_label(self, prop_meta: PropMeta, canvas: ImageNda, active: bool) -> None:
         """绘制标注信息"""
-        p = self.obj.prop(prop_id)
+        p = self.obj.prop(prop_meta.id)
         value = prop_meta.value_meta(p.value)
         # rectangle(canvas, self.dst_rect, color, 4)
         label = f"{value.name}({int(100 * p.conf)}%)"
@@ -86,20 +84,21 @@ class TileObject:
         """设置属性值"""
         self.obj.set_prop(prop_id, value, conf)
         self.root.user_agent = "jxl_prop"
-        hop_save_label(self.root, self.path, self.meta_id)
+        f = hop_save_label(self.root, self.path, self.meta_id)
+        logger.info(f"设置属性, 保存: {f}")
 
     def exclude_prop_if(self, prop_id: int, conf_thr: float) -> None:
         """将属性设置为排除, 当该属性置信度超过阈值"""
-        p = self.obj.properties.get(prop_id)
-        if p and conf_thr < p.conf <= 1:
-            self.obj.properties[prop_id] = ProbValue.exclude()
+        p = self.obj.prop(prop_id)
+        if conf_thr < p.conf <= 1:
+            self.obj.set_prop(prop_id, PROP_EXCLUDE, CONF_EXCLUDE)
             hop_save_label(self.root, self.path, self.meta_id)
 
 
 TileObjects = list[TileObject]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TileRecord:
     """平铺文件记录"""
 
@@ -132,7 +131,7 @@ class TileRecord:
         """把记录绘制在画板上"""
 
 
-def load_tiles(  # noqa: PLR0913
+def load_tiles(
     src_dir: StrPath,
     meta_id: int,
     category: int,
@@ -144,6 +143,7 @@ def load_tiles(  # noqa: PLR0913
     """加载瓦片对象"""
     rs = load_label_records(src_dir, meta_id, LabelFilter.LABELED)
     assert len(rs) > 0
+    logger.info(f"加载图片: {len(rs)}")
 
     tiles: TileObjects = []
     for r in rs:

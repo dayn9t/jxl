@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -14,7 +14,7 @@ from jxl.label.tile import TileObject, TileObjects, TileRecord, load_tiles
 
 
 class PropLabeler(RecordViewer):
-    def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str) -> None:
+    def __init__(self, meta: LabelMeta, cat_name: str, prop_name: str):
         super().__init__(f"labeler-{cat_name}-{prop_name}", meta.view_size)
         self.meta = meta
         self.cat_name = cat_name
@@ -40,7 +40,7 @@ class PropLabeler(RecordViewer):
         cur_image = self.cur_image_file()
         assert cur_image
         f = Path(cur_image)  # TODO: 不反应所有文件
-        print("#%d" % index, f)
+        print(f"#{index}", f)
         self.tile_index = 0
 
     def on_key(self, key: int) -> int:
@@ -76,7 +76,7 @@ class PropLabeler(RecordViewer):
     def on_draw(self, canvas: ImageNda, _pos: Point) -> None:
         rec: TileRecord = self.record()
         for i, o in enumerate(rec.objects):
-            o.draw_label(self.prop_meta.id, canvas, i == self.tile_index, self.prop_meta)
+            o.draw_label(self.prop_meta, canvas, i == self.tile_index)
 
     def on_left_button_down(self, cursor: Point, flags: int) -> None:
         """顶点/区域选择，节点区域左键保存选中区域内样本"""

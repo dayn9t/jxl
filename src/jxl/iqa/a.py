@@ -14,7 +14,7 @@ def estimate_clearness(image: ImageNda, ratio: float) -> int:
     # print('hist:', hist.shape)
     hist = hist.flatten()
     # print('hist:', hist.shape)
-    thr = float(ratio * np.sum(hist))
+    thr = ratio * np.sum(hist)
     s = 0.0
     for i, v in enumerate(hist):
         s += float(v)

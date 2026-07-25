@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """A2dResult 格式数据集 -> YOLO(darknet).
 
 处理旧版 img_label/sam_label 产出的 A2dResult(检测结果)数据集,
@@ -24,7 +24,6 @@ from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels
 from jxl.label.darknet.darknet_set import darknet_export_objects
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
-# ruff: noqa: TRY003, EM102
 
 app = typer.Typer(help="A2dResult 格式数据集 -> YOLO(darknet)")
 

@@ -1,0 +1,587 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ModelContract",
+  "description": "训练↔推理 artifact 契约。`#[serde(tag = \"task\")]` 使 JSON 用 `task` 字段选变体。",
+  "oneOf": [
+    {
+      "description": "目标检测（YOLO 等）。",
+      "type": "object",
+      "required": [
+        "class_names",
+        "meta",
+        "postprocess",
+        "preprocess",
+        "task"
+      ],
+      "properties": {
+        "class_names": {
+          "description": "类别表（单一数据源，替代 ONNX names）。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "meta": {
+          "description": "元信息。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContractMeta"
+            }
+          ]
+        },
+        "postprocess": {
+          "description": "后处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DetectPostprocess"
+            }
+          ]
+        },
+        "preprocess": {
+          "description": "预处理（scale=1/255，无 mean/std）。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DetectPreprocess"
+            }
+          ]
+        },
+        "task": {
+          "type": "string",
+          "enum": [
+            "detect"
+          ]
+        }
+      }
+    },
+    {
+      "description": "图像分类（resnet 等）。",
+      "type": "object",
+      "required": [
+        "class_names",
+        "meta",
+        "postprocess",
+        "preprocess",
+        "task"
+      ],
+      "properties": {
+        "class_names": {
+          "description": "类别表。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "meta": {
+          "description": "元信息。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContractMeta"
+            }
+          ]
+        },
+        "postprocess": {
+          "description": "后处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ClassifyPostprocess"
+            }
+          ]
+        },
+        "preprocess": {
+          "description": "预处理（含 ImageNet mean/std）。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ClassifyPreprocess"
+            }
+          ]
+        },
+        "task": {
+          "type": "string",
+          "enum": [
+            "classify"
+          ]
+        }
+      }
+    },
+    {
+      "description": "分割（mmseg 等）。",
+      "type": "object",
+      "required": [
+        "class_names",
+        "meta",
+        "postprocess",
+        "preprocess",
+        "task"
+      ],
+      "properties": {
+        "class_names": {
+          "description": "类别表。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "meta": {
+          "description": "元信息。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContractMeta"
+            }
+          ]
+        },
+        "postprocess": {
+          "description": "后处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SegmentPostprocess"
+            }
+          ]
+        },
+        "preprocess": {
+          "description": "预处理（含 mean/std）。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SegmentPreprocess"
+            }
+          ]
+        },
+        "task": {
+          "type": "string",
+          "enum": [
+            "segment"
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "ClassifyOutputFormat": {
+      "description": "分类输出格式（doc 自述闭合集 `logits` / `probabilities`）。\n\n枚举而非 free-form String：与 `DetectOutputFormat` 对称，写入侧 jsonschema 拒绝未知值、 加载侧 serde 拒绝未知变体，双端 fail-fast（原则 7 类型排除非法状态 + 原则 8 单一数据源）。 新增格式时追加变体。",
+      "oneOf": [
+        {
+          "description": "原始 logits（softmax 之前）。",
+          "type": "string",
+          "enum": [
+            "logits"
+          ]
+        },
+        {
+          "description": "softmax 后的概率分布。",
+          "type": "string",
+          "enum": [
+            "probabilities"
+          ]
+        }
+      ]
+    },
+    "ClassifyPostprocess": {
+      "description": "分类后处理。",
+      "type": "object",
+      "required": [
+        "num_classes",
+        "output_format"
+      ],
+      "properties": {
+        "num_classes": {
+          "description": "类别数。",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "output_format": {
+          "description": "输出格式。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ClassifyOutputFormat"
+            }
+          ]
+        }
+      }
+    },
+    "ClassifyPreprocess": {
+      "description": "分类预处理。",
+      "type": "object",
+      "required": [
+        "common"
+      ],
+      "properties": {
+        "common": {
+          "description": "公共预处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/CommonPreprocess"
+            }
+          ]
+        },
+        "normalize": {
+          "description": "归一化（mean/std）。",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Normalize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ColorOrder": {
+      "description": "颜色通道顺序。",
+      "oneOf": [
+        {
+          "description": "RGB。",
+          "type": "string",
+          "enum": [
+            "rgb"
+          ]
+        },
+        {
+          "description": "BGR。",
+          "type": "string",
+          "enum": [
+            "bgr"
+          ]
+        }
+      ]
+    },
+    "CommonPreprocess": {
+      "description": "三线共享的预处理参数（原则 9：公共前缀提升为嵌套）。",
+      "type": "object",
+      "required": [
+        "color",
+        "dtype",
+        "input_size",
+        "layout",
+        "resize"
+      ],
+      "properties": {
+        "color": {
+          "description": "颜色通道顺序。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ColorOrder"
+            }
+          ]
+        },
+        "dtype": {
+          "description": "数据类型。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DType"
+            }
+          ]
+        },
+        "input_size": {
+          "description": "输入尺寸。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/InputSize"
+            }
+          ]
+        },
+        "layout": {
+          "description": "内存布局。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Layout"
+            }
+          ]
+        },
+        "resize": {
+          "description": "resize 模式。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ResizeMode"
+            }
+          ]
+        }
+      }
+    },
+    "ContractMeta": {
+      "description": "契约自身元信息。",
+      "type": "object",
+      "required": [
+        "exported_by",
+        "schema_version"
+      ],
+      "properties": {
+        "exported_by": {
+          "description": "训练框架来源（诊断用）。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Framework"
+            }
+          ]
+        },
+        "schema_version": {
+          "description": "契约 schema 版本（v1 起步），向后兼容判据。",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
+    "DType": {
+      "description": "张量数据类型。",
+      "oneOf": [
+        {
+          "description": "float32。",
+          "type": "string",
+          "enum": [
+            "f32"
+          ]
+        },
+        {
+          "description": "float16。",
+          "type": "string",
+          "enum": [
+            "f16"
+          ]
+        }
+      ]
+    },
+    "DetectOutputFormat": {
+      "description": "检测输出格式（对齐 usls `YOLOPredsFormat` 构造器名）。\n\n枚举而非 free-form String：写入侧 jsonschema 拒绝未知值、加载侧 serde 拒绝未知变体， 双端 fail-fast（原则 7 类型排除非法状态 + 原则 8 单一数据源）。 当前仅 ObjectDetection 标准格式；detect 线出现新格式时追加变体。",
+      "oneOf": [
+        {
+          "description": "`n_a_xyxy_confcls` — usls `YOLOPredsFormat::n_a_xyxy_confcls()`。",
+          "type": "string",
+          "enum": [
+            "n_a_xyxy_confcls"
+          ]
+        }
+      ]
+    },
+    "DetectPostprocess": {
+      "description": "检测后处理。\n\n`conf_threshold` 是 runtime retain 过滤的默认值（请求未指定 conf 时回落）。 NMS 不在契约：ml-vision 保持 usls `apply_nms(false)`（NMS 关、靠 retain 过滤）， 故不设 `nms`/`iou_threshold` 字段（避免设计了不消费的 dead data）。",
+      "type": "object",
+      "required": [
+        "conf_threshold",
+        "output_format"
+      ],
+      "properties": {
+        "conf_threshold": {
+          "description": "置信度阈值（runtime retain 过滤默认值）。",
+          "type": "number",
+          "format": "float"
+        },
+        "output_format": {
+          "description": "输出格式（驱动 usls `YOLOPredsFormat`）。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DetectOutputFormat"
+            }
+          ]
+        }
+      }
+    },
+    "DetectPreprocess": {
+      "description": "检测预处理。",
+      "type": "object",
+      "required": [
+        "common",
+        "scale"
+      ],
+      "properties": {
+        "common": {
+          "description": "公共预处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/CommonPreprocess"
+            }
+          ]
+        },
+        "scale": {
+          "description": "像素缩放系数（YOLO = 1/255 ≈ 0.003921569）。",
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "Framework": {
+      "description": "训练框架。",
+      "oneOf": [
+        {
+          "description": "ultralytics（YOLO）。",
+          "type": "string",
+          "enum": [
+            "ultralytics"
+          ]
+        },
+        {
+          "description": "torchvision（resnet/MobileNet）。",
+          "type": "string",
+          "enum": [
+            "torchvision"
+          ]
+        },
+        {
+          "description": "mmsegmentation。",
+          "type": "string",
+          "enum": [
+            "mmseg"
+          ]
+        }
+      ]
+    },
+    "InputSize": {
+      "description": "输入尺寸（像素）。",
+      "type": "object",
+      "required": [
+        "height",
+        "width"
+      ],
+      "properties": {
+        "height": {
+          "description": "高。",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "width": {
+          "description": "宽。",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
+    "Layout": {
+      "description": "内存布局。",
+      "oneOf": [
+        {
+          "description": "NCHW。",
+          "type": "string",
+          "enum": [
+            "nchw"
+          ]
+        },
+        {
+          "description": "NHWC。",
+          "type": "string",
+          "enum": [
+            "nhwc"
+          ]
+        }
+      ]
+    },
+    "Normalize": {
+      "description": "归一化参数（分类/分割需要，检测不需要）。",
+      "type": "object",
+      "required": [
+        "mean",
+        "scale",
+        "std"
+      ],
+      "properties": {
+        "mean": {
+          "description": "均值（per-channel）。",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        "scale": {
+          "description": "缩放系数（YOLO 为 1/255）。",
+          "type": "number",
+          "format": "float"
+        },
+        "std": {
+          "description": "标准差（per-channel）。",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          },
+          "maxItems": 3,
+          "minItems": 3
+        }
+      }
+    },
+    "ResizeMode": {
+      "description": "resize 模式。",
+      "oneOf": [
+        {
+          "description": "保持长宽比填充（YOLO）。",
+          "type": "string",
+          "enum": [
+            "letterbox"
+          ]
+        },
+        {
+          "description": "等比缩放。",
+          "type": "string",
+          "enum": [
+            "resize_fit"
+          ]
+        },
+        {
+          "description": "缩放后中心裁剪（分类）。",
+          "type": "string",
+          "enum": [
+            "center_crop"
+          ]
+        },
+        {
+          "description": "不缩放。",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "SegmentPostprocess": {
+      "description": "分割后处理。",
+      "type": "object",
+      "required": [
+        "mask_format",
+        "num_classes"
+      ],
+      "properties": {
+        "mask_format": {
+          "description": "mask 输出格式名。\n\nIntentionally `String` until mask format stabilizes（raw/prob/argmax 等尚未定型）； 收 enum 时同步 Detect/Classify 的 output_format（届时三线一致枚举化）。",
+          "type": "string"
+        },
+        "num_classes": {
+          "description": "类别数。",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
+    "SegmentPreprocess": {
+      "description": "分割预处理。",
+      "type": "object",
+      "required": [
+        "common"
+      ],
+      "properties": {
+        "common": {
+          "description": "公共预处理。",
+          "allOf": [
+            {
+              "$ref": "#/definitions/CommonPreprocess"
+            }
+          ]
+        },
+        "normalize": {
+          "description": "归一化（mean/std）。",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Normalize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

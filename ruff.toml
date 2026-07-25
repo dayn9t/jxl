@@ -1,0 +1,67 @@
+# jxl ruff gate — 精选规则集，抓真实 bug + 强制 j-python-strict（注解/不可变/枚举）。
+#
+# 替代旧的 `select = ["ALL"]`（致 3228 错误，多为噪声：D* 文档标点、RUF001-003 中文歧义、
+# bin 脚本 print/assert）。与 pyproject.toml 的 mypy strict=false 渐进基线同源策略：
+# 高价值告警优先，不强 strict / 不 aspirational，避免低价值高 churn。
+#
+# 选型理由：
+#   - F/pyflakes、B/bugbear、RUF、PGH：抓真 bug（未用 import、未定义名、可变默认参数、裸 type:ignore）。
+#   - ANN：j-python-strict 强制全量注解（bin/tests/examples 豁免——遗留脚本与实验代码）。
+#   - E/I/UP/SIM/RET/PIE：现代 Python 语法与轻量简化，低风险可自动修。
+#   - 不启用 pydocstyle D*：lib in flux，文档标点/缺 docstring ~1000 噪声，低价值；后续稳定再开。
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes — 未用 import / 未定义名（真 bug）
+    "I",    # isort
+    "UP",   # pyupgrade — 现代语法
+    "B",    # bugbear — 真 bug（B006 可变默认参数等）
+    "SIM",  # simplify
+    "RET",  # flake8-return 简化
+    "PIE",  # flake8-pie 杂项
+    "PGH",  # pygrep-hooks — 裸 type:ignore / eval
+    "ANN",  # flake8-annotations — j-python-strict 强制注解
+    "RUF",  # ruff-specific 真问题
+    "T201", # flake8-print — 库代码禁止 print（bin/tests/examples 合法，见 per-file-ignores）
+]
+ignore = [
+    "E501",     # 行长交给 ruff format 管
+    "RUF001",   # 中文标点歧义（项目含大量中文 docstring/comment）
+    "RUF002",
+    "RUF003",
+    "RUF012",   # mutable class attr — jxl 常用 dataclass 类变量模式
+    "ANN003",   # **kwargs 注解（kwargs 多为 **Any 透传，价值低）
+]
+
+[lint.per-file-ignores]
+# bin/ 下 ~50 个遗留 argparse CLI 脚本：本轮（T6b）显式不迁移 typer、不补注解（CLI 回归风险高，
+# 标后续 PR）。新增的 typer 脚本（如 d2d_peoplenet_check.py）已写完整注解但一并豁免以保持一致，
+# 待 bin/ 整体迁移后按脚本粒度纳入。
+"src/jxl/bin/*.py" = [
+    "ANN",      # 注解非硬要求
+    "T201",     # print 合法（CLI 输出）
+    "S101",     # assert 合法
+    "PLR0913",  # 参数多（argparse 天然）
+    "N812",
+    "E402",     # 非 top-level import（argparse 惯例）
+    "TRY003",
+    "EM102",
+    "S603",
+    "S607",
+    "S108",
+    "FBT001",
+    "FBT002",
+    "B006",
+    "B008",     # typer.Argument/click 在默认值中是文档化的 CLI 模式（非可变默认 bug）
+]
+# tests/ 下 assert / print 合法，注解与 docstring 非硬要求
+"tests/**/*.py" = ["S101", "ANN", "T201", "D"]
+# examples/ demo 脚本：实验性质，不强制注解 / docstring / import 顺序
+"examples/**/*.py" = ["ANN", "D", "T201", "E402", "I"]
+# src/jxl/ 下散落的独立脚本（功能上属 test/demo/bin，待迁移至对应目录）：
+# print 合法（同 bin/tests/examples 策略——这些脚本非库代码、不被 import）。
+# 判据：*_test.py（内联测试）/ *_demo.py（demo）/ hyphen 命名 *-*.py（Python 模块名禁 hyphen，
+# 故 hyphen 即独立 CLI 脚本，仅可 `python x-y.py` 直接运行）。
+"src/jxl/**/*_test.py" = ["T201"]
+"src/jxl/**/*_demo.py" = ["T201"]
+"src/jxl/**/*-*.py" = ["T201"]

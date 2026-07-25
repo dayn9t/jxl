@@ -4,7 +4,7 @@ from jcx.sys.fs import StrPath, find_in_parts
 from jcx.text.txt_json import load_json
 from jvi.geo.rectangle import PHasRect, Rect
 from jvi.geo.size2d import Size
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from rustshed import Err, Null, Ok, Option, Result, Some
 
 
@@ -125,19 +125,29 @@ class PropVar(BaseModel):
     """属性类型名称"""
 
 
-def in_range(value: float, value_range: list[float] | None) -> bool:
+def in_range(value: float, range: list[float] | None) -> bool:
     """检查指值是否在指定范围"""
-    if value_range is None:
+    if range is None:
         return True
-    assert len(value_range) == 2
-    return value_range[0] <= value <= value_range[1]
+    assert len(range) == 2
+    return range[0] <= value <= range[1]
 
 
 class FilterCfg(BaseModel):
     """目标过滤器配置"""
 
-    aspect_radio: list[float] | None = None
-    """目标纵横比范围"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    # FALLBACK: 历史磁盘 meta JSON 误拼 aspect_radio，validation_alias 保留读取兼容直至数据迁移完成 — dayn9t 2026-07
+    aspect_ratio: list[float] | None = Field(
+        default=None,
+        validation_alias="aspect_radio",
+    )
+    """目标纵横比范围
+
+    注：历史 meta JSON 将此字段误拼为 ``aspect_radio``，validation_alias 保留对旧
+    数据的解析兼容（populate_by_name=True 同时接受正确字段名）；新序列化使用正确名。
+    """
     area: list[float] | None = None
     """目标面积范围"""
 
@@ -145,7 +155,7 @@ class FilterCfg(BaseModel):
         """检查对象合法性"""
 
         v = ob.rect().aspect_ratio()
-        if not in_range(v, self.aspect_radio):
+        if not in_range(v, self.aspect_ratio):
             return Err(f"目标纵横比={v}无效")
 
         v = ob.rect().area()
@@ -217,9 +227,7 @@ class LabelMeta(BaseModel):
     properties: list[PropMeta]
     """属性条目集合"""
 
-    def cat_meta(
-        self, id_: int | None = None, name: str | None = None
-    ) -> CatMeta:
+    def cat_meta(self, id_: int | None = None, name: str | None = None) -> CatMeta:
         """获取类别配置"""
         if id_ is not None:
             for c in self.categories:
@@ -229,8 +237,7 @@ class LabelMeta(BaseModel):
             for c in self.categories:
                 if c.name == name:
                     return c
-        msg = "程序BUG"
-        raise NotImplementedError(msg)
+        raise ValueError(f"category not found: id={id_}, name={name}")
 
     def prop_meta_by_name(
         self, name: str, cat_id: int | None = None, cat_name: str | None = None
@@ -249,7 +256,7 @@ class LabelMeta(BaseModel):
         """获取属性值对应的元数据"""
         cat = self.cat_meta(cat_id, cat_name)
         if cat.properties is None:
-            return Null
+            raise ValueError(f"category {cat.name} has no properties")
         type_name = cat.properties[prop_id].type
         for p in self.properties:
             if p.name == type_name:

@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """COCO -> YOLO 格式转换(按类别筛, 如 person).
 
 读 COCO instances_*.json, 筛指定类别(默认 person), bbox [x,y,w,h] 绝对像素左上角
@@ -29,7 +29,9 @@ def main(
     ann_json: Annotated[Path, typer.Argument(help="COCO instances_*.json")],
     img_dir: Annotated[Path, typer.Argument(help="COCO 图片目录(train2017/等)")],
     out_dir: Annotated[Path, typer.Argument(help="输出 YOLO 目录(images/+labels/)")],
-    categories: Annotated[list[str], typer.Option(help="目标类别名(默认 person)")] = ["person"],
+    categories: Annotated[list[str], typer.Option(help="目标类别名(默认 person)")] = [
+        "person"
+    ],
 ) -> None:
     """筛 COCO 类别 转 YOLO, 复制对应图片."""
     out_img = out_dir / "images"
@@ -48,7 +50,10 @@ def main(
         if c["name"] in name2yid
     }
     assert cat2yid, f"类别 {categories} 不在 {ann_json.name}"
-    logger.info("类别映射: {}", {c["name"]: c["id"] for c in data["categories"] if c["name"] in name2yid})
+    logger.info(
+        "类别映射: {}",
+        {c["name"]: c["id"] for c in data["categories"] if c["name"] in name2yid},
+    )
 
     imgs = {im["id"]: im for im in data["images"]}
     by_img: dict[int, list[tuple[int, list[float]]]] = defaultdict(list)
@@ -79,14 +84,18 @@ def main(
         if not lines:
             continue
         (out_lbl / f"{Path(im['file_name']).stem}.txt").write_text(
-            "\n".join(lines) + "\n", encoding="utf-8")
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
         shutil.copy(src, out_img / im["file_name"])
         n_img += 1
         n_box += len(lines)
 
     logger.info(
         "完成: {} 图 / {} 框 -> {}{}",
-        n_img, n_box, out_dir, f" | 跳过 {missing} 缺图" if missing else "",
+        n_img,
+        n_box,
+        out_dir,
+        f" | 跳过 {missing} 缺图" if missing else "",
     )
 
 

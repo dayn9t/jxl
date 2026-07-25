@@ -1,7 +1,7 @@
 from jcx.text.txt_json import load_json, to_json
 
-from consts import META_DIR
 from jxl.det.a2d import A2dResult
+from tests.consts import META_DIR
 
 
 def test_a2d_result():

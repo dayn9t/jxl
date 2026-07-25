@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """YOLO 目标检测训练(ultralytics, 含最新 YOLO26).
 
 项目通用训练入口: 调用 ultralytics 的 YOLO.train() 训练目标检测器.

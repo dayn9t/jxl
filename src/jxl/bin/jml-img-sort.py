@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -10,7 +10,7 @@ from jvi.gui.record_viewer import RecordViewer, load_dir_records
 
 
 class Sorter(RecordViewer):
-    def __init__(self, title: str, dst_dir: Path) -> None:
+    def __init__(self, title: str, dst_dir: Path):
         super().__init__(title, Size(244 * 3 * 2, 244 * 2))
         self.dst_dir = dst_dir
         self.key_class = {ord("e"): "0", ord("q"): "1", Key.BLANK: "pending"}
@@ -33,7 +33,7 @@ class Sorter(RecordViewer):
             return 0
         return super().on_key(key)
 
-    def _move_class(self, cat: str) -> None:
+    def _move_class(self, cat: str):
         """图片移动到指定类别"""
         r = self.record()
         dst = Path(self.dst_dir, cat, r.path.name)
@@ -45,7 +45,7 @@ class Sorter(RecordViewer):
 # args = /home/jiang/ws/scene/cnooc/sources/31010102100700101 -v
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="图片人工分类")
     parser.add_argument("folder", type=Path, help="来源图片目录")
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")

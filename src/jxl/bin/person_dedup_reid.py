@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """person Re-ID 同人聚类(HDBSCAN, 身份级).
 
 对 OSNet Re-ID embedding 做 HDBSCAN(cosine) 聚类, 自动合并同一人的 crop,
@@ -39,7 +39,12 @@ def main(
     labels = hdb.fit_predict(emb)
     n_clusters = len({int(x) for x in labels if x >= 0})
     n_noise = int((labels < 0).sum())
-    logger.info("HDBSCAN(min_size={}): 身份簇={}, 噪声(孤立)={}", min_cluster_size, n_clusters, n_noise)
+    logger.info(
+        "HDBSCAN(min_size={}): 身份簇={}, 噪声(孤立)={}",
+        min_cluster_size,
+        n_clusters,
+        n_noise,
+    )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     np.save(out_dir / "identity_map.npy", labels.astype(np.int64))

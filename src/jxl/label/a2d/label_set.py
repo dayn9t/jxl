@@ -40,7 +40,7 @@ class A2dLabelSet(ABC):
     """2D分析标注集合"""
 
     @classmethod
-    def valid_set(cls, folder: Path, meta_id: int) -> bool:  # noqa: ARG003
+    def valid_set(cls, folder: Path, meta_id: int) -> bool:
         """检验路径是否是本格式的数据集"""
         return False
 

@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -6,14 +6,14 @@ from pathlib import Path
 from jxl.model.util import show_model
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="深度学习模型工具")
     parser.add_argument("model", type=Path, help="模型文件路径")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
     opt = parser.parse_args()
 
-    show_model(opt.model, opt)
+    show_model(opt.model)
 
 
 if __name__ == "__main__":

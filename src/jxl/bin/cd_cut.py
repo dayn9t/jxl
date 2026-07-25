@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -14,7 +14,7 @@ epilog = """
 Examples:
 
     cd-cut src_dir dst_dir
-
+    
 """
 
 SIZE = SIZE_FHD

@@ -1,9 +1,9 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 from pathlib import Path
 
-import fire  # type: ignore
-from autogluon.tabular import TabularDataset, TabularPredictor  # type: ignore
+import fire
+from autogluon.tabular import TabularDataset, TabularPredictor
 
 # label = 'signature'
 

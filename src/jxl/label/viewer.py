@@ -12,7 +12,7 @@ from jxl.label.a2d.dd import A2dImageLabel
 from jxl.label.meta import LabelMeta
 
 
-@dataclass
+@dataclass(frozen=True)
 class LabelRecord(PImageEntry):
     """文件记录"""
 

@@ -4,6 +4,7 @@ from typing import Final
 from jcx.sys.fs import StrPath, files_in, make_parents, remake_dir, with_parent
 from jcx.text.txt_json import load_json
 from jvi.image.image_nda import ImageNda
+from loguru import logger
 
 from jxl.label.a2d.dd import IMG_EXT, A2dImageLabel, A2dImageLabelPairs, A2dImageLabels
 from jxl.label.meta import meta_fix
@@ -65,6 +66,7 @@ def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:
     folder = Path(folder)
     rs = []
     tail = label_tail(meta_id, ".todo")
+    logger.info(f"tail: {tail}")
 
     files = sorted(folder.rglob("*" + tail))
     for lbl_file in files:
@@ -73,7 +75,7 @@ def load_label_dir(folder: StrPath, meta_id: int) -> A2dImageLabels:
     return rs
 
 
-def dump_label_prop(  # noqa: PLR0913
+def dump_label_prop(
     label_pairs: A2dImageLabelPairs,
     dst: Path,
     category_id: int,

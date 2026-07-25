@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Protocol, Self
 
 import numpy as np
-from jvi.image.image_nda import ImageNda
 
-from jxl.label.prop import ProbValue
+from jxl.label.a2d.dd import ProbValue
 from jxl.model.types import ModelInfo
 
 
@@ -21,7 +20,7 @@ class ModelFormat(IntEnum):
     """参数包, 无模型结构"""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ClassifierOpt:
     """分类器器选项"""
 
@@ -40,46 +39,36 @@ class ClassifierOpt:
 
 
 class ClassifierRes(Protocol):
-    """分类器返回结果"""
+    """分类器返回结果。
+
+    结构化接口：声明原语方法 (top/confidences/__len__) 与派生方法
+    (top_index/top_confidence)。实现者以结构化方式满足协议，无需显式继承。
+    """
 
     def top(self) -> ProbValue:
         """最可能类别"""
+        ...
 
     def top_index(self) -> int:
         """最可能类别索引"""
-        return self.top().value
+        ...
 
     def top_confidence(self) -> float:
         """最可能类别置信度"""
-        return self.top().conf
+        ...
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""
-
-    def at(self, idx: int) -> float:
-        """获取指定分类的置信度"""
-        return self.confidences()[idx]
+        ...
 
     def __len__(self) -> int:
         """分类器结果包含对象数量"""
-
-    def bin(self) -> "ClassifierRes":
-        """二值化, 0/非0各一组"""
-        probs = self.confidences()
-        p0 = probs[0]
-        p1 = sum(probs) - p0
-
-        return ClassifierResList(probs=[p0, p1])
-
-    def nozero_ratio(self) -> float:
-        """非零分类所占比率"""
-        probs = self.confidences()
-        return 1 - probs[0]
+        ...
 
 
 def vote_weighted(arr: list[ClassifierRes]) -> ClassifierRes:
     """根据概率投票获取最终分类结果"""
-    mat = np.array([a.confidences() for a in arr], dtype=float)
+    mat = np.array([a.confidences() for a in arr], dtype=np.float64)
     v = np.sum(mat, axis=0)
     v /= np.sum(v)
     return ClassifierResList(probs=v.tolist())
@@ -96,9 +85,12 @@ def vote_bin(arr: list[ClassifierRes]) -> ClassifierRes:
     return ClassifierResList(probs=[p0, p1])
 
 
-@dataclass(frozen=True)
-class ClassifierResList(ClassifierRes):
-    """分类器返回结果"""
+@dataclass(frozen=True, slots=True)
+class ClassifierResList:
+    """分类器返回结果 — 基于 probs 列表的具体实现。
+
+    结构化实现 ClassifierRes 协议（不显式继承 Protocol 当基类）。
+    """
 
     probs: list[float]
 
@@ -124,13 +116,13 @@ class ClassifierResList(ClassifierRes):
         return len(self.probs)
 
 
-class IClassifier(ABC):
+class IClassifier[T](ABC):
     """分类器"""
 
     model_class = "classifier"
 
     @classmethod
-    def new(cls: type[Self], info: ModelInfo, model_root: Path) -> Self:
+    def new(cls: type[Self], info: ModelInfo[ClassifierOpt], model_root: Path) -> Self:
         """创建分类器-根据信息"""
         file = model_root / info.file
         return cls(file, info.opt, info.device)
@@ -143,5 +135,5 @@ class IClassifier(ABC):
         self._device_name = device_name
 
     @abstractmethod
-    def __call__(self, item: ImageNda) -> ClassifierRes:
-        """对图像分类"""
+    def __call__(self, item: T) -> ClassifierRes:
+        """对数据条目分类, 支持类型:图像, 数组"""

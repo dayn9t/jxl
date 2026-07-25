@@ -1,8 +1,7 @@
+from jcx.text.txt_json import to_json
 from jcx.time.stop_watch import StopWatch
 from openai import OpenAI
-import os
 from pydantic import BaseModel
-from jcx.text.txt_json import to_json
 
 
 class Step(BaseModel):
@@ -34,11 +33,10 @@ def main():
                 "type": "disabled"  # 不使用深度思考能力
                 # "type": "enabled" # 使用深度思考能力
             }
-        }
+        },
     )
-    resp = completion.choices[0].message.parsed
     # 打印 JSON 格式结果
-    # print(resp.model_dump_json(indent=2))
+    # print(completion.choices[0].message.parsed.model_dump_json(indent=2))
     print(to_json(completion))
     print("elapsed:", watch.stop())
 

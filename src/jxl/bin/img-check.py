@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path

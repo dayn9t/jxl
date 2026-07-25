@@ -20,7 +20,7 @@ def draw_boxi(
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
         # c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-        c2 = c1[0] + t_size[0], c1[1] + t_size[1] + 3
+        c2 = (c1[0] + t_size[0], c1[1] + t_size[1] + 3)
         cv2.rectangle(bgr, c1, c2, color.bgr(), -1, cv2.LINE_AA)  # filled
         color = color.inverse()
         # cv2.putText(bgr, label, (c1[0], c1[1] - 2), 0, tl / 3, color, thickness=tf, lineType=cv2.LINE_AA)

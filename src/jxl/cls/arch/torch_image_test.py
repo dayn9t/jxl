@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from loguru import logger
-
 from jxl.cls.arch.torch_image import create, load_pth_tar
 
 
@@ -11,24 +9,24 @@ def load_pth_tar_test() -> None:
     net = load_pth_tar(6, file)
 
     net = net.cuda()
-    logger.info("cuda {}", net)
+    print("cuda", net)
 
-    logger.info("model type: {}", type(net))
-    logger.info("state_dict: {}", len(net.state_dict()))
+    print("\nmodel type:", type(net))
+    print("state_dict:", len(net.state_dict()))
 
 
 def a_test(show_state: bool) -> None:
     net = create("resnet18", 2, pretrained=True)
-    logger.info("{}", net)
+    print(net)
 
-    logger.info("model type: {}", type(net))
-    logger.info("state_dict: {}", len(net.state_dict()))
+    print("\nmodel type:", type(net))
+    print("state_dict:", len(net.state_dict()))
 
     if show_state:
         sd = net.state_dict()
-        logger.info("state_dict: {}", type(sd))
+        print("state_dict:", type(sd))
         for k, v in sd.items():
-            logger.info("{} \t {}", k, v.size())
+            print(k, "\t", v.size())
 
 
 if __name__ == "__main__":

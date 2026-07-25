@@ -38,7 +38,7 @@ def guess_format_cls(
     if label_format:
         fmt_cls = _class_map[label_format]
     else:
-        for cls in _class_map.values():
+        for _name, cls in _class_map.items():
             if cls.valid_set(folder, meta_id):
                 fmt_cls = cls
     return fmt_cls

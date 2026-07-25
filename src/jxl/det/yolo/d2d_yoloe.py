@@ -13,16 +13,12 @@ YOLO-E是YOLO系列的高效版本, 提供了优秀的检测性能和速度平�
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
 
 from jvi.image.image_nda import ImageNda
-from ultralytics.models.yolo.model import YOLOE
+from ultralytics import YOLOE
 
 from jxl.det.d2d import D2dOpt, D2dResult, Detector2D
 from jxl.yolo.results import results_list_to_d2d_result
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 class D2dYoloE(Detector2D):
@@ -56,10 +52,7 @@ class D2dYoloE(Detector2D):
         super().__init__(model_path, opt, device_name, verbose)
 
         self._model = YOLOE(model_path)
-        # ultralytics 动态方法无类型签名, 经 cast 显式标注以通过 no-untyped-call。
-        get_text_pe = cast("Callable[[list[str]], object]", self._model.get_text_pe)
-        set_classes = cast("Callable[[list[str], object], None]", self._model.set_classes)
-        set_classes(names, get_text_pe(names))
+        self._model.set_classes(names, self._model.get_text_pe(names))
 
     def detect(self, image: ImageNda, persist: bool = True) -> D2dResult:
         """检测图像中的目标.

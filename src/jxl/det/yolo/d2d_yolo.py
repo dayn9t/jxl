@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from jvi.image.image_nda import ImageNda
-from ultralytics.models.yolo.model import YOLO
+from ultralytics import YOLO
 
 from jxl.det.d2d import D2dOpt, D2dResult, Detector2D
 from jxl.yolo.results import results_list_to_d2d_result

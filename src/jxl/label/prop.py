@@ -18,7 +18,7 @@ CONF_EXCLUDE = -1.0
 """属性特殊值-排除, 默认置信度"""
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ProbValue:
     """带有置信度的值"""
 

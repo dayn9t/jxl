@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -8,28 +8,6 @@ from jvi.geo.size2d import size_parse
 from jxl.label.darknet.darknet_set import darknet_dump_labels
 from jxl.label.hop import hop_load_labels
 from jxl.label.meta import find_meta
-
-
-def resize_labels(labels: ImageLabelPairs, folder: Path, meta: LabelMeta) -> int:
-    """保存darknet样本标注信息, TODO: meta 可能有更多的用处"""
-
-    labels_dir = remake_subdir(folder, "labels")
-    images_dir = remake_subdir(folder, "images")
-
-    print("\n开始生成样本(%d)：" % len(labels))
-    total = 0
-    for image, label in labels:
-        src: ImageNda = ImageNda.load(image)
-        jpg = images_dir / f"{image.stem}.jpg"
-        txt = labels_dir / f"{image.stem}.txt"
-        save_objects(label.objects, txt)
-
-        dst = get_roi_image(
-            src, label.roi().unwrap(), Color.parse(meta.sample.background)
-        )
-        dst.save(jpg)
-        total += len(label.objects)
-    return total
 
 
 def main() -> None:

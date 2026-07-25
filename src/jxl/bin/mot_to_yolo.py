@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """MOT(MOT17/MOT20) -> YOLO 格式转换.
 
 读 MOT train 序列(gt/gt.txt + img1/*.jpg), 筛 class 1/7(pedestrian + static person)
@@ -50,7 +50,9 @@ def parse_gt(gt_path: Path) -> dict[int, list[tuple[float, float, float, float]]
     return by_frame
 
 
-def to_yolo_line(box: tuple[float, float, float, float], iw: int, ih: int) -> str | None:
+def to_yolo_line(
+    box: tuple[float, float, float, float], iw: int, ih: int
+) -> str | None:
     """MOT (x,y,w,h) 左上角绝对像素 -> YOLO '0 cx cy w h' 归一化中心.
 
     先 clamp 到图像边界(MOT gt 有少量越界标注), 全越界返回 None 丢弃.
@@ -70,7 +72,12 @@ def to_yolo_line(box: tuple[float, float, float, float], iw: int, ih: int) -> st
 def main(
     src_dir: Annotated[Path, typer.Argument(help="MOT train 目录(含 MOT*-*/序列)")],
     out_dir: Annotated[Path, typer.Argument(help="输出 YOLO 目录(images/+labels/)")],
-    detector: Annotated[str | None, typer.Option(help="检测器变体(DPM/FRCNN/SDP, MOT17用); 留空匹配所有MOT序列(MOT20)")] = None,
+    detector: Annotated[
+        str | None,
+        typer.Option(
+            help="检测器变体(DPM/FRCNN/SDP, MOT17用); 留空匹配所有MOT序列(MOT20)"
+        ),
+    ] = None,
 ) -> None:
     """遍历 MOT train 序列, 转 YOLO person 检测格式."""
     out_img = out_dir / "images"
@@ -80,7 +87,9 @@ def main(
 
     suffix = f"-{detector}" if detector else ""
     seqs = sorted(
-        d for d in src_dir.iterdir() if d.is_dir() and d.name.startswith("MOT") and d.name.endswith(suffix)
+        d
+        for d in src_dir.iterdir()
+        if d.is_dir() and d.name.startswith("MOT") and d.name.endswith(suffix)
     )
     assert seqs, f"未在 {src_dir} 找到 MOT-*{suffix} 序列目录"
     logger.info("序列 {} 个({}) -> {}", len(seqs), detector, out_dir)
@@ -102,7 +111,9 @@ def main(
             if boxes:  # 有标注才写 label(无标注帧不写, YOLO 视为负样本)
                 lines = [ln for b in boxes if (ln := to_yolo_line(b, iw, ih))]
                 if lines:
-                    (out_lbl / label_name).write_text("\n".join(lines) + "\n", encoding="utf-8")
+                    (out_lbl / label_name).write_text(
+                        "\n".join(lines) + "\n", encoding="utf-8"
+                    )
                     n_lbl += 1
                     seq_box += len(lines)
             dst_img = out_img / f"{seq.name}_{frame:06d}{IMG_EXT}"
@@ -114,7 +125,11 @@ def main(
 
     logger.info(
         "完成: {} 序列 -> {} 图 / {} label / {} person 框 -> {}",
-        len(seqs), n_img, n_lbl, n_box, out_dir,
+        len(seqs),
+        n_img,
+        n_lbl,
+        n_box,
+        out_dir,
     )
 
 

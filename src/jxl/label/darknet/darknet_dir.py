@@ -1,13 +1,12 @@
 from pathlib import Path
-from typing import *
+from typing import Self
 
 from jcx.sys.fs import files_in
-from jcx.text.io import save_txt
-from jcx.text.txt_json import load_txt
+from jcx.text.txt_json import load_txt, save_txt
 from jvi.geo.rectangle import Rect
 from loguru import logger
 from pydantic import BaseModel
-from rustshed import *
+from rustshed import Ok, Result, result_shortcut
 
 from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel
 
@@ -15,7 +14,9 @@ DARKNET_EXT = ".txt"  # 标注文件扩展名
 
 
 class DarknetObjectLabel(BaseModel):
-    """表示Darknet标注文件中的一行数据。"""
+    """
+    表示Darknet标注文件中的一行数据。
+    """
 
     class_id: int
     """类别ID，表示对象的类别"""
@@ -42,8 +43,7 @@ class DarknetObjectLabel(BaseModel):
         parts = line.strip().split()
         if len(parts) != 5:
             logger.warning(f"Invalid line format: {line.strip()}")
-            msg = "Line must contain 5 space-separated values."
-            raise ValueError(msg)
+            raise ValueError("Line must contain 5 space-separated values.")
 
         class_id, x_center, y_center, width, height = map(float, parts)
         return cls(
@@ -94,9 +94,11 @@ class DarknetObjectLabel(BaseModel):
 
 
 class DarknetImageLabel(BaseModel):
-    """表示Darknet一个标注文件中的信息。"""
+    """
+    表示Darknet一个标注文件中的信息。
+    """
 
-    objects: List[DarknetObjectLabel]
+    objects: list[DarknetObjectLabel]
     """包含的对象列表"""
 
     @classmethod
@@ -173,10 +175,10 @@ class DarknetImageLabel(BaseModel):
         return A2dImageLabel(user_agent="darknet", objects=objects)
 
 
-DarknetImageLabelPair: TypeAlias = Tuple[Path, DarknetImageLabel]
+type DarknetImageLabelPair = tuple[Path, DarknetImageLabel]
 """Darknet图像与标注信息对"""
 
-DarknetImageLabelPairs: TypeAlias = List[DarknetImageLabelPair]
+type DarknetImageLabelPairs = list[DarknetImageLabelPair]
 """Darknet图像与标注信息对集"""
 
 

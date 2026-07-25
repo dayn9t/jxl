@@ -1,4 +1,4 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 
 import argparse
 import shutil
@@ -25,7 +25,7 @@ def main() -> None:
     labels = set()
     for d in folder.glob("hop_m*"):
         if d.is_dir():
-            s = {f.stem for f in files_in(d, HOP_EXT)}
+            s = set([f.stem for f in files_in(d, HOP_EXT)])
             print(f"- 加载标注目录: {d.relative_to(folder)}({len(s)})")
             labels.update(s)
 

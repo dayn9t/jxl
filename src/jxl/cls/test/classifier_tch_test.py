@@ -1,11 +1,15 @@
+import pytest
+
+# classifier_tch 依赖 torchsummary (可选依赖), 当前环境未安装, 缺失时跳过收集.
+pytest.importorskip("torchsummary")
+
 from pathlib import Path
 
 from jcx.sys.fs import files_in
 from jvi.image.image_nda import ImageNda
 from jvi.image.trace import trace_image
 
-from jxl.cls.classifier import ClassifierOpt
-from jxl.cls.classifier_tch import ClassifierTch
+from jxl.cls.classifier_tch import ClassifierOpt, ClassifierTch
 
 
 def show_main() -> None:
@@ -19,8 +23,8 @@ def show_main() -> None:
         im: ImageNda = ImageNda.load(file)
         r = classifier(im)
 
-        print("top_class :", r.top())  # noqa: T201
-        print("confidences:", r.confidences())  # noqa: T201
+        print("top_class :", r.top())
+        print("confidences:", r.confidences())
 
         trace_image(im)
 

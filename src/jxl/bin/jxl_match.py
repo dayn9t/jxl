@@ -2,11 +2,12 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torchvision.models as models
+import torchvision.transforms as transforms
 from jcx.sys.fs import files_in
 from jcx.text.txt_json import load_json, save_json
 from PIL import Image
 from pydantic import BaseModel
-from torchvision import models, transforms
 
 from jxl.common import JXL_IMAGES_DIR
 
@@ -19,7 +20,7 @@ class SampleTab(BaseModel):
     files: list[FileInfo] = []
     dist_mat: dict[int, dict[int, float]] = {}
 
-    def cale_likelihood_mat(self, model, dst_dir: Path) -> None:
+    def cale_likelihood_mat(self, model, dst_dir: Path):
         """计算似然矩阵"""
         items = sorted(self.dist_mat.items())
 
@@ -29,12 +30,12 @@ class SampleTab(BaseModel):
                 print("skip:", dst_file)
             else:
                 likelihood_map: dict[int, float] = {}
-                for j in m:
+                for j, _dist in m.items():
                     im1 = self.files[i].image
                     im2 = self.files[j].image
                     s = cale_similarity(model, im1, im2)
                     likelihood_map[j] = float(s)
-                print("#%d" % i, len(likelihood_map))
+                print(f"#{i}", len(likelihood_map))
 
                 save_json(likelihood_map, dst_file)
 
@@ -79,7 +80,7 @@ def cale_similarity(model, image_path1, image_path2):
     return cosine_similarity(features1, features2)
 
 
-def main() -> None:
+def main():
     files = files_in(JXL_IMAGES_DIR, ".jpg")
 
     print("files:", JXL_IMAGES_DIR)
@@ -106,7 +107,7 @@ def main() -> None:
     # cale(model)
 
 
-def cale(model) -> None:
+def cale(model):
     src_file = "/var/howell/s4/ias/meta_shop/d1/n1/2_images.json"
     dst_dir = Path("/var/howell/s4/ias/meta_shop/d1/n1/similarity")
 

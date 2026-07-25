@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """YOLO 数据集图级 core-set 减量(保视觉多样, 强制减量).
 
 读图 DINOv2 embedding(.npy+.txt), k-means 聚 target 簇, 每簇选离 centroid 最近的代表,
@@ -25,7 +25,9 @@ app = typer.Typer(help="YOLO 图级 core-set 减量(DINOv2 多样性采样)")
 
 @app.command()
 def main(
-    embeddings_npy: Annotated[Path, typer.Argument(help="图 DINOv2 embedding .npy(配 .txt 文件名)")],
+    embeddings_npy: Annotated[
+        Path, typer.Argument(help="图 DINOv2 embedding .npy(配 .txt 文件名)")
+    ],
     dataset_dir: Annotated[Path, typer.Argument(help="YOLO 数据集(images/+labels/)")],
     target: Annotated[int, typer.Option(help="目标代表数")],
 ) -> None:
@@ -61,7 +63,13 @@ def main(
             f.unlink()
             del_lbl += 1
     remain = len(list(images_dir.glob("*")))
-    logger.info("删 {} 图 + {} label | 剩余 {} 图(-{:.0%})", del_img, del_lbl, remain, 1 - remain / len(files))
+    logger.info(
+        "删 {} 图 + {} label | 剩余 {} 图(-{:.0%})",
+        del_img,
+        del_lbl,
+        remain,
+        1 - remain / len(files),
+    )
 
 
 if __name__ == "__main__":

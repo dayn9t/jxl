@@ -1,12 +1,14 @@
-from jcx.text.txt_json import to_json, load_json
-from openai import OpenAI
 import base64
 import time
+
+from jcx.text.txt_json import load_json, to_json
+from openai import OpenAI
 
 from jxl.common import JXL_ASSERTS, JXL_OAI_DIR
 from jxl.oai.types1 import LlmCfg
 
 # [物体定位](https://help.aliyun.com/zh/model-studio/vision/?spm=a2c4g.11186623.help-menu-2400256.d_0_2_0.501620b9pPPaJo#98e63a5a0akb9)
+
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
@@ -63,8 +65,9 @@ def main():
     elapsed_time = end_time - start_time
 
     print("model:", completion.model)
+    assert completion.usage is not None
     print("total_tokens:", completion.usage.total_tokens)
-    print("请求时间: {:.2f} 秒".format(elapsed_time))
+    print(f"请求时间: {elapsed_time:.2f} 秒")
     print(completion.choices[0].message.content)
 
 

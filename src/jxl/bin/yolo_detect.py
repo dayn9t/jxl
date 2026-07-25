@@ -1,9 +1,9 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 import argparse
 import sys
 from pathlib import Path
 
-import cv2  # type: ignore
+import cv2
 from jcx.sys.fs import find, stem_append
 from jcx.ui.key import Key
 from jvi.drawing.color import LIME
@@ -19,7 +19,7 @@ from jxl.det.yolo.d2d_yolo import D2dYolo
 # params:/home/jiang/ws/trash/cans/model_dir/can.pt /var/ias/snapshot/shtm/n1/work/2040600111/2021-04-18
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="Yolo检测器")
     parser.add_argument("model", type=Path, help="模型文件路径")
     parser.add_argument("src_dir", type=Path, help="图像来源目录")

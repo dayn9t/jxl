@@ -1,10 +1,11 @@
-import pytest
-from pathlib import Path
-import tempfile
 import os
+import tempfile
+from pathlib import Path
 
-from jxl.label.darknet.darknet_dir import DarknetObjectLabel, DarknetImageLabel
+import pytest
 from jvi.geo.rectangle import Rect
+
+from jxl.label.darknet.darknet_dir import DarknetImageLabel, DarknetObjectLabel
 
 
 class TestDarknetObjectLabel:

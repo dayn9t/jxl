@@ -5,6 +5,7 @@ from pathlib import Path
 from jcx.sys.fs import StrPath, with_parent
 from jcx.text.txt_json import load_json, save_json
 from jvi.gui.record_viewer import FileRecord
+from loguru import logger
 from rustshed import Option
 
 from jxl.label.a2d.dd import IMG_EXT, A2dImageLabel, A2dImageLabelPairs
@@ -44,6 +45,7 @@ def hop_save_label(label: A2dImageLabel, img_file: StrPath, meta_id: int) -> Pat
 def hop_del_label(img_file: StrPath, meta_id: int) -> None:
     label_file = hop_label_path_of(img_file, meta_id)
     label_file.unlink(True)
+    logger.info(f"删除标注: {label_file}")
 
 
 def hop_load_labels(folder: StrPath, meta_id: int) -> A2dImageLabelPairs:
@@ -61,10 +63,8 @@ class LabelFilter(IntEnum):
             return True
         if self == LabelFilter.EXPORT:
             label = ias_label_path_of(image_file, meta_id)
-        elif self == LabelFilter.LABELED:
+        else:  # LabelFilter.LABELED（穷尽：枚举仅 ALL/EXPORT/LABELED 三成员）
             label = hop_label_path_of(image_file, meta_id)
-        else:
-            return False
         return label.is_file()
 
 
@@ -76,7 +76,7 @@ def get_label(image_file: Path, meta_id: int) -> A2dImageLabel:
     return cur_label.unwrap_or(A2dImageLabel(user_agent="jxl_label"))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LabelRecord(FileRecord):
     """标注记录"""
 
@@ -96,6 +96,7 @@ def load_label_records(
 ) -> LabelRecords:
     """加载目录下的图片信息记录"""
     pattern = (pattern or "*") + IMG_EXT
+    logger.info(f"pattern: {pattern}")
     files = sorted(Path(folder, "image").glob(pattern))
     rs = []
     for f in files:

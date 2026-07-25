@@ -1,4 +1,3 @@
-
 from ultralytics.engine.results import Results
 
 from jxl.det.d2d import D2dResult
@@ -8,9 +7,9 @@ from jxl.det.yolo.adapter import boxes_to_d2d
 def results_to_d2d_result(results: Results) -> D2dResult:
     """检测结果转换为D2dResult"""
     assert isinstance(results, Results)
-    boxes = results.boxes
-    assert boxes is not None
-    objects = boxes_to_d2d(boxes)
+    if results.boxes is None:
+        raise ValueError("results.boxes is None")
+    objects = boxes_to_d2d(results.boxes)
     return D2dResult(objects=objects)
 
 

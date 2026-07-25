@@ -3,29 +3,39 @@ from pathlib import Path
 import torch
 from jvi.image.image_nda import ImageNda
 from loguru import logger
+from ultralytics import YOLO
 from ultralytics.engine.results import Results
-from ultralytics.models.yolo.model import YOLO
 
-from jxl.cls.classifier import ClassifierOpt, ClassifierRes, IClassifier
-from jxl.label.prop import ProbValue
+from jxl.cls.classifier import ClassifierOpt, IClassifier
+from jxl.label.a2d.dd import ProbValue
 
 
-class ClassifierResY8(ClassifierRes):
-    """图片分类器结果"""
+class ClassifierResY8:
+    """图片分类器结果。
+
+    结构化实现 ClassifierRes 协议（不显式继承 Protocol 当基类）。
+    """
 
     def __init__(self, rs: Results) -> None:
-        probs = rs.probs
-        assert probs is not None
-        assert isinstance(probs.data, torch.Tensor)
-        self.probs = probs.data
+        if rs.probs is None or not isinstance(rs.probs.data, torch.Tensor):
+            raise ValueError("classify result has no probs tensor")
+        self.probs = rs.probs.data
 
         m = torch.max(self.probs, 0)
-        self.top1 = ProbValue(int(m.indices.item()), float(m.values.item()))
+        self.top1 = ProbValue(int(m.indices.item()), m.values.item())
         self.top1_name = rs.names[self.top1.value]
 
     def top(self) -> ProbValue:
         """最可能类别"""
         return self.top1
+
+    def top_index(self) -> int:
+        """最可能类别索引"""
+        return self.top().value
+
+    def top_confidence(self) -> float:
+        """最可能类别置信度"""
+        return self.top().conf
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""
@@ -35,7 +45,7 @@ class ClassifierResY8(ClassifierRes):
         return len(self.probs)
 
 
-class ClassifierY8(IClassifier):
+class ClassifierY8(IClassifier[ImageNda]):
     """图片分类器"""
 
     model_class = "image_net2"
@@ -73,12 +83,13 @@ def main() -> None:
     opt = ClassifierOpt((224, 224), 1000)
     path = Path("yolov8n-cls.pt")
     image: ImageNda = ImageNda.load("../../jvi/static/lena.jpg")
+    # image = ImageNda.load('bus.jpg')
 
     model = ClassifierY8(path, opt, "cuda")
     res = model(image)
 
-    logger.info("{}", model)
-    logger.info("{} {}", res.top(), res.confidences())
+    logger.info(f"model: {model}")
+    logger.info(f"{res.top()} {res.confidences()}")
 
 
 if __name__ == "__main__":

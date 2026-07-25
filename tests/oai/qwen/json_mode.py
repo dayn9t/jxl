@@ -1,8 +1,8 @@
-from jcx.text.txt_json import load_json, to_json
-from openai import OpenAI
-
 import json
 import textwrap
+
+from jcx.text.txt_json import load_json, to_json
+from openai import OpenAI
 
 from jxl.common import JXL_OAI_DIR
 from jxl.oai.types1 import LlmCfg
@@ -107,9 +107,10 @@ def main():
     # 提取并打印模型生成的JSON结果
     json_string = completion.choices[0].message.content
     print("model:", completion.model)
+    assert completion.usage is not None
     print("total_tokens:", completion.usage.total_tokens)
     print("json_string:", json_string)
-    #print("system_prompt:", system_prompt)
+    # print("system_prompt:", system_prompt)
 
 
 if __name__ == "__main__":

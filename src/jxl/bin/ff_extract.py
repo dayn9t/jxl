@@ -63,12 +63,12 @@ def extract_frames_from_mkv_using_ffmpeg(
             )
             logging.info(f"文件 {mkv_file.name} 处理完成")
         except subprocess.CalledProcessError as e:
-            logging.exception(f"处理文件 {mkv_file.name} 时出错: {e.stderr}")
+            logging.error(f"处理文件 {mkv_file.name} 时出错: {e.stderr}")
 
     return processed_files
 
 
-def main() -> None:
+def main():
     logging.basicConfig(level=logging.INFO)
 
     src_dir = "/mnt/temp/2025_03_24"  # 替换为源MKV文件目录

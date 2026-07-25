@@ -15,7 +15,10 @@ class Cutter2:
     """时间序列图像切割, 用以提供图图像场景样本"""
 
     def __init__(
-        self, dst_dir: Path, sensitivity: int = 50, tile_size: Size | None = None
+        self,
+        dst_dir: Path,
+        sensitivity: int = 50,
+        tile_size: Size | None = None,
     ) -> None:
         self.tile_size = tile_size if tile_size is not None else Size.new(224, 224)
         self.threshold = 20 * sensitivity / 50  # 距离阈值
@@ -26,7 +29,7 @@ class Cutter2:
         """检测镜头移动"""
         dist = self.matcher.match(im1, im2)
         dist = round(dist, 2)
-        logger.info("dist: {}", dist)
+        logger.info(f"dist: {dist}")
         return dist > self.threshold
 
     def _cut_tile(self, ims: list[ImageNda], src_file: Path) -> None:
@@ -51,10 +54,10 @@ class Cutter2:
 
             trace_image(dst_im)
             if self._check_moved(dst_rois[0], dst_rois[1]):
-                name = name_with_parents(src_file, 3)  # 文件名=节点_设备_日期_名称
-                if name.is_null():
-                    continue
-                file = stem_append(self.dst_dir / name.unwrap(), f"_{i}")
+                name = name_with_parents(
+                    src_file, 3
+                ).unwrap()  # 文件名=节点_设备_日期_名称
+                file = stem_append(self.dst_dir / name, f"_{i}")
                 dst_im.save(file)
 
     def cut_files(self, files: list[Path]) -> None:

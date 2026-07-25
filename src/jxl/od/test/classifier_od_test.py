@@ -7,9 +7,8 @@ from jvi.geo.size2d import Size
 from jvi.image.io import load_images_in
 from jvi.image.trace import close_all_windows, trace_images
 
-from jxl.cls.classifier import ClassifierOpt
 from jxl.iqa.diag_extractor import DIV_COLS, DIV_ROWS, DIV_SIZE, DiagExtractor
-from jxl.od.classifier_od import ClassifierOd
+from jxl.od.classifier_od import ClassifierOd, ClassifierOpt
 
 
 def main() -> None:
@@ -17,6 +16,8 @@ def main() -> None:
     model_path = model_dir / "moved.joblib"
 
     image_dir = Path("/home/jiang/ws/trash/outside/2022/n1/neg1/31011000602700301")
+    # image_dir = Path('/home/jiang/ws/trash/outside/2022/n1/n/31010102100100201')
+    # image_dir = Path('/home/jiang/ws/trash/outside/2022/n1/n/1')
     opt = ClassifierOpt((DIV_COLS * DIV_ROWS,), 3)
     model = ClassifierOd(model_path, opt)
 
@@ -25,12 +26,12 @@ def main() -> None:
     images = load_images_in(image_dir)
     num_err = 0
     for i, (a, b) in enumerate(pairwise(images)):
-        print(f"#{i} {images[i]}")  # noqa: T201
+        print(f"#{i} {images[i]}")
         v = extractor.extract(a, b).match_vec
 
         r = model(v)
         if r.top_index() == 1:
-            print(f"  r: {r}")  # noqa: T201
+            print(f"  r: {r}")
             num_err += 1
             key, _ = trace_images(
                 [a, b], box_size=Size.new(1920, 540), auto_close=False
@@ -40,7 +41,7 @@ def main() -> None:
 
     total = len(images) - 1
     ratio = round(num_err / total, 4)
-    print(f"错误率: {num_err}/{total}({ratio * 100}%)")  # noqa: T201
+    print(f"错误率: {num_err}/{total}({ratio * 100}%)")
     close_all_windows()
 
 

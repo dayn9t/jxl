@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """视频抽帧数据集时序下采样(去相邻帧冗余).
 
 MOT17 等连续视频抽帧数据集, 相邻帧相似度极高, 作检测样本冗余大.
@@ -31,7 +31,7 @@ def parse_name(stem: str) -> tuple[str, int] | None:
     idx = stem.rfind("_")
     if idx < 0:
         return None
-    tail = stem[idx + 1:]
+    tail = stem[idx + 1 :]
     return (stem[:idx], int(tail)) if tail.isdigit() else None
 
 
@@ -78,7 +78,11 @@ def main(
     action = "[dry-run] " if dry_run else "已删除 "
     logger.info(
         "{}{} 序列 | 留 {} 删 {} (stride={}){}",
-        action, len(groups), keep_total, drop_total, stride,
+        action,
+        len(groups),
+        keep_total,
+        drop_total,
+        stride,
         f" | 跳过 {skipped} 无帧号文件" if skipped else "",
     )
 

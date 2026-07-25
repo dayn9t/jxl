@@ -1,0 +1,23 @@
+from jvi.image.image_nda import ImageNda
+from jvi.image.struct import find_polygons
+
+from jxl.det.idetector import DetObject, DetObjects
+from jxl.label.prop import ProbValue
+from jxl.seg.iseg import ISegRes
+
+
+class MaskRes(ISegRes):
+    """Mask分割器返回结果"""
+
+    def __init__(self, mask: ImageNda, min_area: float) -> None:
+        self._mask = mask
+        self._min_area = min_area
+
+    def foreground(self) -> ImageNda:
+        """获取前景Mask"""
+        return self._mask
+
+    def objects(self) -> DetObjects:
+        """获取结果中的对象集合"""
+        boxes = find_polygons(self._mask, self._min_area)
+        return [DetObject(0, ProbValue(0, 0.5), polygon=box.polygon) for box in boxes]

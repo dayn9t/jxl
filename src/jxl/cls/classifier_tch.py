@@ -1,29 +1,28 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import torch
+import torch.nn.functional as functional
+import torchvision.transforms as transforms
 from jvi.image.image_nda import ImageNda
-from jvi.image.trans import bgr_to_pil
+from jvi.image.trans import PilImage, bgr_to_pil
 from loguru import logger
 from torch import Tensor
-from torch.nn import functional
 from torchsummary import summary
-from torchvision import transforms
 
 from jxl.cls.arch.torch_image import load_pth_tar
-from jxl.cls.classifier import ClassifierOpt, ClassifierRes, IClassifier, ModelFormat
-from jxl.label.prop import ProbValue
-
-if TYPE_CHECKING:
-    from PIL.Image import Image as PilImage
+from jxl.cls.classifier import ClassifierOpt, IClassifier, ModelFormat
+from jxl.label.a2d.dd import ProbValue
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
-@dataclass(frozen=True)
-class ClassifierTchRes(ClassifierRes):
-    """图片分类器结果"""
+@dataclass(frozen=True, slots=True)
+class ClassifierTchRes:
+    """图片分类器结果。
+
+    结构化实现 ClassifierRes 协议（不显式继承 Protocol 当基类）。
+    """
 
     output: Tensor
 
@@ -31,6 +30,14 @@ class ClassifierTchRes(ClassifierRes):
         """最可能类别"""
         m = torch.max(self.output.data, 0)
         return ProbValue(int(m.indices.item()), float(m.values.item()))
+
+    def top_index(self) -> int:
+        """最可能类别索引"""
+        return self.top().value
+
+    def top_confidence(self) -> float:
+        """最可能类别置信度"""
+        return self.top().conf
 
     def confidences(self) -> list[float]:
         """获取各个分类的置信度"""
@@ -40,7 +47,7 @@ class ClassifierTchRes(ClassifierRes):
         return len(self.output)
 
 
-class ClassifierTch(IClassifier):
+class ClassifierTch(IClassifier[ImageNda]):
     """图片分类器"""
 
     model_class = "image_net"
@@ -49,9 +56,11 @@ class ClassifierTch(IClassifier):
         super().__init__(model_path, opt, device_name)
 
         if opt.data_format == ModelFormat.FULL_MODEL:
-            model: torch.nn.Module = torch.load(model_path, weights_only=False)
+            model = torch.load(model_path)
         else:
             model = load_pth_tar(opt.num_classes, model_path)
+        # print(opt)
+        # show_keys(model.state_dict(), 'full:')
 
         model = model.cuda()
         model.eval()  # 固定dropout/归一化层，否则每次推理结果不同
@@ -70,12 +79,10 @@ class ClassifierTch(IClassifier):
     def show_detail(self) -> None:
         """显示细节信息"""
         summary(self.model, (3, 224, 224))
-        logger.info("{}", self.model)
+        logger.info(f"model: {self.model}")
 
     def __str__(self) -> str:
-        s = self.model.__str__()
-        assert isinstance(s, str)
-        return s
+        return str(self.model)
 
     def num_parameters(self) -> int:
         """TODO: 用途？"""
@@ -104,5 +111,5 @@ class ClassifierTch(IClassifier):
 
     def save(self, file: Path) -> None:
         """必须在至少一次推理后保存，格式.pth"""
-        logger.info("model save to: {}", file)
+        logger.info(f"model save to: {file}")
         torch.save(self.model, file)

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import *
+from typing import Final, Protocol, Self
 
 from jcx.time.dt import now_iso_str
 from jvi.drawing.color import Color, Colors
@@ -145,7 +145,7 @@ class A2dObjectLabel(BaseModel):
         return deepcopy(self)
 
 
-A2dObjectLabels = List[A2dObjectLabel]
+A2dObjectLabels = list[A2dObjectLabel]
 """2D分析目标标注信息集"""
 
 
@@ -178,6 +178,11 @@ class A2dImageLabel(BaseModel):
         for i, ob in enumerate(label.objects):
             ob.id = i + 1
         return label
+
+    @classmethod
+    def new(cls, user_agent: str, objects: A2dObjectLabels) -> Self:
+        """构造图片标注"""
+        return cls(user_agent=user_agent, objects=objects)
 
     def roi_rect(self) -> Rect:
         """获取 ROI 外包矩形"""
@@ -220,7 +225,7 @@ class A2dImageLabel(BaseModel):
         self,
         canvas: ImageNda,
         cfg: LabelMeta,
-        visible_props: List[str],
+        visible_props: list[str],
         show_conf: bool = True,
         cat_filter: int = -1,
     ) -> None:
@@ -238,21 +243,17 @@ class A2dImageLabel(BaseModel):
             assert color
             label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
             for prop_id, v in ob.properties.items():
-                # FIXME(jvi-migration): properties 现以 int prop_id 为键; visible_props
-                # 仍是 prop 名称列表, 需经 cfg 解析 prop_id->name 做名称过滤。
-                if "all" not in visible_props:
-                    prop_meta = cfg.prop_meta_by_id(prop_id)
-                    if prop_meta.is_null():
-                        continue
-                    if prop_meta.unwrap().name not in visible_props:
-                        continue
+                if "all" not in visible_props and prop_id not in visible_props:
+                    continue
                 p = cfg.prop_value_sign(ob.prob_class.value, prop_id, v.value)
                 match p:
                     case Some(v_name):
                         if len(v_name) > 0:
                             label += " " + v_name + (v.conf_str() if show_conf else "")
                     case _:
-                        pass
+                        logger.warning(
+                            f"无效属性: {ob.prob_class.value} {prop_id} {v.value}"
+                        )
                     # fmt = ' %s=%d' if type(v) == int else ' %s=%.2f'
                     # label += fmt % (k, v)
             if cfg.label.title_style == 0:
@@ -276,10 +277,10 @@ class A2dImageLabel(BaseModel):
 
     def min_conf(self) -> float:
         """计算最小置信度, TODO: 分属性计算"""
-        confs = (o.min_conf() for o in self.objects)
+        confs = map(lambda o: o.min_conf(), self.objects)
         return min(confs, default=1.0)
 
-    def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> Tuple[Rect, Self]:
+    def crop_by_roi(self, im_size: Size, extend_side: int = 4) -> tuple[Rect, Self]:
         """根据ROI裁切标注样本, 以期提高目标的分辨率"""
         rect = self.roi_rect()
         assert rect.is_normalized()
@@ -301,13 +302,13 @@ class A2dImageLabel(BaseModel):
         return deepcopy(self)
 
 
-A2dImageLabels = List[A2dImageLabel]
+A2dImageLabels = list[A2dImageLabel]
 """图像标注信息集"""
 
-A2dImageLabelPair = Tuple[Path, A2dImageLabel]
+A2dImageLabelPair = tuple[Path, A2dImageLabel]
 """图像与标注信息对"""
 
-A2dImageLabelPairs = List[A2dImageLabelPair]
+A2dImageLabelPairs = list[A2dImageLabelPair]
 """图像与标注信息对集"""
 
 

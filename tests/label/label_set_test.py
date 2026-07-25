@@ -1,4 +1,4 @@
-from jxl.label.a2d.label_set import *
+from jxl.label.a2d.label_set import LabelFormat
 
 
 def test_label_format():

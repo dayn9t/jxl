@@ -1,4 +1,4 @@
-from jxl.cls.classifier import *
+from jxl.cls.classifier import ClassifierResList, vote_weighted
 
 
 def test_vote() -> None:

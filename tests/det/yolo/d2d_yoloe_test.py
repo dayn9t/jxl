@@ -1,8 +1,7 @@
 from pathlib import Path
 
-import cv2  # type: ignore
 from jvi.image.image_nda import ImageNda
-from jvi.image.trace import trace_image, close_all_windows
+from jvi.image.trace import close_all_windows, trace_image
 
 from jxl.det.d2d import D2dOpt, draw_d2d_objects
 from jxl.det.yolo.d2d_yoloe import D2dYoloE

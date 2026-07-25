@@ -1,14 +1,14 @@
 import csv
 from dataclasses import astuple, dataclass
-from pathlib import Path
 
 from jcx.sys.fs import StrPath
 from jvi.geo.rectangle import Rect
 from loguru import logger
 from rustshed import Err, Ok, Result
 
-from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels
-from jxl.label.prop import ProbValue
+from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels, ProbValue
+
+type KittiError = OSError | ValueError | IndexError | csv.Error
 
 """
 # 参考：
@@ -18,8 +18,7 @@ from jxl.label.prop import ProbValue
 """
 
 
-@dataclass(slots=True)
-# FIXME: KittiLabelInfo 不可冻结 — bbox.setter 需可变修改 left/top/right/bottom 字段。
+@dataclass
 class KittiLabelInfo:
     """Kitti标注信息"""
 
@@ -73,39 +72,45 @@ class KittiLabelInfo:
 KittiLabelInfos = list[KittiLabelInfo]
 
 
-def load_kitti(file: StrPath) -> Result[KittiLabelInfos, str]:
+def load_kitti(file: StrPath) -> Result[KittiLabelInfos, KittiError]:
     """加载KITTI标注信息"""
-    with Path(file).open() as f:
-        rows = csv.reader(f, delimiter=" ")
-        infos = [
-            KittiLabelInfo(
-                r[0],
-                float(r[1]),
-                int(r[2]),
-                float(r[3]),
-                float(r[4]),
-                float(r[5]),
-                float(r[6]),
-                float(r[7]),
-                float(r[8]),
-                float(r[9]),
-                float(r[10]),
-                float(r[11]),
-                float(r[12]),
-                float(r[13]),
-                float(r[14]),
-            )
-            for r in rows
-        ]
+    try:
+        with open(file) as f:
+            rows = csv.reader(f, delimiter=" ")
+            infos = [
+                KittiLabelInfo(
+                    r[0],
+                    float(r[1]),
+                    int(r[2]),
+                    float(r[3]),
+                    float(r[4]),
+                    float(r[5]),
+                    float(r[6]),
+                    float(r[7]),
+                    float(r[8]),
+                    float(r[9]),
+                    float(r[10]),
+                    float(r[11]),
+                    float(r[12]),
+                    float(r[13]),
+                    float(r[14]),
+                )
+                for r in rows
+            ]
+    except (OSError, ValueError, IndexError, csv.Error) as e:
+        return Err(e)
     return Ok(infos)
 
 
-def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, str]:
-    """加载KITTI标注信息"""
-    with Path(txt_file).open("w") as fp:
-        writer = csv.writer(fp, delimiter=" ")
-        for o in infos:
-            writer.writerow(astuple(o))
+def save_kitti(infos: KittiLabelInfos, txt_file: StrPath) -> Result[bool, KittiError]:
+    """保存KITTI标注信息"""
+    try:
+        with open(txt_file, "w") as fp:
+            writer = csv.writer(fp, delimiter=" ")
+            for o in infos:
+                writer.writerow(astuple(o))
+    except (OSError, csv.Error) as e:
+        return Err(e)
     return Ok(True)
 
 
@@ -128,18 +133,20 @@ def to_kitti(info: A2dObjectLabel, label_names: list[str]) -> KittiLabelInfo:
     return k
 
 
-def import_kitti(file: StrPath, label_names: list[str]) -> Result[A2dObjectLabels, str]:
+def import_kitti(
+    file: StrPath, label_names: list[str]
+) -> Result[A2dObjectLabels, KittiError]:
     """导入KITTI标注文件"""
     r = load_kitti(file)
     if r.is_err():
-        return Err(r.unwrap_err())
+        return Err(r.err().unwrap())
     infos = [from_kitti(k, label_names) for k in r.unwrap()]
     return Ok(infos)
 
 
 def export_kitti(
     infos: A2dObjectLabels, file: StrPath, label_names: list[str]
-) -> Result[bool, str]:
+) -> Result[bool, KittiError]:
     """导出KITTI标注文件"""
     ks = [to_kitti(info, label_names) for info in infos]
     return save_kitti(ks, file)
@@ -148,13 +155,13 @@ def export_kitti(
 def labels_test() -> None:
     infos0 = load_kitti("demo.kitti").unwrap()
     for info in infos0:
-        logger.info("{}", astuple(info))
+        logger.info(f"{astuple(info)}")
 
     # save_kitti(infos0, "demo1.kitti").unwrap()
 
     infos1 = load_kitti("demo1.kitti").unwrap()
 
-    logger.info("{}", infos0 == infos1)
+    logger.info(f"{infos0 == infos1}")
 
 
 if __name__ == "__main__":

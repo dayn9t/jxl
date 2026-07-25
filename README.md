@@ -1,66 +1,48 @@
-# JXL
+<!-- TODO(relocate): README 待重写反映新现状（训练/导出/标注/ModelContract），见 SPEC §5.5 -->
+# jxl — Python ML 库
 
-机器/深度学习基础库。
+dayn9t 推理层的 Python 侧：模型训练 / 导出 / 标注工具 + `ModelContract` 写入端（把训练侧元数据 embed 进 ONNX，驱动 Rust 侧 `ml-vision` 推理契约）。
 
-## 样本处理
+> 旧版 README（2022 shtm/trash 操作指南、ias 脚本流程）已废弃——本文件只描述 jxl **库**本身。
 
-- 标注：```jxl_label <路径> 101 -v -l 3```
+## 结构（`src/jxl/`）
 
+| 模块 | 职责 |
+|------|------|
+| `det/` | 检测（YOLO 集成、`Detector` trait、mm） |
+| `seg/` | 分割（SAM、mask） |
+| `track/` | 跟踪（`IouTracker`） |
+| `cls/` | 分类（`IClassifier[T]`、`ClassifierRes` Protocol） |
+| `label/` | 标注工具与格式转换（COCO / Darknet / KITTI / labelme，含 `DataCoco`、tile、blend） |
+| `contract/` | **ModelContract 写入端**——`embed_contract` 把 schema 写入 ONNX metadata key `ml.model_contract`（schema 权威在 `ml-types::ModelContract` + schemars，见跨 repo spec） |
+| `model/` | 模型类型（`ModelInfo[OptT]` 泛型） |
+| `bin/` | CLI 入口（`jml_label` / `jml_prop` / `jml_sample` / 标注审核等，经 `uv run` 或 entry point 调用） |
+| `io/` `iqa/` `od/` `sam/` `util/` `yolo/` | I/O、图像质量、目标检测、SAM、工具、YOLO |
 
-## 操作步骤
+`examples/oai/` 下为 LLM provider demo 脚本（不在可 import 包命名空间）。
 
-- 拉取图片
-    - 更新服务器的目录访问权限
-    - 拉取：```ias-snapshot-pull.sh shtm n1 h```
+## ModelContract 契约
 
+jxl 是训练↔推理 artifact 契约的**写入侧**：
 
-- 设定日期：```date=***2022-01-01***```
+```
+jxl (embed_contract)  →  ONNX metadata[ml.model_contract]  →  ml-vision (parse_contract, fail-fast)
+                              ↑ schema 权威
+                      ml-types::ModelContract (schemars 派生)
+```
 
-- 本地生成标注，验证新训练好的模型：
-    - 修改：PROJECT/cfg/work/trash/31.json中的fps>1，结束时还要恢复
-    - 启动保存：```ias_dump.py PROJECT NODE -v```
-    - 启动传感器：```ias_sensor.py PROJECT NODE -v```
-    - 启动数据源：```ias_source_folder.py PROJECT NODE DATE -v```
-    - 必要时修改权限：```sudo find -name "*.msg" -exec chmod 777 {} \;```
-- TODO: ias_pick
-- 目标标注：```jml_label.py $saw $date 31 -D $daw```
-    - 复查标注加参数：```-l```
-    - 筛选错误：```-p 17-49-40.694.jpg```
-- 标注查看：```jml-viewer.py <dir> -m 31 -f hop```
-- 属性标注：
-    - 桶类别：```jml_prop.py $date 31 can sort```
-    - 垃圾量：```jml_prop.py $date 31 can amount```
-    - 盖类别：```jml_prop.py $date 31 lid sort```
-    - 桶盖面：```jml_prop.py $date 31 lid side```
-- 样本生成：
-    - 检测样本：```jml-sample.py $date ../../cabin/dates/$date 31```
-    - 桶类别：
-        - 筒口: ```jml-sample.py $date ../../can-sort/dates/$date 31 -c opening -p sort -P o_```
-        - 筒盖: ```jml-sample.py $date ../../can-sort/dates/$date 31 -c lid -p sort -P l_ -k```
-    - 垃圾量：```jml-sample.py $date ../../trash-amount/dates/$date 31 -c can -p amount```
-- 加入样本全集：```rsync -av $date/ ../samples/```
-- 分割样本集：```jml-split.py samples dataset```
-- 样本审核：
-    - 审核全部样本：```jml-check.py images/ -n 类别数 -v```
-    - 审核当天样本：```jml-check.py data/$date/ -n 类别数 -v```
-- 其他
-    - 开启视频诊断: ```find -name "*2.json" -exec sed -i 's/"private": true/"private": false/g' {} \;```
+`ml-types/tests/schema_sync.rs` 守护 jxl 的 schema 拷贝与 ml-types 派生 schema 一致（drift 即测试失败）。
 
-## 模型
+## 开发
 
-- 模型导出：```yolo export model=2024-11-10_sign.pt format=onnx simplify dynamic```
-- 验证模型：```yolo val task=detect model=2025-02-15_sign.onnx imgsz=640 data=/home/jiang/ws/s4/sign/dataset.yaml```
+```bash
+uv sync                 # 安装
+uv run ruff check .     # lint（gate：精选规则，见 ruff.toml）
+uv run mypy .           # 类型检查（strict=false 渐进基线 + 高价值告警）
+uv run pytest           # 测试
+```
 
-## TODO
+## 关键约束
 
-- jxl_label
-    - 添加：调到下一个sensor
-    - **特性：概率筛选，排序**
-- jxl_label2，二级检测目标标注
-- 重构coco，转换成标准格式
-
-## Change
-
-- jxl_label
-    - 修复G: 插入顶点产生自相交
-
+- **类型严格**：全量注解、禁 `Any`/`hasattr`/裸 `except`（j-python-strict）；`BaseModel>dict`、`@dataclass(frozen=True, slots=True)`、`StrEnum`。
+- **契约一致**：改 `ml-types::ModelContract` schema 后须重新生成 schema（`ml-types` 的 `gen_schema`）并同步本库 `contract/schema/` 拷贝，否则 `schema_sync` 失败。

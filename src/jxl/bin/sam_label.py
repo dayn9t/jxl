@@ -102,7 +102,7 @@ def process_video(
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     video_file: Annotated[Path, typer.Argument(help="输入视频文件路径")],
     dataset_dir: Annotated[Path, typer.Argument(help="输出数据集目录")],
     names: Annotated[str, typer.Argument(help="目标类别名称, 多个类别用逗号分隔")],

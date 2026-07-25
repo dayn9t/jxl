@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 
 import argparse
 from copy import deepcopy
@@ -38,7 +38,7 @@ class Labeler(RecordViewer):
         snapshot_dir: Path,
         visible_props: list[str],
         verbose: bool,
-    ) -> None:
+    ):
         super().__init__("labeler", meta.view_size)
         self.meta_id = meta_id
         self.snapshot_dir = snapshot_dir
@@ -107,7 +107,7 @@ class Labeler(RecordViewer):
             cur_label = import_label(f, self.meta_id)
             self.labeled = False
         self.cur_label = cur_label.unwrap_or(A2dImageLabel(user_agent="jxl_label"))
-        print("  #%d" % index, f, len(self.cur_label.objects) - 1)
+        print(f"  #{index}", f, len(self.cur_label.objects) - 1)
 
         if self.locked_roi.is_some():
             self.cur_label.roi = deepcopy(self.locked_roi.unwrap())
@@ -279,7 +279,7 @@ class Labeler(RecordViewer):
         match self.cur_object:
             case Some(ob):
                 ob.prob_class.value = category
-                print("类别修改: %d %d" % (ob.id, category))
+                print(f"类别修改: {ob.id} {category}")
                 self.saved = False
             case _:
                 print("当前目标不存在")

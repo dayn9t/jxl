@@ -1,7 +1,7 @@
-from jcx.sys.fs import *
+from jcx.sys.fs import dirs_in, files_in
 
 
-def main() -> None:
+def main():
     src_dir = "/var/howell/s4/ias/snapshot/d1/n1/13/0"  # 示例源目录
     dirs = dirs_in(src_dir)
 

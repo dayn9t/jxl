@@ -5,6 +5,7 @@ from jvi.drawing.color import YOLO_GRAY
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
 from jvi.image.proc import get_roi_image
+from loguru import logger
 
 from jxl.label.a2d.dd import (
     A2dImageLabelPairs,
@@ -24,7 +25,7 @@ class DarknetSet(A2dLabelSet):
     """Darknet标注格式数据集"""
 
     @classmethod
-    def valid_set(cls, folder: Path, meta_id: int) -> bool:  # noqa: ARG003
+    def valid_set(cls, folder: Path, meta_id: int) -> bool:
         """检验路径是否是本格式的数据集"""
         return DarknetDir.valid_dir(folder)
 
@@ -46,19 +47,19 @@ class DarknetSet(A2dLabelSet):
         pairs = self.darknet_dir.find_pairs(pattern)
         return [(path, label.to_label()) for path, label in pairs]
 
-    def save(self, root: Path) -> None:  # noqa: ARG002
+    def save(self, root: Path) -> None:
         self.darknet_dir.save()
 
 
 def darknet_export_objects(objects: A2dObjectLabels, txt_file: Path) -> None:
     """保存标注对象集"""
-    with Path(txt_file).open("w") as fp:
+    with open(txt_file, "w") as fp:
         for o in objects:
             c = o.prob_class.value
             if c < 0:  # TODO: 类别过滤
                 continue
             f = o.rect().cs_list()
-            fp.write(f"{c} {f[0]} {f[1]} {f[2]} {f[3]}\n")
+            fp.write(f"{c} {f[0]:f} {f[1]:f} {f[2]:f} {f[3]:f}\n")
 
 
 def darknet_dump_labels(
@@ -73,15 +74,14 @@ def darknet_dump_labels(
     labels_dir = make_subdir(folder, "labels", remake)
     images_dir = make_subdir(folder, "images", remake)
 
+    logger.info(f"\n开始生成样本({len(labels)})：")
     total = 0
-    for image, raw_label in labels:
+    for image, label in labels:
         src: ImageNda = ImageNda.load(image)
-        label = raw_label
 
         if crop_roi:
-            rect, cropped = label.crop_by_roi(src.size())
+            rect, label = label.crop_by_roi(src.size())
             src = src.roi(rect)
-            label = cropped
         name = image.stem
         jpg = images_dir / f"{name}.jpg"
         txt = labels_dir / f"{name}.txt"

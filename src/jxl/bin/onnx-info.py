@@ -4,7 +4,7 @@ import onnx
 import onnxruntime as ort
 
 
-def main1(model_path: Path) -> None:
+def main1(model_path: Path):
     providers = ["CPUExecutionProvider"]
     session_options = ort.SessionOptions()
     session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -24,7 +24,7 @@ def main1(model_path: Path) -> None:
         print(f"Name: {output.name}, Shape: {output.shape}, Type: {output.type}")
 
 
-def main2(model_path: Path) -> None:
+def main2(model_path: Path):
     model = onnx.load(model_path)
     for imp in model.opset_import:
         print(f"打印OpSet导入信息: {imp.domain}, Version: {imp.version}")

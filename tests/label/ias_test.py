@@ -1,4 +1,6 @@
-from jxl.label.ias import *
+from pathlib import Path
+
+from jxl.label.ias import ias_image_path_of_label
 
 
 def test_image_path_of_label():

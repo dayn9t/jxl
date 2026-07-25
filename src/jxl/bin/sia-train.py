@@ -1,12 +1,13 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 import random
 from argparse import ArgumentParser, Namespace
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.optim as optim
 import torchvision
 from torch import device as Device
-from torch import nn, optim
 from torch.optim import Adadelta
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset
@@ -25,7 +26,7 @@ class SiameseNetwork(nn.Module):
     In addition, we aren't using `TripletLoss` as the MNIST dataset is simple, so `BCELoss` can do the trick.
     """
 
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         # get resnet model
         self.resnet = torchvision.models.resnet18(weights=None)
@@ -54,7 +55,7 @@ class SiameseNetwork(nn.Module):
         self.resnet.apply(self.init_weights)
         self.fc.apply(self.init_weights)
 
-    def init_weights(self, m) -> None:
+    def init_weights(self, m):
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
@@ -80,7 +81,7 @@ class SiameseNetwork(nn.Module):
 
 
 class APP_MATCHER(Dataset):
-    def __init__(self, root, train, download=False) -> None:
+    def __init__(self, root, train, download=False):
         super().__init__()
 
         # get MNIST dataset
@@ -96,7 +97,7 @@ class APP_MATCHER(Dataset):
 
         self.group_examples()
 
-    def group_examples(self) -> None:
+    def group_examples(self):
         """
         To ease the accessibility of data based on the class, we will use `group_examples` to group
         examples based on class.
@@ -114,7 +115,7 @@ class APP_MATCHER(Dataset):
         for i in range(10):
             self.grouped_examples[i] = np.where(np_arr == i)[0]
 
-    def __len__(self) -> int:
+    def __len__(self):
         return self.data.shape[0]
 
     def __getitem__(self, index):

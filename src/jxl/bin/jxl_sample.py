@@ -1,8 +1,7 @@
-#!/opt/ias/env/bin/python
+#!/usr/bin/env python3
 """样本生成程序: 把标注数据集导出为 YOLO(darknet) 训练样本."""
 
 # typer CLI 惯用模式: bool Option 默认值与参数校验异常消息, 豁免相关噪声规则
-# ruff: noqa: FBT002, TRY003, EM101, EM102
 
 from enum import StrEnum
 from pathlib import Path
@@ -29,7 +28,7 @@ app = typer.Typer(help="样本生成程序: 标注数据集 -> YOLO 训练样本
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     src_dir: Annotated[Path, typer.Argument(help="来源标注目录")],
     dst_dir: Annotated[Path, typer.Argument(help="目的样本目录")],
     meta_id: Annotated[int, typer.Argument(help="元数据ID")],

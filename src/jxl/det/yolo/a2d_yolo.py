@@ -1,14 +1,11 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from jvi.image.image_nda import ImageNda
-from ultralytics.models.yolo.model import YOLO
+from ultralytics import YOLO
 
 from jxl.det.a2d import A2dOpt, A2dResult, Analyzer2D, from_d2d
+from jxl.det.d2d import D2dResult
 from jxl.det.yolo.d2d_yolo import D2dYolo
-
-if TYPE_CHECKING:
-    from jxl.det.d2d import D2dResult
 
 
 class A2dYolo(Analyzer2D):

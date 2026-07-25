@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """图像目录自动标注工具 - 基于 YOLOE 开放词汇检测.
 
 该工具参考 sam_label.py 设计，但支持图像目录输入而非视频文件。
@@ -117,7 +117,10 @@ def process_image_dir(
             dataset.add_sample(name, image, a2d_ret)
             success += 1
 
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError, KeyError, AttributeError) as e:
+            # 批处理:单张图像失败(I/O 解码 / 模型推理 / 标注转换 / 写入)记录后
+            # 继续处理其余图像,不静默吞错(logger.error 显式上报);
+            # verbose 模式向上抛出以便定位。
             logger.error("[{}/{}] {} - 处理失败: {}", i, total, image_file.name, e)
             if verbose:
                 raise
@@ -132,16 +135,14 @@ def process_image_dir(
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     src_dir: Annotated[Path, typer.Argument(help="输入图像目录")],
     dst_dir: Annotated[Path, typer.Argument(help="输出数据集目录")],
     names: Annotated[str, typer.Argument(help="目标类别名称, 多个类别用逗号分隔")],
     model_name: Annotated[
         str, typer.Option(help="YOLOE 模型文件名")
     ] = "yoloe-11l-seg.pt",
-    weights_dir: Annotated[
-        Path | None, typer.Option(help="模型权重文件目录")
-    ] = None,
+    weights_dir: Annotated[Path | None, typer.Option(help="模型权重文件目录")] = None,
     conf_thr: Annotated[float, typer.Option(help="置信度阈值")] = 0.3,
     iou_thr: Annotated[float, typer.Option(help="IOU 阈值")] = 0.5,
     meta_id: Annotated[int, typer.Option(help="元数据 ID")] = 0,
