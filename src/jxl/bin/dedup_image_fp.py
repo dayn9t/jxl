@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """整图姿态指纹去重(场景A).
 
 监控背景完全相同, 整图 pHash/CLIP 被背景主导. 改用前景姿态指纹:

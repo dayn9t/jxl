@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """评估 grounding 结果 vs rmb_yolo GT：定位 IoU/召回/精度/F1 + 面额准确率。
 
 读 ground_notes 产出的 ndjson + GT labels，按图 stem 匹配，

@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """按 experiment toml 配置,前缀 symlink 组合各样本集 → 训练池。
 
 读 config.toml(name, datasets, split)→ 对每 dataset 的 images+labels

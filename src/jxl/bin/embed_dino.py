@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """DINOv2 embedding 提取(前景 crop, SSL 前景特征).
 
 对目录下所有图像提取 DINOv2(自监督) embedding, L2 归一化,

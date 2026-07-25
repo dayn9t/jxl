@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """可灵钱币变体生成：每张钱币 → 5 变体(陈旧/污渍/折痕/破损/笔迹) + VLM 复检面额(丢弃失真)。
 
 读 sources_selected/{denom}/*.jpg（bat67 原图，白底），每张小图(≥300px) → 可灵图生图变体

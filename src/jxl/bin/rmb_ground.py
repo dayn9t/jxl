@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """VLM grounding：让视觉模型定位图中人民币纸币，输出归一化 bbox + 面额标签。
 
 支持多后端，访问信息从 json 配置文件读取（base_url + api_key），

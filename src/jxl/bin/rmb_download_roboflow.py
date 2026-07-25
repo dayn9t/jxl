@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Download Roboflow Universe datasets in YOLOv8 format.
 
 The annotated RMB detection datasets all live on Roboflow behind a free API key.

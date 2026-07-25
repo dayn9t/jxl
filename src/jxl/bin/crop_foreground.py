@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 YOLO 标注数据集截取前景 crop(任意类别 bbox, 原图分辨率, 紧贴 bbox, 无 padding).
 
 遍历 samples/{images,labels}, 把指定类别(--person-class)的 bbox(归一化) 区域

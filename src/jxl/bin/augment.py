@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """YOLO-aware data augmentation for banknote detection.
 
 Reads a YOLO detection dataset (``images/`` + ``labels/`` with paired

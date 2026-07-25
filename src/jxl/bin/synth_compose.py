@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Copy-Paste 合成：可灵背景 + YOLOE-seg 抠好的透明钱币 → 多币散落图 + 自动 bbox。
 
 读 assets/backgrounds/（可灵文生图背景）+ assets/notes_cut/{denom}/*.png（YOLOE-seg 抠的透明钱币），

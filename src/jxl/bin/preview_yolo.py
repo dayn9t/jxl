@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """画 YOLO 标注 bbox 回图网格，供样本审批/VLM 复查。
 
 读 images/+labels/，随机抽 N 张，按 class 着色画 bbox + 面额标签，拼成网格输出。

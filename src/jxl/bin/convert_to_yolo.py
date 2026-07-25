@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Convert foreign detection datasets (COCO / VOC) into YOLO .txt labels.
 
 Outputs one ``.txt`` per image with lines ``class cx cy w h`` (all normalized),

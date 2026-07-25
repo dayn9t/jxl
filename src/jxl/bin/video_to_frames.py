@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Sample frames from videos into a dataset folder.
 
 When you film banknotes from many angles under different lighting, this turns

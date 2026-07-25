@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """可灵文生图批量生成无钱币桌面背景，供 Copy-Paste 合成。
 
 复用 kling_recompose 的可灵 API 调用与维度池。文生图（无参考图）已验证可用。

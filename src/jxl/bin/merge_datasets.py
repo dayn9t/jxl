@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Merge Roboflow YOLOv8 datasets into one unified RMB training set.
 
 Each Roboflow export uses its own class-id order and naming. This tool unifies

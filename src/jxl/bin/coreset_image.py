@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """整图 core-set 去重(场景A, 图前景 embedding, 强制减量).
 
 Re-ID(torchreid/insightface) 受阻时的可靠兜底:

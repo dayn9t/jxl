@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 mkv 视频提取编码关键帧（I-frame）→ 图片目录。
 
 ffmpeg 无损提取所有 I 帧（select=eq(pict_type,I)），全量不抽样。

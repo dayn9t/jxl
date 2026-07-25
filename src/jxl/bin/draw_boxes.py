@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """把 grounding 检测框画回原图，供视觉 / VLM 复查定位准确性。
 
 读 ground_notes / yolo_ground 产出的 ndjson，把检测框(label+conf)画到图上，

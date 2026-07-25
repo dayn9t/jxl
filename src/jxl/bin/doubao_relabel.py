@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """P2 豆包 vision grounding 复检 det_mine review 集 → YOLO labels。
 
 读 det_mine review/manifest.jsonl，对每图豆包 grounding(prompt 由 --target 加载

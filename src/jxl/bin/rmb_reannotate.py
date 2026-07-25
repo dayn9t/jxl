@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """可灵生成图 reannotation + 面额校验 → YOLO 检测集。
 
 对 assets/synth/ 可灵生成图：豆包 grounding 出 bbox+面额，校验检测面额 ∈ manifest

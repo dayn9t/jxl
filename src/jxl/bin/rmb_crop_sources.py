@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 rmb_yolo train 按 bbox 抠出钱币前景，作可灵图生图的参考素材源。
 
 按面额平衡抽样，去白底，输出紧致钱币图到 assets/sources/{denom}/。

@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """YOLOE-seg 抠钱币：精确掩码去白底，输出透明 PNG（供 Copy-Paste）。
 
 用 jxl venv（ultralytics 8.4.75 + yoloe-11l-seg.pt）。set_classes(["banknote"]) 开放词汇分割。

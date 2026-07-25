@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 VLM 打标结果筛选高质量钱币作可灵图生图参考源。
 
 读 describe ndjson，过滤（真实人民币 + 适合合成 + 完整 + 无伪影），

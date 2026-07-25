@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """VLM 打标：用多模态模型给每张人民币图生成结构化描述，用于筛选"合成素材源"。
 
 读取一个钱币图片目录（默认 bat67），对每张图调用 OpenAI 兼容的多模态端点

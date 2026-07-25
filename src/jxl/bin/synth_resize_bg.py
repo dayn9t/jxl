@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """背景图统一处理成 960×960：
 - 宽高比≈1:1 → resize 960×960
 - 宽高比≈2:1 或 1:2 → 切两半(允许重叠) → 各 resize 960×960

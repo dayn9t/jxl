@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 rmb_yolo 按 bbox 抠取钞票前景：裁剪块 → YOLOE-seg 抠透明 → 按面额存 notes_cut。
 
 用户决策：rmb_yolo 不再作训练/验证集，但从中抠取钞票前景子图作 Copy-Paste 素材。

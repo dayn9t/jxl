@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Search-engine image crawler for banknote collection.
 
 Pulls images per keyword (e.g. "人民币 100元 纸币") into

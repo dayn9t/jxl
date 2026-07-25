@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """可灵图生图重绘：钱币参考图 + 场景prompt → 生成"纸币散落台面"合成图。
 
 已验证可用（请求被受理）：端点 https://api-beijing.klingai.com/v1/images/generations、

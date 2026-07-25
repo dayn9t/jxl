@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """Det-Mine: N 模型加权争议分 + cascade 难例挖掘。
 
 target(person.pt 等) + 多校验器(YOLOE/GroundingDINO/RF-DETR) 同检 → hardmine.score_sample

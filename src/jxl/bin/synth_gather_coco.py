@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """从 COCO 下载新背景：dining_table 补集(贴桌面目标) + bench/couch/bed(多样性) → 去重 → resize_960 → backgrounds_960。
 
 dining_table 共 11837 张，coco_dt 已下 2499，取补集。bench/couch/bed 增加场景多样性。

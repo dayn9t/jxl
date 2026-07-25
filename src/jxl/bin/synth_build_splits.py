@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """合成数据随机划分 train/val/test（全合成，同分布公平评估，解决 domain shift）。
 
 输入合成图目录(images/+labels/)，随机按比例划分，复制到 YOLO 标准布局，生成 data_abs.yaml。

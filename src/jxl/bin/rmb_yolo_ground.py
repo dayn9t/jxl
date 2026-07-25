@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """YOLOE grounding：用本机 YOLOE 开放词汇检测纸币，输出归一化 bbox。
 
 用 jxl 的 venv 跑（ultralytics 8.4.75 + yoloe-11l-seg.pt），不依赖 money 项目的 typer。

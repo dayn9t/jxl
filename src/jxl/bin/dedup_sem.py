@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """前景 crop 去重(SemDeDup 近重复 + k-means core-set 选代表).
 
 DINOv2 是通用视觉模型, 区分不了实例身份(实测 39370 crop 聚成 1 大簇),

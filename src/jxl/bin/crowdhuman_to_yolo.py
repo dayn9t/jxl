@@ -1,4 +1,4 @@
-#!/home/jiang/py/jxl/.venv/bin/python
+#!/usr/bin/env python3
 """将 CrowdHuman odgt 标注转为 YOLO person 检测集。
 
 读 annotation.odgt（每行一图 JSON: ID + gtboxes[].{tag,fbox,vbox,hbox,head_attr}），
