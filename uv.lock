@@ -552,7 +552,7 @@ wheels = [
 [[package]]
 name = "jcx"
 version = "0.5.6"
-source = { directory = "/home/jiang/py/jcx" }
+source = { directory = "/home/jiang/cc/py/jcx" }
 dependencies = [
     { name = "arrow" },
     { name = "cattrs" },
@@ -681,7 +681,7 @@ wheels = [
 [[package]]
 name = "jvi"
 version = "0.4.5"
-source = { directory = "/home/jiang/py/jvi" }
+source = { directory = "/home/jiang/cc/py/jvi" }
 dependencies = [
     { name = "arrow" },
     { name = "imageio" },
@@ -699,7 +699,7 @@ dependencies = [
 requires-dist = [
     { name = "arrow" },
     { name = "imageio" },
-    { name = "jcx", directory = "/home/jiang/py/jcx" },
+    { name = "jcx", directory = "/home/jiang/cc/py/jcx" },
     { name = "loguru" },
     { name = "numpy" },
     { name = "opencv-contrib-python" },
@@ -771,9 +771,9 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "imageio", extras = ["ffmpeg"], specifier = ">=2.34" },
     { name = "insightface", specifier = ">=1.0.1" },
-    { name = "jcx", directory = "/home/jiang/py/jcx" },
+    { name = "jcx", directory = "/home/jiang/cc/py/jcx" },
     { name = "jsonschema" },
-    { name = "jvi", directory = "/home/jiang/py/jvi" },
+    { name = "jvi", directory = "/home/jiang/cc/py/jvi" },
     { name = "lap" },
     { name = "loguru" },
     { name = "numpy" },

@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = "~=3.12.0"
 dependencies = [
-    "jcx @ file:///home/jiang/py/jcx",
-    "jvi @ file:///home/jiang/py/jvi",
+    "jcx @ file:///home/jiang/cc/py/jcx",
+    "jvi @ file:///home/jiang/cc/py/jvi",
     "rustshed",
     "pydantic",
     "typer",
