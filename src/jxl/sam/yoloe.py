@@ -16,7 +16,7 @@ def main() -> None:
     model.set_classes(names, model.get_text_pe(names))
 
     # Run detection on the given image
-    rs = model.predict("/home/jiang/py/jxl/assets/person/p2.jpg")
+    rs = model.predict("/home/jiang/cc/py/jxl/assets/person/p2.jpg")
 
     assert isinstance(rs, list)
     assert len(rs) == 1

@@ -53,7 +53,7 @@ def process_video(
     video_file = video_file.resolve()
     logger.info("video_file: {}", video_file)
 
-    weights_dir = weights_dir or Path("/home/jiang/py/jxl/models")
+    weights_dir = weights_dir or Path("/home/jiang/cc/py/jxl/models")
     yolo_set_weights_dir(str(weights_dir))
 
     capture = Capture(video_file)

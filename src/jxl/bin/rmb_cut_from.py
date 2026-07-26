@@ -8,8 +8,8 @@
 面额不均(1/5/10yuan 各~300, 20/50/100yuan 各1000-2000)，小面额靠可灵变体补充。
 
 用法:
-  /home/jiang/py/jxl/.venv/bin/python tools/cut_from_rmb.py --limit 50   # 小规模验证
-  /home/jiang/py/jxl/.venv/bin/python tools/cut_from_rmb.py              # 全量
+  /home/jiang/cc/py/jxl/.venv/bin/python tools/cut_from_rmb.py --limit 50   # 小规模验证
+  /home/jiang/cc/py/jxl/.venv/bin/python tools/cut_from_rmb.py              # 全量
 """
 import argparse
 import json
@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from ultralytics import YOLOE
 
-MODEL = "/home/jiang/py/jxl/models/yoloe-11l-seg.pt"
+MODEL = "/home/jiang/cc/py/jxl/models/yoloe-11l-seg.pt"
 CANON = ["1yuan", "5yuan", "10yuan", "20yuan", "50yuan", "100yuan"]
 ID2D = dict(enumerate(CANON))
 

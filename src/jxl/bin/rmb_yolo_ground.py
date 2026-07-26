@@ -5,7 +5,7 @@
 输出格式与 ground_notes.py 一致，可用 eval_grounding.py 评估。
 
 用法:
-  /home/jiang/py/jxl/.venv/bin/python tools/yolo_ground.py \\
+  /home/jiang/cc/py/jxl/.venv/bin/python tools/yolo_ground.py \\
       --src assets/rmb_yolo/images/valid --out assets/grounding/yoloe_valid.ndjson
 """
 import argparse
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from ultralytics import YOLOE
 
-MODEL = "/home/jiang/py/jxl/models/yoloe-11l-seg.pt"
+MODEL = "/home/jiang/cc/py/jxl/models/yoloe-11l-seg.pt"
 _IMG_EXTS = {".jpg", ".jpeg", ".png"}
 
 

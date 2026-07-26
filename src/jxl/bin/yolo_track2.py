@@ -11,7 +11,7 @@ def main() -> None:
     # video_path = "/mnt/temp/C2_2025_03_05T10_09_47_L.mkv"
     # video_path = "/mnt/temp/C2_2025_03_05T10_14_48_L.mkv"
 
-    src_dir = "/home/jiang/py/jxl/assets/s4/snapshots"
+    src_dir = "/home/jiang/cc/py/jxl/assets/s4/snapshots"
 
     model = YOLO(model_file)
 

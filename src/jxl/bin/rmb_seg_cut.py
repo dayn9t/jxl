@@ -5,7 +5,7 @@
 比阈值裁白边干净得多（精确掩码，无黑/白边残留）。
 
 用法:
-  /home/jiang/py/jxl/.venv/bin/python tools/seg_cut.py
+  /home/jiang/cc/py/jxl/.venv/bin/python tools/seg_cut.py
 """
 import argparse
 import json
@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from ultralytics import YOLOE
 
-MODEL = "/home/jiang/py/jxl/models/yoloe-11l-seg.pt"
+MODEL = "/home/jiang/cc/py/jxl/models/yoloe-11l-seg.pt"
 CANON = ["1yuan", "5yuan", "10yuan", "20yuan", "50yuan", "100yuan"]
 
 

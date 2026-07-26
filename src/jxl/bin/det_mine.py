@@ -35,7 +35,7 @@ app = typer.Typer(add_completion=False, help="Det-Mine: N 模型加权争议分 
 VALIDATOR_BACKENDS = {"yoloe", "gdino", "rfdetr"}
 _RFDETR_VARIANTS = {"base", "large"}
 _IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
-_YOLOE_DEFAULT = Path("/home/jiang/py/jxl/models/yoloe-11l-seg.pt")
+_YOLOE_DEFAULT = Path("/home/jiang/cc/py/jxl/models/yoloe-11l-seg.pt")
 
 
 @dataclass(frozen=True, slots=True)

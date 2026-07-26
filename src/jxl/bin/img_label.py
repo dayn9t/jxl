@@ -62,7 +62,7 @@ def process_image_dir(
     logger.info("src_dir: {}", src_dir)
     logger.info("dst_dir: {}", dst_dir)
 
-    weights_dir = weights_dir or Path("/home/jiang/py/jxl/models")
+    weights_dir = weights_dir or Path("/home/jiang/cc/py/jxl/models")
     yolo_set_weights_dir(str(weights_dir))
 
     # 查找所有图像文件

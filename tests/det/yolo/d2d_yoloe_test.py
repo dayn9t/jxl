@@ -8,13 +8,13 @@ from jxl.det.yolo.d2d_yoloe import D2dYoloE
 
 
 def a_test() -> None:
-    file = "/home/jiang/py/jxl/assets/person/p2.jpg"
+    file = "/home/jiang/cc/py/jxl/assets/person/p2.jpg"
     conf = 0.4
     iou = 0.5
     opt = D2dOpt(input_shape=(640, 640), conf_thr=conf, iou_thr=iou)
 
     model_name = "yoloe-11l-seg.pt"
-    model_file = Path("/home/jiang/py/jxl/models/yoloe", model_name)
+    model_file = Path("/home/jiang/cc/py/jxl/models/yoloe", model_name)
     names = ["person"]
 
     model = D2dYoloE(model_file, opt, names)
