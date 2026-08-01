@@ -1,0 +1,400 @@
+"""vdt Typer CLI —— 薄消费者（spec §11）。
+
+仅做参数校验、配置加载、产物 IO 与管线编排调用；重 ML 栈由 ``pipeline.run``
+lazy import 拉起，避免 app import 即拖入 torch/ultralytics/onnxruntime。
+
+命令：
+- ``vdt run <video> --config <toml>`` 跑管线，可选 ``--out-tracks`` / ``--out-video``。
+- ``vdt info`` 打印模型槽位与配置示例。
+
+约定（j-python-strict）：纯函数 helper（``load_config``/``write_tracks``/
+``annotate_video``）可独立单测，零模型依赖；``run_cmd`` 是 imperative shell。
+"""
+
+from __future__ import annotations
+
+import sys
+import tomllib
+from pathlib import Path
+from typing import Annotated
+
+import orjson
+import typer
+from loguru import logger
+from pydantic import ValidationError
+
+from jxl.det.d2d import D2dObject, draw_d2d_objects
+from jxl.vdt.types import (
+    DecodeError,
+    FrameResult,
+    Track,
+    Tracks,
+    VdtConfig,
+)
+
+app = typer.Typer(help="视频检测与跟踪 (detect → track → [pose]) 批处理 CLI")
+
+_TRACKR_MODES: tuple[str, ...] = ("iou", "reid")
+"""合法 tracker 模式（与 ``VdtConfig.tracker`` Literal 同步——单一数据源见 types.py）"""
+
+
+# ---------------------------------------------------------------------------
+# 纯函数 helper（可单测，自包含）
+# ---------------------------------------------------------------------------
+
+
+def load_config(path: Path, tracker_override: str | None, no_pose: bool) -> VdtConfig:
+    """读 TOML 配置 → ``VdtConfig``。
+
+    TOML 中 ``tracker_cfg`` 以**鉴别子表** ``[tracker_cfg.iou]`` / ``[tracker_cfg.reid]``
+    呈现（沿用 spec §11 示例）；本函数将其**拍平**为 ``VdtConfig.tracker_cfg`` 期望的
+    ``IouCfg | ReidCfg`` 直连 dict，再交 pydantic 校验。
+
+    - 非法值/缺字段 → pydantic ``ValidationError`` → 转 ``typer.BadParameter``（友好 CLI 错误）。
+    - ``tracker_override`` 非 None → 覆盖 ``tracker``；若覆盖与配置中的子表类型不一致 →
+      ``BadParameter``（提示需匹配的 cfg 子表）。
+    - ``no_pose`` → 剥离 ``pose``（等价于 ``config.pose=None``）。
+    """
+    if not path.is_file():
+        raise typer.BadParameter(f"配置文件不存在: {path}")
+    with path.open("rb") as f:
+        data = tomllib.load(f)
+
+    raw_cfg = data.get("tracker_cfg")
+    if not isinstance(raw_cfg, dict) or len(raw_cfg) != 1:
+        raise typer.BadParameter(
+            "tracker_cfg 必须含且仅含一个鉴别子表: [tracker_cfg.iou] 或 [tracker_cfg.reid]"
+        )
+    (sub_key, sub_body), = raw_cfg.items()
+    if sub_key not in _TRACKR_MODES:
+        raise typer.BadParameter(
+            f"tracker_cfg 子表名非法: {sub_key!r} (合法: {_TRACKR_MODES})"
+        )
+    if sub_body is None or not isinstance(sub_body, dict):
+        raise typer.BadParameter(f"[tracker_cfg.{sub_key}] 子表为空")
+
+    effective_mode = tracker_override if tracker_override is not None else sub_key
+    if tracker_override is not None and tracker_override != sub_key:
+        raise typer.BadParameter(
+            f"--tracker={tracker_override} 与配置子表 [tracker_cfg.{sub_key}] 不匹配；"
+            f"需提供 [tracker_cfg.{tracker_override}] 子表"
+        )
+
+    flat: dict[str, object] = {k: v for k, v in data.items()}
+    flat["tracker"] = effective_mode
+    flat["tracker_cfg"] = sub_body
+    if no_pose:
+        flat.pop("pose", None)
+
+    try:
+        return VdtConfig(**flat)
+    except ValidationError as e:
+        raise typer.BadParameter(f"配置校验失败 ({path}):\n{e}") from e
+
+
+def write_tracks(tracks: Tracks, path: Path) -> None:
+    """将 ``Tracks`` 序列化为 JSON 写入 ``path``（orjson，pydantic model_dump JSON 模式）。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = tracks.model_dump(mode="json")
+    path.write_bytes(orjson.dumps(payload))
+
+
+def annotate_video(video_path: str, tracks: Tracks, out_path: Path) -> None:
+    """按 ``tracks`` 重解码视频并绘制标注，写出 mp4。
+
+    用 ``OcvDecoder`` 以**与管线相同的 fps 采样**重解码——确保 ``frame_idx`` 与
+    ``Tracks`` 对齐。逐帧：有标注则 ``draw_d2d_objects`` 后写出，无则写原帧（保持时长）。
+
+    注：``jxl.vdt.decoder`` 在 P1 并行期可能未就绪；本函数内 lazy import，集成后由主控验证。
+    """
+    import cv2  # noqa: PLC0415（lazy import cv2 与 app import 解耦）
+    import numpy as np  # noqa: PLC0415
+
+    from jvi.image.image_nda import ImageNda  # noqa: PLC0415
+    from jxl.vdt.decoder import OcvDecoder  # noqa: PLC0415
+
+    frame_map: dict[int, list[D2dObject]] = {}
+    for tr in tracks.tracks:
+        for fr in tr.frames:
+            frame_map.setdefault(fr.frame_idx, []).extend(fr.objects)
+
+    decoder = OcvDecoder(video_path, tracks.config.decode)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _emit(frame_idx: int, frame_bgr: np.ndarray, writer: cv2.VideoWriter) -> None:
+        objs = frame_map.get(frame_idx, [])
+        if objs:
+            canvas = ImageNda(data=frame_bgr)
+            draw_d2d_objects(canvas, objs)
+            writer.write(canvas.data())
+        else:
+            writer.write(frame_bgr)
+
+    frame_iter = iter(decoder)
+    try:
+        first = next(frame_iter)
+    except StopIteration as e:
+        raise DecodeError(f"视频无帧可解码: {video_path}") from e
+
+    first_idx, _ts0, first_frame = first
+    height, width = first_frame.shape[:2]
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
+    writer = cv2.VideoWriter(str(out_path), fourcc, tracks.fps, (width, height))
+    if not writer.isOpened():
+        raise DecodeError(f"VideoWriter 打开失败: {out_path}")
+    try:
+        _emit(first_idx, first_frame, writer)
+        for frame_idx, _ts, frame in frame_iter:
+            _emit(frame_idx, frame, writer)
+    finally:
+        writer.release()
+
+
+# ---------------------------------------------------------------------------
+# 命令
+# ---------------------------------------------------------------------------
+
+
+@app.command("run")
+def run_cmd(
+    video: Annotated[Path, typer.Argument(help="输入视频路径 (mkv/mp4/...)")],
+    config: Annotated[Path, typer.Argument(help="TOML 配置路径 (spec §11)")],
+    tracker: Annotated[
+        str | None,
+        typer.Option("--tracker", help=f"覆盖配置中的 tracker ({'/'.join(_TRACKR_MODES)})"),
+    ] = None,
+    out_tracks: Annotated[
+        Path | None, typer.Option("--out-tracks", help="轨迹 JSON 输出路径")
+    ] = None,
+    out_video: Annotated[
+        Path | None, typer.Option("--out-video", help="标注视频 mp4 输出路径")
+    ] = None,
+    no_pose: Annotated[
+        bool, typer.Option("--no-pose", help="禁用 pose 阶段（等价 config.pose=None）"),
+    ] = False,
+) -> None:
+    """对 ``video`` 跑 detect → track →（可选）pose 管线，产出 tracks JSON 与/或标注视频。"""
+    if tracker is not None and tracker not in _TRACKR_MODES:
+        raise typer.BadParameter(f"--tracker 非法: {tracker} (合法: {_TRACKR_MODES})")
+    if not video.is_file():
+        raise typer.BadParameter(f"视频不存在: {video}")
+
+    cfg = load_config(config, tracker, no_pose)
+
+    from jxl.vdt.pipeline import run  # noqa: PLC0415（lazy import，避免 app import 拉 ML 栈）
+
+    logger.info("vdt run: {} | tracker={} | fps={}", video, cfg.tracker, cfg.decode.fps)
+    tracks = run(str(video), cfg)
+
+    if out_tracks is not None:
+        write_tracks(tracks, out_tracks)
+        logger.info("tracks → {}", out_tracks)
+    if out_video is not None:
+        annotate_video(str(video), tracks, out_video)
+        logger.info("annotated → {}", out_video)
+
+    duration_s = tracks.duration_ms / 1000.0
+    n_objs = sum(len(fr.objects) for tr in tracks.tracks for fr in tr.frames)
+    logger.info(
+        "完成: {} 条轨迹 | fps={:.2f} | 时长 {:.1f}s | 累计目标 {}",
+        len(tracks.tracks), tracks.fps, duration_s, n_objs,
+    )
+
+
+@app.command("info")
+def info_cmd() -> None:
+    """打印模型槽位说明与配置示例（纯文本，无副作用）。"""
+    info = """vdt 模型槽位（spec §7）：
+
+  检测 (det.model)
+    默认: yolo26s.pt
+    来源: ultralytics；经 D2dYolo 加载（track=False 走 predict 分支）
+
+  IoU 跟踪 (tracker="iou")
+    实现: jxl.vdt.tracker.IouTracker（ByteTrack-on-detections 思路）
+    配置: [tracker_cfg.iou]  iou_thr / max_age / min_hits
+
+  ReID 嵌入 (tracker="reid", tracker_cfg.reid.model)
+    默认: DINOv3 ViT-S/16 (frozen, ~21M)
+    来源: HF DINOv3 collection → ONNX（torch.onnx.export 或社区 convert-to-onnx）
+    fallback: DINOv2 small (sefaburak/dinov2-small-onnx) — 需显式 FALLBACK 标注
+
+  Pose (pose.model)
+    默认: RTMPose-m (~6M)
+    来源: MMPose / HF；SimCC 解码，crop 上推理
+
+配置示例 (experiments/vdt-person.toml, spec §11)：
+
+  tracker = "reid"
+  [decode]
+  fps = 0.5
+  [det]
+  model = "yolo26s.pt"
+  conf = 0.4
+  iou = 0.5
+  classes = [0]
+  [tracker_cfg.reid]
+  model = "dinov3-vits16.onnx"
+  cos = 0.6
+  motion_radius = 0.3
+  ema = 0.2
+  ttl_sec = 600
+  [pose]
+  enabled = true
+  model = "rtmpose-m.onnx"
+  kpt_shape = [17, 3]
+  keyframe_every = 5
+  min_hits = 3
+"""
+    sys.stdout.write(info)
+
+
+if __name__ == "__main__":
+    app()
+
+
+# ---------------------------------------------------------------------------
+# 单测（自包含，零模型依赖；pytest 自动发现）
+# ---------------------------------------------------------------------------
+
+from pathlib import Path as _Path  # noqa: E402
+from typing import Any  # noqa: E402
+
+import pytest  # noqa: E402
+from typer.testing import CliRunner  # noqa: E402
+
+from jvi.geo.point2d import Point  # noqa: E402
+from jvi.geo.rectangle import Rect  # noqa: E402
+from jxl.det.d2d import D2dObject as _D2dObject  # noqa: E402
+
+
+_IOU_TOML = """\
+tracker = "iou"
+[decode]
+fps = 25.0
+[det]
+model = "yolo26s.pt"
+conf = 0.4
+iou = 0.5
+classes = [0]
+[tracker_cfg.iou]
+iou_thr = 0.5
+max_age = 30
+min_hits = 3
+"""
+
+_REID_TOML = """\
+tracker = "reid"
+[decode]
+fps = 0.5
+[det]
+model = "yolo26s.pt"
+[tracker_cfg.reid]
+model = "dinov3-vits16.onnx"
+cos = 0.6
+motion_radius = 0.3
+ema = 0.2
+ttl_sec = 600
+[pose]
+enabled = true
+model = "rtmpose-m.onnx"
+"""
+
+
+def _write(tmp_path: _Path, name: str, body: str) -> _Path:
+    p = tmp_path / name
+    p.write_text(body, encoding="utf-8")
+    return p
+
+
+def test_load_config_iou_ok(tmp_path: _Path) -> None:
+    from jxl.vdt.cli import load_config
+
+    cfg = load_config(_write(tmp_path, "iou.toml", _IOU_TOML), None, False)
+    assert cfg.tracker == "iou"
+    assert cfg.decode.fps == 25.0
+    assert cfg.det.model == "yolo26s.pt"
+    assert cfg.tracker_cfg.iou_thr == 0.5  # type: ignore[union-attr]
+    assert cfg.pose is None  # 未提供 pose 子表 → None
+
+
+def test_load_config_invalid_fps_bad_param(tmp_path: _Path) -> None:
+    from jxl.vdt.cli import load_config
+
+    bad = _IOU_TOML.replace("fps = 25.0", "fps = 0.0")
+    with pytest.raises(typer.BadParameter):
+        load_config(_write(tmp_path, "bad.toml", bad), None, False)
+
+
+def test_load_config_tracker_override_mismatch_bad_param(tmp_path: _Path) -> None:
+    """配置是 iou 子表，--tracker=reid 覆盖 → 子表不匹配 → BadParameter。"""
+    from jxl.vdt.cli import load_config
+
+    with pytest.raises(typer.BadParameter):
+        load_config(_write(tmp_path, "iou.toml", _IOU_TOML), "reid", False)
+
+
+def test_load_config_tracker_override_match_ok(tmp_path: _Path) -> None:
+    from jxl.vdt.cli import load_config
+
+    cfg = load_config(_write(tmp_path, "reid.toml", _REID_TOML), "reid", False)
+    assert cfg.tracker == "reid"
+    assert cfg.tracker_cfg.cos == 0.6  # type: ignore[union-attr]
+
+
+def test_load_config_no_pose_strips_pose(tmp_path: _Path) -> None:
+    from jxl.vdt.cli import load_config
+
+    cfg = load_config(_write(tmp_path, "reid.toml", _REID_TOML), None, no_pose=True)
+    assert cfg.pose is None
+
+
+def _synth_tracks() -> Tracks:
+    rect = Rect.from_ltrb(Point(x=0.1, y=0.1), Point(x=0.4, y=0.5))
+    obj = _D2dObject(id=1, cls=0, conf=0.9, rect=rect)
+    fr = FrameResult(frame_idx=0, ts_ms=0, objects=[obj], kpts=[None])
+    track = Track(id=1, cls=0, frames=[fr])
+    # 构造合法 VdtConfig（直连 pydantic，绕过 TOML 拍平）
+    from jxl.vdt.types import DecodeCfg, DetCfg, IouCfg
+
+    vcfg = VdtConfig(
+        tracker="iou",
+        decode=DecodeCfg(fps=25.0),
+        det=DetCfg(model="yolo26s.pt"),
+        tracker_cfg=IouCfg(),
+        pose=None,
+    )
+    return Tracks(
+        src="x.mkv", fps=25.0, duration_ms=1000, tracks=[track], config=vcfg
+    )
+
+
+def test_write_tracks_roundtrip(tmp_path: _Path) -> None:
+    from jxl.vdt.cli import write_tracks
+
+    tracks = _synth_tracks()
+    out = tmp_path / "sub" / "tracks.json"
+    write_tracks(tracks, out)
+    assert out.is_file() and out.stat().st_size > 0
+
+    raw: dict[str, Any] = orjson.loads(out.read_bytes())
+    assert raw["src"] == "x.mkv"
+    assert raw["fps"] == 25.0
+    assert len(raw["tracks"]) == 1
+    assert raw["tracks"][0]["id"] == 1
+
+
+def test_info_cmd_exit_zero() -> None:
+    runner = CliRunner()
+    result = runner.invoke(app, ["info"])
+    assert result.exit_code == 0
+    assert "DINOv3" in result.stdout
+
+
+def test_run_cmd_missing_video_bad_param(tmp_path: _Path) -> None:
+    """视频不存在 → BadParameter（不进入管线）。"""
+    runner = CliRunner()
+    cfg = _write(tmp_path, "iou.toml", _IOU_TOML)
+    video = tmp_path / "nope.mkv"
+    result = runner.invoke(app, ["run", str(video), str(cfg)])
+    assert result.exit_code != 0

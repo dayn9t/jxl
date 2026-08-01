@@ -1,0 +1,20 @@
+# vdt 示例配置 — IoU 跟踪模式（正常帧率 MVP，spec §11/§13 P1）。
+# 用法:
+#   vdt run <video.mkv> --config experiments/vdt-iou.toml \
+#       --out-tracks tracks.json --out-video annotated.mp4
+
+tracker = "iou"
+
+[decode]
+fps = 25.0 # IoU 模式用源帧率（正常帧率跟踪）
+
+[det]
+model = "yolo26n.pt" # repo root 已有；spec 默认 yolo26s.pt
+conf = 0.4
+iou = 0.5
+classes = [0] # person
+
+[tracker_cfg.iou]
+iou_thr = 0.5
+max_age = 30
+min_hits = 3
