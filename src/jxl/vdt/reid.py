@@ -24,13 +24,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
-from collections.abc import Sequence
 
 import numpy as np
 
+# 测试段用（pytest 自动发现；常规 import，勿用 __import__ 动态导入——j-python-strict）
+from jvi.geo.size2d import Size as _Size
+
+from jxl.vdt._ort import OrtSessionLike, build_ort_session
 from jxl.vdt.reid_assoc import Embedder  # 协议单一数据源（纯函数核心模块）
-from jxl.vdt.types import ModelLoadError
+from jxl.vdt.types import ModelLoadError, ReidError
 
 # ---------------------------------------------------------------------------
 # 常量（DINOv2 官方预处理；单一数据源——本模块钉死，reid_tracker/reid_assoc 不重述）。
@@ -50,29 +52,8 @@ DINOV2_DIM: int = 384
 
 
 # ---------------------------------------------------------------------------
-# ort 结构化窄接口（ISP：仅依赖本模块用到的方法；避免引用被 mypy ignore 的
-# onnxruntime，也避免 ``Any``——j-python-strict，与 pose.py 同模式）。
+# ort 结构化窄接口 + CUDA fail-fast 构造：单一数据源见 :mod:`jxl.vdt._ort`
 # ---------------------------------------------------------------------------
-
-
-class _OrtNodeLike(Protocol):
-    """ort 输入/输出节点窄接口（仅用 ``name``）。"""
-
-    name: str
-
-
-class _OrtSessionLike(Protocol):
-    """``ort.InferenceSession`` 的结构化窄接口（仅用 ``run``/``get_inputs``/``get_outputs``）。"""
-
-    def run(
-        self,
-        output_names: list[str] | None,
-        input_feed: dict[str, np.ndarray],
-    ) -> list[np.ndarray]: ...
-
-    def get_inputs(self) -> Sequence[_OrtNodeLike]: ...
-
-    def get_outputs(self) -> Sequence[_OrtNodeLike]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -90,35 +71,24 @@ class ReidEmbedder:
     注明的 fallback 路径）。两者预处理与嵌入维数（384）一致。
     """
 
-    def __init__(self, model_path: str, device: str = "") -> None:
+    def __init__(self, model_path: str) -> None:
         """构造 ort session。
 
-        lazy import ``onnxruntime``（重 ML 栈，避免模块 import 时拉入）。``providers``
-        按 spec §9 显式配置 CUDA 优先 / CPU 兜底（spec §9 仅禁"回退别的模型"，不禁
-        EP 优先级表）。
+        ort session 经 :func:`jxl.vdt._ort.build_ort_session` 构造——**要求 CUDA**
+        （fail-fast，No Silent Degradation；不静默回退 CPU）。输出维度在 ``embed``
+        推理期由 ``reshape`` 校验，不符即 ``ReidError``（错误具体化，不裸泄漏）。
 
         Args:
             model_path: DINOv2 ONNX 权重路径。
-            device: 预留（与 :class:`YoloDetector`/``RtmposeStep`` 对称签名）；当前
-                由 providers 优先级表决定实际落 CUDA 还是 CPU。
 
         Raises:
-            ModelLoadError: 权重不存在 / ort 加载失败 / 输入或输出数不符（不回退替代模型）。
+            ModelLoadError: 权重不存在 / 无 CUDA EP / ort 加载失败 / IO 节点数不符
+                （不回退替代模型）。
         """
-        import onnxruntime as ort  # heavy ML; lazy
-
-        _ = device  # 预留：实际由 providers 优先级表决定
         path = Path(model_path)
         if not path.is_file():
             raise ModelLoadError(f"DINOv2 权重不存在: {model_path}")
-        # providers 顺序：CUDA 优先，CPU 兜底（与 RtmposeStep 一致）。
-        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        try:
-            session = ort.InferenceSession(str(path), providers=providers)
-        except Exception as ex:  # ort 抛类型不一，统一收口为 ModelLoadError。
-            raise ModelLoadError(
-                f"DINOv2 加载失败 ({model_path}): {type(ex).__name__}: {ex}"
-            ) from ex
+        session = build_ort_session(str(path))
 
         inputs = session.get_inputs()
         outputs = session.get_outputs()
@@ -130,7 +100,7 @@ class ReidEmbedder:
                 f"DINOv2 应有 1 输出 (CLS 嵌入)，实际 {len(outputs)}: {names}"
             )
 
-        self._session: _OrtSessionLike = session
+        self._session: OrtSessionLike = session
         self._in_name: str = inputs[0].name
 
     def embed(self, crop: np.ndarray) -> np.ndarray:
@@ -142,11 +112,14 @@ class ReidEmbedder:
         2. resize 224×224（``cv2.INTER_LINEAR``）。
         3. ``/255`` → ImageNet mean/std 标准化（RGB [0,1] 空间）。
         4. HWC → CHW → ``[1,3,224,224]`` float32。
-        5. forward → ``output[0]`` 形状 [384]（CLS 已池化）。
+        5. forward → ``output[0]`` 形状 [384]（CLS 已池化；维度构造期已校验）。
         6. L2 归一化。
 
         零面积 / 全零 crop → 返回全零 384-d（无效哨兵，``associate`` 据此判无效 →
         id=0，spec §9 显式哨兵而非静默填零点嵌入）。
+
+        Raises:
+            ReidError: 推理期 ort 异常（错误具体化，不裸泄漏）。
         """
         import cv2
 
@@ -161,8 +134,11 @@ class ReidEmbedder:
         x = (x - mean) / std  # 广播：HWC × 3
         x = np.transpose(x, (2, 0, 1))[None, ...]  # [1,3,224,224]
 
-        out = self._session.run(None, {self._in_name: x})[0]
-        emb = out.reshape(DINOV2_DIM).astype(np.float32)
+        try:
+            out = self._session.run(None, {self._in_name: x})[0]
+            emb = out.reshape(DINOV2_DIM).astype(np.float32)  # 维度不符→ValueError→ReidError
+        except (RuntimeError, ValueError) as ex:  # EP 失败 / 形状不匹配
+            raise ReidError(f"DINOv2 推理失败: {type(ex).__name__}: {ex}") from ex
         norm = float(np.linalg.norm(emb))
         if norm > 1e-12:
             emb = emb / norm
@@ -268,7 +244,7 @@ def test_embed_same_person_two_crops_high_cosine() -> None:
     ob = max(objs, key=lambda o: o.conf)
 
     # 主 crop：归一化 rect → 像素框裁剪。
-    px = ob.rect.absolutize(__import__("jvi.geo.size2d", fromlist=["Size"]).Size.new(w, h)).round()
+    px = ob.rect.absolutize(_Size.new(w, h)).round()
     lt, rb = px.ltrb()
     x0, y0 = max(0, int(lt.x)), max(0, int(lt.y))
     x1, y1 = min(w, int(rb.x)), min(h, int(rb.y))
@@ -314,7 +290,7 @@ def test_embed_heterogeneous_crops_low_cosine() -> None:
     if not objs:
         pytest.skip("p2.jpg 未检出 person，跳过")
     ob = max(objs, key=lambda o: o.conf)
-    px = ob.rect.absolutize(__import__("jvi.geo.size2d", fromlist=["Size"]).Size.new(w, h)).round()
+    px = ob.rect.absolutize(_Size.new(w, h)).round()
     lt, rb = px.ltrb()
     x0, y0 = max(0, int(lt.x)), max(0, int(lt.y))
     x1, y1 = min(w, int(rb.x)), min(h, int(rb.y))

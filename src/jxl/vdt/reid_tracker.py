@@ -35,32 +35,27 @@ from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
 
 from jxl.det.d2d import D2dObject
+from jxl.vdt._geom import pixel_box
 from jxl.vdt.reid_assoc import Embedder, Gallery, associate
 from jxl.vdt.types import ReidCfg
 
 # ---------------------------------------------------------------------------
-# Functional Core：_crop 纯函数（设计原则 6；可独立单测）
+# Functional Core：_crop 纯函数（设计原则 6；裁剪原语单一数据源见 _geom.pixel_box）
 # ---------------------------------------------------------------------------
 
 
 def _crop(
     image: np.ndarray, rect: Rect, img_w: int, img_h: int
 ) -> np.ndarray | None:
-    """归一化 ``rect`` → 像素 clip → crop ndarray；零面积 → None。
+    """归一化 ``rect`` → crop ndarray；零面积 → None。
 
-    与 :func:`jxl.vdt.pose._pixel_box` 同源逻辑（``absolutize``+``round``+clip 到
-    ``[0,img_w]×[0,img_h]``），仅返回 crop 本身——ReID 不需坐标回映（无关键点偏移）。
-    ``D2dObject.rect`` 恒归一化（来自 detector）；``absolutize`` 内部已 ``round``，再
-    ``.round()`` 幂等确保整数。detector 可能越界，clip 兜住。
+    裁剪原语（clip/零面积判据）复用 :func:`jxl.vdt._geom.pixel_box`（单一数据源，
+    与 pose 共用）；ReID 仅需 crop 本身，不需坐标回映偏移。
     """
-    px = rect.absolutize(Size.new(img_w, img_h)).round()
-    lt, rb = px.ltrb()
-    x0 = max(0, int(lt.x))
-    y0 = max(0, int(lt.y))
-    x1 = min(img_w, int(rb.x))
-    y1 = min(img_h, int(rb.y))
-    if x1 - x0 <= 0 or y1 - y0 <= 0:
+    box = pixel_box(rect, img_w, img_h)
+    if box is None:
         return None
+    x0, y0, x1, y1 = box
     return image[y0:y1, x0:x1]
 
 
@@ -95,18 +90,25 @@ class ReidTracker:
         self._cfg: ReidCfg = cfg
         self._embedder: Embedder = embedder
         self._gallery: Gallery = Gallery(tracks={}, next_id=1)
+        self._ended_ids: set[int] = set()
         self._dim: int | None = None
         """嵌入维度（模型内禀，跨帧/跨 reset 缓存）。首帧首个有效嵌入发现后锁定；
         零面积 crop 的占位零向量用此维度。None = 尚未见有效嵌入。"""
 
+    @property
+    def ended_ids(self) -> set[int]:
+        """本视频被 TTL 过期淘汰的 track_id（供 aggregate 标 ``ended``，spec §9）。"""
+        return self._ended_ids
+
     def reset(self) -> None:
-        """视频边界清 gallery（批处理多视频防跨视频身份泄漏，spec §4 关键设计点）。
+        """视频边界清 gallery + ended_ids（批处理多视频防跨视频身份泄漏，spec §4）。
 
         清空轨迹、``next_id`` 归 1——新视频从头分配，不继承上一视频的身份。
         ``_dim`` 跨 reset 保留（嵌入维度是模型内禀属性，非视频状态；保留避免新视频首帧
         重新探测）。
         """
         self._gallery = Gallery(tracks={}, next_id=1)
+        self._ended_ids = set()
 
     def update(
         self,
@@ -133,9 +135,12 @@ class ReidTracker:
         img_h, img_w = image.shape[:2]
         crops = [_crop(image, d.rect, img_w, img_h) for d in dets]
         embeddings = self._embed_all(crops)
+        old_ids = set(self._gallery.tracks)
         tracked, new_gallery = associate(
             embeddings, dets, self._gallery, ts_ms, self._cfg
         )
+        # TTL 淘汰：旧 gallery 有、新 gallery 无的 id（associate 内部按 ttl_sec 过滤）。
+        self._ended_ids |= old_ids - set(new_gallery.tracks)
         self._gallery = new_gallery
         return tracked
 
@@ -164,7 +169,7 @@ class ReidTracker:
 # ---------------------------------------------------------------------------
 # 单测（pytest 自动发现；spec §10 ReID 项）。
 # 自包含：合成 image + fake embedder（按 crop 像素均值映射到 one-hot 嵌入，模拟同人/异人），
-# 零真实模型。兄弟模块 reid_assoc 未就绪时整个测试段经 importorskip 优雅跳过。
+# 零真实模型依赖（reid_tracker 已硬依赖 reid_assoc，无需运行时 importorskip）。
 # ---------------------------------------------------------------------------
 
 from pathlib import Path  # noqa: E402
@@ -239,17 +244,10 @@ def test_crop_zero_area_returns_none() -> None:
     assert _crop(_blank(), Rect.new(0.1, 0.1, 0.0, 0.4), 100, 100) is None
 
 
-# -- 以下测试经 reid_assoc 兄弟模块驱动（未就绪时整段跳过，主控集成后全跑） ----------
-
-
-def _maybe_skip_reid_assoc() -> None:
-    """reid_assoc 兄弟未就绪则跳过本测试段（并行期 unresolved-import 兜底）。"""
-    pytest.importorskip("jxl.vdt.reid_assoc")
 
 
 def test_same_person_reuses_id_across_frames() -> None:
     """同人跨帧复用 id：同位置同纹理 det → 相同嵌入 → associate 复用同一 track_id。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)  # 全图常量 → crop mean=10
     d = _det(0.1, 0.1)
@@ -262,7 +260,6 @@ def test_same_person_reuses_id_across_frames() -> None:
 
 def test_distinct_persons_get_distinct_ids() -> None:
     """异人新建：不同位置 + 不同纹理 → 正交嵌入 → 各自新 id（不混淆）。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     image = _blank()
     a, b = _det(0.1, 0.1), _det(0.7, 0.1)  # 中心距 ≈ 0.6 > motion_radius=0.3
@@ -276,7 +273,6 @@ def test_distinct_persons_get_distinct_ids() -> None:
 
 def test_distinct_embedding_at_same_position_gets_new_id() -> None:
     """跨帧同人位置但外观变（正交嵌入）→ 不复用旧 id（cos 门控拦截，motion 放行）。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     d = _det(0.1, 0.1)
 
@@ -294,7 +290,6 @@ def test_distinct_embedding_at_same_position_gets_new_id() -> None:
 
 def test_ttl_expiry_assigns_new_id() -> None:
     """TTL 过期：ts_ms 跨度 > ``ttl_sec*1000`` → 旧轨迹被淘汰，再现分配新 id。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>", ttl_sec=1), _FakeEmbedder())  # 1 秒 TTL
     image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)
     d = _det(0.1, 0.1)
@@ -307,9 +302,22 @@ def test_ttl_expiry_assigns_new_id() -> None:
     assert f2[0].id >= 1
 
 
+def test_ttl_marks_ended() -> None:
+    """TTL 淘汰的轨迹进 ``ended_ids``（供 aggregate 标 ``Track.ended``，spec §9/§10）。"""
+    trk = ReidTracker(ReidCfg(model="<fake>", ttl_sec=1), _FakeEmbedder())
+    image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)
+    d = _det(0.1, 0.1)
+
+    out = trk.update(0, 0, image, [d])  # id=1
+    oid = out[0].id
+    assert trk.ended_ids == set()  # 尚无淘汰
+    # 人离开（空检测）超过 ttl → gallery 淘汰 id=oid
+    trk.update(1, 1500, image, [])
+    assert oid in trk.ended_ids
+
+
 def test_reset_clears_gallery_no_cross_video_leak() -> None:
     """reset 清 gallery：``tracks`` 空、``next_id`` 归 1（新视频不继承旧轨迹）。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)
     d = _det(0.1, 0.1)
@@ -327,7 +335,6 @@ def test_reset_clears_gallery_no_cross_video_leak() -> None:
 
 def test_zero_area_crop_emits_id0_sentinel() -> None:
     """零面积 crop（w=0）→ 提嵌入失败 → 零向量 → ``id=0`` 哨兵（不新建、不消耗 next_id）。"""
-    _maybe_skip_reid_assoc()
     trk = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)
     zero = D2dObject(id=0, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.0, 0.4))  # w=0
@@ -339,7 +346,6 @@ def test_zero_area_crop_emits_id0_sentinel() -> None:
 
 def test_frame_idx_ignored_reid_uses_ts_ms() -> None:
     """``frame_idx`` 在 reid 模式忽略：相同 ts_ms + image + dets，frame_idx 任意变 → 同结果。"""
-    _maybe_skip_reid_assoc()
     trk1 = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     trk2 = ReidTracker(ReidCfg(model="<fake>"), _FakeEmbedder())
     image = np.full((_IMG_SIZE, _IMG_SIZE, 3), 10, dtype=np.uint8)
@@ -403,7 +409,6 @@ def test_integration_real_dinov2_same_person_reuses_id() -> None:
     """
     pytest.importorskip("onnxruntime")
     pytest.importorskip("jxl.vdt.reid")
-    _maybe_skip_reid_assoc()
     onnx = Path("/home/jiang/cc/py/jxl/dinov2_vits14.onnx")
     if not onnx.is_file():
         pytest.skip("无 dinov2_vits14.onnx（集成 smoke 跳过）")

@@ -61,13 +61,11 @@ def should_pose(
       （抑制闪烁/误检）。
     - 已确认后，满足任一触发即 ``True``：
       ① 首次——``not state.had_pose``（刚跨过 ``min_hits``，首次捕获 pose）。
-      ② 周期关键帧——``state.had_pose and (frame_idx - state.last_pose_frame)
-         >= cfg.keyframe_every``。
-      ③ staleness 兜底——``state.had_pose and gap >= 2 * cfg.keyframe_every``
-         （与 ② 在常路径上重叠，作为安全网显式保留）。
-      ④ aspect 跳变——``state.had_pose and state.last_aspect >= 0 and
+      ② 周期关键帧（兼 staleness 兜底）——``state.had_pose and
+         (frame_idx - state.last_pose_frame) >= cfg.keyframe_every``。
+      ③ aspect 跳变——``state.had_pose and state.last_aspect >= 0 and
          abs(aspect - state.last_aspect) > _ASPECT_JUMP``。
-      ⑤ 遮挡退出——``state.hit_count > 0 and (frame_idx - state.last_seen_frame)
+      ④ 遮挡退出——``state.hit_count > 0 and (frame_idx - state.last_seen_frame)
          > 1``（id 缺席后重现；``last_seen_frame`` 取自上一帧观察）。
     """
     if cls != 0:
@@ -79,13 +77,11 @@ def should_pose(
         return True  # ① 首次
     gap = frame_idx - state.last_pose_frame
     if gap >= cfg.keyframe_every:
-        return True  # ② 周期关键帧
-    if gap >= 2 * cfg.keyframe_every:
-        return True  # ③ staleness 兜底（常路径被 ② 覆盖，安全网）
+        return True  # ② 周期关键帧（gap 越大即 staleness，单条覆盖，无需独立 K_max）
     if state.last_aspect >= 0 and abs(aspect - state.last_aspect) > _ASPECT_JUMP:
-        return True  # ④ aspect 跳变
+        return True  # ③ aspect 跳变
     if state.hit_count > 0 and (frame_idx - state.last_seen_frame) > 1:
-        return True  # ⑤ 遮挡退出
+        return True  # ④ 遮挡退出
     return False
 
 
@@ -182,14 +178,14 @@ def test_periodic_keyframe() -> None:
     assert gate.step(1, 0, 0, 0.5) is False
     assert gate.step(1, 0, 1, 0.5) is False
     assert gate.step(1, 0, 2, 0.5) is True  # last_pose=2
-    # frame 3-6: gap=1..4 < 5 → False（aspect 恒定、连续无遮挡→⑤ 不触发）
+    # frame 3-6: gap=1..4 < 5 → False（aspect 恒定、连续无遮挡→④ 不触发）
     assert gate.step(1, 0, 3, 0.5) is False
     assert gate.step(1, 0, 4, 0.5) is False
     assert gate.step(1, 0, 5, 0.5) is False
     assert gate.step(1, 0, 6, 0.5) is False
     # frame 7: gap=7-2=5 >= 5 → ② True
     assert gate.step(1, 0, 7, 0.5) is True  # last_pose=7
-    # frame 8-11: gap=1..4 < 5 → False（连续帧→⑤ 不触发）
+    # frame 8-11: gap=1..4 < 5 → False（连续帧→④ 不触发）
     assert gate.step(1, 0, 8, 0.5) is False
     assert gate.step(1, 0, 9, 0.5) is False
     assert gate.step(1, 0, 10, 0.5) is False
@@ -199,20 +195,20 @@ def test_periodic_keyframe() -> None:
 
 
 def test_aspect_jump_triggers_early() -> None:
-    """稳态中 aspect 突变 > 0.3 → 触发 ④，不等周期。"""
+    """稳态中 aspect 突变 > 0.3 → 触发 ③，不等周期。"""
     gate = PoseGate(_cfg(keyframe_every=5, min_hits=3))
     # 首次 pose at frame 2，aspect=0.5
     gate.step(1, 0, 0, 0.5)
     gate.step(1, 0, 1, 0.5)
     assert gate.step(1, 0, 2, 0.5) is True  # last_aspect=0.5, last_pose=2
-    # frame 3: aspect 跳到 1.05（Δ=0.55 > 0.3），gap=1 < 5 → 仅 ④ 触发
+    # frame 3: aspect 跳到 1.05（Δ=0.55 > 0.3），gap=1 < 5 → 仅 ③ 触发
     assert gate.step(1, 0, 3, 1.05) is True
     # 反向：last_aspect 现为 1.05，frame 4 aspect 回 0.5（Δ=0.55）→ 仍触发
     assert gate.step(1, 0, 4, 0.5) is True
 
 
 def test_aspect_small_change_no_trigger() -> None:
-    """aspect 微变（Δ <= 0.3）不触发 ④。"""
+    """aspect 微变（Δ <= 0.3）不触发 ③。"""
     gate = PoseGate(_cfg(keyframe_every=10, min_hits=1))
     assert gate.step(1, 0, 0, 0.5) is True  # ① 首次；last_aspect=0.5
     # frame 1: aspect=0.7（Δ=0.2 <= 0.3），gap=1 < 10 → False
@@ -220,41 +216,36 @@ def test_aspect_small_change_no_trigger() -> None:
 
 
 def test_staleness_fallback() -> None:
-    """周期阈值 ``keyframe_every`` 触发后，``2 * keyframe_every`` 仍触发 True。
+    """staleness 由周期规则 ② 单条覆盖：距上次 pose 达 ``keyframe_every`` 即触发。
 
-    规则 ③（``>= 2 * keyframe_every``）在常路径下被 ②（``>= keyframe_every``）
-    完全覆盖——``2*kf > kf`` ⇒ ② 总先满足。③ 作为安全网保留（防未来 ② 逻辑改动
-    漏判），本测试验证两个阈值点行为正确：在 gap=kf 与 gap=2*kf 处皆 True。
+    （曾设独立 ``>=2*keyframe_every`` 兜底，但被 ② 完全覆盖、永不可达，已删——
+    gap 越大 staleness 越严重，② 的 ``>=keyframe_every`` 已是最小阈值兼兜底。）
     """
     gate = PoseGate(_cfg(keyframe_every=5, min_hits=1))
-    assert gate.step(1, 0, 0, 0.5) is True  # last_pose=0
-    # 用一个独立的、禁止 ② 触发的场景验证 ③ 阈值点：keyframe_every 极大
-    # 使常规周期不可达，仅当 gap 推到 2*kf 时才命中（但 ② 先于 ③ 命中）。
-    # 为隔离 ③，改以"短窗口周期连续触发"为断言对象：
+    assert gate.step(1, 0, 0, 0.5) is True  # ① 首次，last_pose=0
     for f in range(1, 5):
         assert gate.step(1, 0, f, 0.5) is False  # gap 1..4 < 5
     assert gate.step(1, 0, 5, 0.5) is True  # gap=5 → ②
     # last_pose=5；frame 6-9 gap=1..4 → False
     for f in range(6, 10):
         assert gate.step(1, 0, f, 0.5) is False
-    # frame 10: gap=10-5=5 → ② 再次触发（gap=5=kf，2*kf 阈值由 ② 兜住）
-    assert gate.step(1, 0, 10, 0.5) is True
+    assert gate.step(1, 0, 10, 0.5) is True  # gap=5 → ② 再次触发
 
 
 def test_occlusion_exit_triggers_on_reappear() -> None:
-    """id 在 frame 2 后缺席，frame 10 重现（``frame_idx - last_seen > 1``）→ ⑤ True。"""
+    """id 在 frame 2 后缺席，frame 10 重现（``frame_idx - last_seen > 1``）→ ④ True。"""
     gate = PoseGate(_cfg(keyframe_every=30, min_hits=1))
     assert gate.step(1, 0, 0, 0.5) is True  # last_pose=0, last_seen=0
     gate.step(1, 0, 1, 0.5)  # last_seen=1
     gate.step(1, 0, 2, 0.5)  # last_seen=2
     # id 缺席 frame 3-9（不调 step），frame 10 重现
-    # frame 10: gap=10-0=10 < 30（② 不触发）；aspect 恒定（④ 不触发）；
-    #           10-2=8 > 1 → ⑤ 触发
+    # frame 10: gap=10-0=10 < 30（② 不触发）；aspect 恒定（③ 不触发）；
+    #           10-2=8 > 1 → ④ 触发
     assert gate.step(1, 0, 10, 0.5) is True
 
 
 def test_occlusion_gap_equal_one_no_trigger() -> None:
-    """``frame_idx - last_seen == 1``（连续帧）不触发 ⑤。"""
+    """``frame_idx - last_seen == 1``（连续帧）不触发 ④。"""
     gate = PoseGate(_cfg(keyframe_every=30, min_hits=1))
     assert gate.step(1, 0, 0, 0.5) is True
     # frame 1: gap_pose=1 < 30, aspect 同, 1-0=1 not > 1 → False

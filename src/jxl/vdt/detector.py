@@ -69,7 +69,9 @@ class YoloDetector:
             raise ModelLoadError(
                 f"加载 YOLO 检测权重失败: {model_path}（{type(ex).__name__}: {ex}）"
             ) from ex
-        except Exception as ex:  # ultralytics 内部抛类型不一，统一收口为 ModelLoadError。
+        except (RuntimeError, ValueError) as ex:
+            # ultralytics 内部多以 RuntimeError/ValueError 抛（权重格式/设备等）；
+            # 收窄避免把代码 bug（AttributeError/TypeError）误报为"模型加载失败"。
             raise ModelLoadError(
                 f"YOLO 权重加载异常: {model_path}（{type(ex).__name__}: {ex}）"
             ) from ex
@@ -184,7 +186,8 @@ def _has_cuda() -> bool:
         import torch
 
         return bool(torch.cuda.is_available())
-    except Exception:
+    except (ImportError, RuntimeError):
+        # torch 缺失（ImportError）或 CUDA 查询失败（RuntimeError，如驱动不匹配）→ 无可用 CUDA。
         return False
 
 

@@ -216,6 +216,12 @@ class Tracker(Protocol):
     共享同一接口（Plan B 对称）：换一次检测器两种跟踪模式同时受益。
     """
 
+    @property
+    def ended_ids(self) -> set[int]:
+        """本视频已被淘汰的 track_id（IoU=max_age 老化、ReID=TTL 过期），供 aggregate
+        标记 ``Track.ended``（spec §4/§9）。只读——淘汰由 tracker 内部决定。"""
+        ...
+
     def update(
         self, frame_idx: int, ts_ms: int, image: np.ndarray, dets: list[D2dObject]
     ) -> list[D2dObject]:
@@ -226,7 +232,7 @@ class Tracker(Protocol):
         """
 
     def reset(self) -> None:
-        """视频边界清状态（批处理多视频防跨视频身份泄漏）。"""
+        """视频边界清状态（批处理多视频防跨视频身份泄漏 + ended_ids 归空）。"""
 
 
 class PoseStep(Protocol):
@@ -236,3 +242,6 @@ class PoseStep(Protocol):
         self, image: np.ndarray, tracked: list[D2dObject]
     ) -> list[Keypoints | None]:
         """对 tracked 中满足门控的目标跑 RTMPose，其余位置 None。"""
+
+    def reset(self) -> None:
+        """视频边界清状态（门控状态/帧序/复用缓存；批处理多视频防泄漏）。"""

@@ -60,6 +60,7 @@ def aggregate(
     duration_ms: int,
     frames: list[FrameResult],
     config: VdtConfig,
+    ended_ids: set[int] | None = None,
 ) -> Tracks:
     """聚合逐帧结果为按 ``track_id`` 分组的时间线（spec §4 Aggregator）。
 
@@ -74,11 +75,13 @@ def aggregate(
         duration_ms: 源视频时长毫秒（透传到 ``Tracks.duration_ms``）。
         frames: 逐帧结果（objects 已带 track_id，kpts 已与 objects 对齐）。
         config: 管线配置快照（随 ``Tracks`` 持久化以保证可复现）。
+        ended_ids: 本视频被淘汰的 track_id（IoU=max_age 老化、ReID=TTL 过期），
+            这些 id 的 ``Track.ended`` 置 True（spec §4/§9）；None/空 → 全部 ended=False。
 
     Returns:
-        Tracks: 按 id 升序的轨迹集合。P1 IoU 模式下 ``ended`` 恒 False
-        （TTL 是 ReID 概念，P3 在 ReID 路径标记）。
+        Tracks: 按 id 升序的轨迹集合；``ended_ids`` 中的 id 标记 ``ended=True``。
     """
+    evicted: set[int] = ended_ids or set()
     # id -> 该 id 在各帧的 (源帧, 目标, 对齐关键点)
     grouped: dict[
         int, list[tuple[FrameResult, D2dObject, Keypoints | None]]
@@ -107,7 +110,7 @@ def aggregate(
             for fr, ob, kpt in entries
         ]
         tracks.append(
-            Track(id=tid, cls=first_cls[tid], frames=narrowed, ended=False)
+            Track(id=tid, cls=first_cls[tid], frames=narrowed, ended=tid in evicted)
         )
 
     return Tracks(
@@ -149,6 +152,8 @@ def run_pipeline(
         Tracks: 整段视频的轨迹集合。
     """
     tracker.reset()  # 视频边界清状态（批处理多视频防跨视频身份泄漏）
+    if pose is not None:
+        pose.reset()  # 同对称：清门控/帧序/复用缓存，防跨视频泄漏
     frames: list[FrameResult] = []
     for frame_idx, ts_ms, image in decoder:
         dets = detector.detect(image)
@@ -166,7 +171,9 @@ def run_pipeline(
                 kpts=kpts,
             )
         )
-    return aggregate(src, fps, duration_ms, frames, config)
+    return aggregate(
+        src, fps, duration_ms, frames, config, ended_ids=tracker.ended_ids
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +333,7 @@ class _FakeTracker:
 
     def __init__(self) -> None:
         self.reset_calls = 0
+        self.ended_ids: set[int] = set()
 
     def reset(self) -> None:
         self.reset_calls += 1
@@ -350,6 +358,9 @@ class _FakePoseStep:
 
         kpt = Keypoints(pts=[Point(x=0.5, y=0.5)] * 17, conf=[0.9] * 17)
         return [kpt for _ in tracked]
+
+    def reset(self) -> None:
+        """视频边界空操作（fake 无跨帧状态）。"""
 
 
 def _make_iou_config() -> VdtConfig:
@@ -423,6 +434,18 @@ def test_aggregate_skips_id0_sentinel() -> None:
     assert [t.id for t in out.tracks] == [5]
     assert len(out.tracks[0].frames) == 1
     assert out.tracks[0].frames[0].objects[0].id == 5
+
+
+def test_aggregate_marks_ended() -> None:
+    """ended_ids 中的 id → Track.ended=True，其余 False（spec §4/§9/§10）。"""
+    cfg = _make_iou_config()
+    fr = FrameResult(
+        frame_idx=0, ts_ms=0, objects=[_d2d(5), _d2d(7)], kpts=[None, None]
+    )
+    out = aggregate("v.mkv", 10.0, 100, [fr], cfg, ended_ids={5})
+
+    by_id = {t.id: t.ended for t in out.tracks}
+    assert by_id == {5: True, 7: False}
 
 
 def test_aggregate_aligns_kpts_into_narrowed_frames() -> None:
@@ -562,17 +585,22 @@ def test_build_tracker_reid_bad_model_raises() -> None:
 
 def test_build_tracker_reid_constructs_tracker() -> None:
     """``tracker='reid'`` + 真实权重 → ``ReidTracker``（注入 ``ReidEmbedder``）。"""
+    from pathlib import Path
+
     import pytest
 
-    cfg = VdtConfig(
-        tracker="reid",
-        decode=DecodeCfg(fps=0.5),
-        det=DetCfg(model="yolo26s.pt"),
-        tracker_cfg=ReidCfg(model="dinov2_vits14.onnx"),
-    )
+    onnx = Path(__file__).resolve().parents[3] / "dinov2_vits14.onnx"
+    if not onnx.is_file():
+        pytest.skip("缺 dinov2_vits14.onnx（gitignored），跳过 reid builder 集成")
     try:
         from jxl.vdt.reid_tracker import ReidTracker  # noqa: F401
     except ImportError:
         pytest.skip("jxl.vdt.reid_tracker 尚未实现")
+    cfg = VdtConfig(
+        tracker="reid",
+        decode=DecodeCfg(fps=0.5),
+        det=DetCfg(model="yolo26s.pt"),
+        tracker_cfg=ReidCfg(model=str(onnx)),
+    )
     trk = build_tracker(cfg)
     assert isinstance(trk, ReidTracker)

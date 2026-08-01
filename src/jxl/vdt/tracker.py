@@ -84,7 +84,13 @@ class IouTracker:
         self._min_hits: int = cfg.min_hits
         self._tracks: list[_TrackState] = []
         self._next_id: int = 1  # >=1；0 是哨兵。单调递增，不复用已结束 id。
+        self._ended_ids: set[int] = set()
         self.reset()
+
+    @property
+    def ended_ids(self) -> set[int]:
+        """本视频被 max_age 淘汰的 confirmed track_id（供 aggregate 标 ``ended``）。"""
+        return self._ended_ids
 
     def reset(self) -> None:
         """视频边界清状态（批处理多视频防跨视频身份泄漏，spec §4 关键设计点）。
@@ -93,6 +99,7 @@ class IouTracker:
         """
         self._tracks = []
         self._next_id = 1
+        self._ended_ids = set()
 
     def update(
         self,
@@ -191,6 +198,9 @@ class IouTracker:
             trk.miss_count += 1
             if trk.miss_count <= self._max_age:
                 survivors.append(trk)
+            elif trk.confirmed:
+                # max_age 淘汰的 confirmed 轨迹 → 记 ended（供 aggregate 标记，spec §9）
+                self._ended_ids.add(trk.id)
         self._tracks = survivors
 
     def _emit(
@@ -279,6 +289,18 @@ def test_max_age_expiry_assigns_new_id() -> None:
     f4 = trk.update(3, 99, _IMG, [a])  # 无既有轨迹，开新轨迹
     assert f4[0].id != oid
     assert f4[0].id >= 1
+
+
+def test_max_age_marks_ended() -> None:
+    """max_age 淘汰的 confirmed 轨迹进 ``ended_ids``（供 aggregate 标 ended，spec §9/§10）。"""
+    trk = IouTracker(IouCfg(iou_thr=0.5, max_age=1, min_hits=1))
+    a = _det(0.1, 0.1)
+
+    oid = trk.update(0, 0, _IMG, [a])[0].id  # confirmed（min_hits=1）
+    assert trk.ended_ids == set()
+    trk.update(1, 33, _IMG, [])  # miss_count=1，存活
+    trk.update(2, 66, _IMG, [])  # miss_count=2 > 1 → 移除 → ended
+    assert oid in trk.ended_ids
 
 
 def test_two_disjoint_objects_keep_distinct_ids() -> None:

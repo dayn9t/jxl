@@ -106,6 +106,12 @@ class OcvDecoder:
                     yield (frame_idx, ts_ms, np.asarray(frame))
                     frame_idx += 1
                 src_idx += 1
+            # spec §9：抽帧得 0 帧（损坏/不可解码，构造期 CAP_PROP_FRAME_COUNT 对部分
+            # 编码不准、可能误报正）→ raise，不静默产出空 Tracks（No Silent Degradation）。
+            if frame_idx == 0:
+                raise DecodeError(
+                    f"视频抽帧得 0 帧（损坏或不可解码）: {self._video_path}"
+                )
         finally:
             cap.release()
 

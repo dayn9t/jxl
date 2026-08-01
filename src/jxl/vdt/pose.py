@@ -28,67 +28,26 @@ RTMPose-m ONNX 批量 forward → SimCC 解码 → 坐标回映归一化 → 复
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from pathlib import Path
-from typing import Protocol
 
 import numpy as np
 
 from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
-from jvi.geo.size2d import Size
 from jxl.det.d2d import D2dObject
+from jxl.vdt._geom import pixel_box
+from jxl.vdt._ort import OrtSessionLike, build_ort_session
 from jxl.vdt.types import Keypoints, ModelLoadError, PoseCfg
 
 # ---------------------------------------------------------------------------
-# ort 结构化窄接口（ISP：仅依赖本模块用到的方法；避免引用被 mypy ignore 的
-# onnxruntime，也避免 ``Any``——j-python-strict）。
+# ort 结构化窄接口 + CUDA fail-fast 构造：单一数据源见 :mod:`jxl.vdt._ort`
+# （ISP/No Silent Degradation；reid 与 pose 共用）。
 # ---------------------------------------------------------------------------
-
-
-class _OrtNodeLike(Protocol):
-    """ort 输入/输出节点窄接口（仅用 ``name``）。"""
-
-    name: str
-
-
-class _OrtSessionLike(Protocol):
-    """``ort.InferenceSession`` 的结构化窄接口（仅用 ``run``/``get_inputs``/``get_outputs``）。"""
-
-    def run(
-        self,
-        output_names: list[str] | None,
-        input_feed: dict[str, np.ndarray],
-    ) -> list[np.ndarray]: ...
-
-    def get_inputs(self) -> Sequence[_OrtNodeLike]: ...
-
-    def get_outputs(self) -> Sequence[_OrtNodeLike]: ...
 
 
 # ---------------------------------------------------------------------------
 # Functional Core：纯函数（设计原则 6；可独立单测）
 # ---------------------------------------------------------------------------
-
-
-def _pixel_box(
-    rect: Rect, img_w: int, img_h: int
-) -> tuple[int, int, int, int] | None:
-    """归一化 ``Rect`` → 裁剪到边界的像素 int 框 ``(x0, y0, x1, y1)``；零面积 → None。
-
-    ``D2dObject.rect`` 恒归一化（来自 detector）。``absolutize`` 内部已 ``round``，
-    再 ``.round()`` 幂等确保整数；随后裁剪到 ``[0,img_w]×[0,img_h]``（detector 可能
-    越界，clip 兜住）。
-    """
-    px = rect.absolutize(Size.new(img_w, img_h)).round()
-    lt, rb = px.ltrb()
-    x0 = max(0, int(lt.x))
-    y0 = max(0, int(lt.y))
-    x1 = min(img_w, int(rb.x))
-    y1 = min(img_h, int(rb.y))
-    if x1 - x0 <= 0 or y1 - y0 <= 0:
-        return None
-    return x0, y0, x1, y1
 
 
 def _crop_rect(
@@ -97,9 +56,9 @@ def _crop_rect(
     """裁剪 ``rect`` 对应的 crop，返回 ``(crop, x0_px, y0_px)``；零面积 → None。
 
     左上角像素 ``(x0_px, y0_px)`` 是坐标回映的偏移量，与 crop 同源于一次裁剪——单一
-    数据源（设计原则 8），避免调用处重算裁剪逻辑。
+    数据源（设计原则 8）。裁剪原语复用 :func:`jxl.vdt._geom.pixel_box`。
     """
-    box = _pixel_box(rect, img_w, img_h)
+    box = pixel_box(rect, img_w, img_h)
     if box is None:
         return None
     x0, y0, x1, y1 = box
@@ -140,29 +99,19 @@ class RtmposeStep:
     def __init__(self, cfg: PoseCfg) -> None:
         """构造 ort session 与门控。
 
-        lazy import ``onnxruntime``（重 ML 栈，避免模块 import 时拉入）。``providers``
-        按 spec §6 显式配置 CUDA 优先 / CPU 兜底（spec §9 仅禁"回退别的模型"，不禁
-        EP 优先级表）。
+        ort session 经 :func:`jxl.vdt._ort.build_ort_session` 构造——**要求 CUDA**
+        （fail-fast，No Silent Degradation；不静默回退 CPU）。
 
         Args:
             cfg: pose 配置（model/kpt_shape/keyframe_every/min_hits）。
 
         Raises:
-            ModelLoadError: 权重缺失 / ort 加载失败 / 输入或输出数不符。
+            ModelLoadError: 权重缺失 / 无 CUDA EP / ort 加载失败 / 输入或输出数不符。
         """
-        import onnxruntime as ort  # heavy ML; lazy
-
         model_path = Path(cfg.model)
         if not model_path.is_file():
             raise ModelLoadError(f"RTMPose 权重不存在: {cfg.model}")
-        # providers 顺序按 spec §6 显式配置（CUDA 优先，CPU 兜底）。
-        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        try:
-            session = ort.InferenceSession(str(model_path), providers=providers)
-        except Exception as ex:  # ort 抛类型不一，统一收口为 ModelLoadError。
-            raise ModelLoadError(
-                f"RTMPose 加载失败 ({cfg.model}): {type(ex).__name__}: {ex}"
-            ) from ex
+        session = build_ort_session(str(model_path))
 
         inputs = session.get_inputs()
         outputs = session.get_outputs()
@@ -174,9 +123,9 @@ class RtmposeStep:
                 f"RTMPose 应有 2 输出 (simcc_x, simcc_y)，实际 {len(outputs)}: {names}"
             )
 
-        from jxl.vdt.pose_gate import PoseGate  # 兄弟模块；并行期 unresolved 可暂忽略
+        from jxl.vdt.pose_gate import PoseGate
 
-        self._session: _OrtSessionLike = session
+        self._session: OrtSessionLike = session
         self._in_name: str = inputs[0].name
         self._cfg: PoseCfg = cfg
         self._gate = PoseGate(cfg)
@@ -381,19 +330,19 @@ def _spike_forward(
 def test_pixel_box_clips_to_bounds_and_rounds() -> None:
     """归一化 rect → 像素 int 框，裁剪到边界（detector 越界被 clip）。"""
     # 100x100 图，rect (0.1,0.2,0.5,0.6) → 像素 (10,20,50,60)。
-    box = _pixel_box(Rect.new(0.1, 0.2, 0.5, 0.6), 100, 100)
+    box = pixel_box(Rect.new(0.1, 0.2, 0.5, 0.6), 100, 100)
     assert box == (10, 20, 60, 80)
 
 
 def test_pixel_box_clips_overflow() -> None:
     """越界 rect（部分超出画面）被裁剪到 [0,w]×[0,h]，不产生负坐标/超限。"""
-    box = _pixel_box(Rect.new(-0.1, -0.1, 0.5, 0.5), 100, 100)
+    box = pixel_box(Rect.new(-0.1, -0.1, 0.5, 0.5), 100, 100)
     assert box == (0, 0, 40, 40)
 
 
 def test_pixel_box_zero_area_returns_none() -> None:
     """零面积 rect（w=0）→ None。"""
-    assert _pixel_box(Rect.new(0.1, 0.1, 0.0, 0.5), 100, 100) is None
+    assert pixel_box(Rect.new(0.1, 0.1, 0.0, 0.5), 100, 100) is None
 
 
 def test_crop_rect_returns_crop_and_offset() -> None:

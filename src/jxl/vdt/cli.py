@@ -16,7 +16,7 @@ from __future__ import annotations
 import sys
 import tomllib
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, get_args
 
 import orjson
 import typer
@@ -34,8 +34,9 @@ from jxl.vdt.types import (
 
 app = typer.Typer(help="视频检测与跟踪 (detect → track → [pose]) 批处理 CLI")
 
-_TRACKR_MODES: tuple[str, ...] = ("iou", "reid")
-"""合法 tracker 模式（与 ``VdtConfig.tracker`` Literal 同步——单一数据源见 types.py）"""
+_TRACKR_MODES: tuple[str, ...] = get_args(VdtConfig.model_fields["tracker"].annotation)
+"""合法 tracker 模式——**派生自** ``VdtConfig.tracker`` 的 Literal（单一数据源，
+新增模式仅改 types.py 一处，CLI 自动同步；j-design-principles 原则 8）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -80,14 +81,15 @@ def load_config(path: Path, tracker_override: str | None, no_pose: bool) -> VdtC
             f"需提供 [tracker_cfg.{tracker_override}] 子表"
         )
 
-    flat: dict[str, object] = {k: v for k, v in data.items()}
-    flat["tracker"] = effective_mode
-    flat["tracker_cfg"] = sub_body
+    # 就地在 tomllib dict 上拍平鉴别子表 → VdtConfig 期望的直连 tracker_cfg，
+    # 交 pydantic model_validate 校验（不在本地引入 object/Any 注解——j-python-strict）。
+    data["tracker"] = effective_mode
+    data["tracker_cfg"] = sub_body
     if no_pose:
-        flat.pop("pose", None)
+        data.pop("pose", None)
 
     try:
-        return VdtConfig(**flat)
+        return VdtConfig.model_validate(data)
     except ValidationError as e:
         raise typer.BadParameter(f"配置校验失败 ({path}):\n{e}") from e
 
@@ -158,7 +160,7 @@ def annotate_video(video_path: str, tracks: Tracks, out_path: Path) -> None:
 @app.command("run")
 def run_cmd(
     video: Annotated[Path, typer.Argument(help="输入视频路径 (mkv/mp4/...)")],
-    config: Annotated[Path, typer.Argument(help="TOML 配置路径 (spec §11)")],
+    config: Annotated[Path, typer.Option("--config", help="TOML 配置路径 (spec §11)")],
     tracker: Annotated[
         str | None,
         typer.Option("--tracker", help=f"覆盖配置中的 tracker ({'/'.join(_TRACKR_MODES)})"),
@@ -258,7 +260,6 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------------------
 
 from pathlib import Path as _Path  # noqa: E402
-from typing import Any  # noqa: E402
 
 import pytest  # noqa: E402
 from typer.testing import CliRunner  # noqa: E402
@@ -377,11 +378,12 @@ def test_write_tracks_roundtrip(tmp_path: _Path) -> None:
     write_tracks(tracks, out)
     assert out.is_file() and out.stat().st_size > 0
 
-    raw: dict[str, Any] = orjson.loads(out.read_bytes())
-    assert raw["src"] == "x.mkv"
-    assert raw["fps"] == 25.0
-    assert len(raw["tracks"]) == 1
-    assert raw["tracks"][0]["id"] == 1
+    # 反序列化回 Tracks 做字段断言（避免 Any/dict 注解——j-python-strict 零 Any）。
+    back = Tracks.model_validate_json(out.read_bytes())
+    assert back.src == "x.mkv"
+    assert back.fps == 25.0
+    assert len(back.tracks) == 1
+    assert back.tracks[0].id == 1
 
 
 def test_info_cmd_exit_zero() -> None:
@@ -392,9 +394,45 @@ def test_info_cmd_exit_zero() -> None:
 
 
 def test_run_cmd_missing_video_bad_param(tmp_path: _Path) -> None:
-    """视频不存在 → BadParameter（不进入管线）。"""
+    """视频不存在 → BadParameter（不进入管线）。config 为 --config flag（spec §11）。"""
     runner = CliRunner()
     cfg = _write(tmp_path, "iou.toml", _IOU_TOML)
     video = tmp_path / "nope.mkv"
-    result = runner.invoke(app, ["run", str(video), str(cfg)])
+    result = runner.invoke(app, ["run", str(video), "--config", str(cfg)])
     assert result.exit_code != 0
+
+
+def test_annotate_video_writes_readable_mp4(tmp_path: _Path) -> None:
+    """annotate_video（重解码+帧对齐+draw+VideoWriter）端到端：输出可读 mp4。"""
+    import cv2
+
+    from jxl.vdt.cli import annotate_video
+    from jxl.vdt.decoder import _make_synthetic_video
+    from jxl.vdt.types import DecodeCfg, DetCfg, IouCfg
+
+    video = tmp_path / "s.mp4"
+    _make_synthetic_video(str(video), fps=5.0, frames=5)
+    rect = Rect.from_ltrb(Point(x=0.1, y=0.1), Point(x=0.4, y=0.5))
+    obj = _D2dObject(id=1, cls=0, conf=0.9, rect=rect)
+    fr = FrameResult(frame_idx=0, ts_ms=0, objects=[obj], kpts=[None])
+    vcfg = VdtConfig(
+        tracker="iou",
+        decode=DecodeCfg(fps=5.0),
+        det=DetCfg(model="x"),
+        tracker_cfg=IouCfg(),
+    )
+    tracks = Tracks(
+        src=str(video),
+        fps=5.0,
+        duration_ms=1000,
+        tracks=[Track(id=1, cls=0, frames=[fr])],
+        config=vcfg,
+    )
+    out = tmp_path / "ann.mp4"
+    annotate_video(str(video), tracks, out)
+    assert out.is_file() and out.stat().st_size > 0
+    cap = cv2.VideoCapture(str(out))
+    assert cap.isOpened()
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    assert n >= 1

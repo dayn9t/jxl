@@ -215,8 +215,9 @@ def preprocess_crop(
 ) -> tuple[np.ndarray, Point, Point]:
     """crop ``[Hc,Wc,3]`` BGR uint8 → ``(tensor, center, scale)``。
 
-    全流程：``hbb2cs`` → ``top_down_affine`` → normalize（**不除 255**）→ HWC→CHW
-    →加 batch 维。BGR 通道序保持不变。
+    全流程：``hbb2cs`` → ``top_down_affine``（先 BGR→RGB）→ normalize（**不除 255**）
+    → HWC→CHW →加 batch 维。**BGR→RGB**：RTMPose 训练于 RGB、mean/std 为 [R,G,B] 序
+    （见模块 docstring）；opencv 原生 BGR crop 在此翻转对齐。
 
     :returns: ``(tensor [1,3,256,192] float32 CHW normalized, center, scale)``。
         ``scale`` 为 ``top_down_affine`` 的 aspect-adjusted scale（非原始 hbb2cs scale）。
