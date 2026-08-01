@@ -1,0 +1,28 @@
+# vdt 示例配置 — ReID 跟踪模式（低帧率，spec §11/§13 P3）。
+# DINOv2 ViT-S/14 嵌入 + associate()（移植 iap）+ gallery。
+# 用法:
+#   vdt run <video.mkv> --config experiments/vdt-reid.toml --out-tracks tracks.json
+
+tracker = "reid"
+
+[decode]
+fps = 0.5 # 低帧率（每 2s 抽一帧）——ReID 模式核心场景（IoU/Kalman 在低帧率必失效）
+
+[det]
+model = "yolo26n.pt"
+conf = 0.3
+iou = 0.5
+classes = [0]
+
+[tracker_cfg.reid]
+model = "dinov2_vits14.onnx" # DINOv2 ViT-S/14（spec §7 fallback；理想 DINOv3 ViT-S/16 待 HF 提供）
+cos = 0.6                     # 余弦相似度阈值（iap 默认）
+motion_radius = 0.3           # 运动 gating 半径（归一化坐标，2s 内合理位移）
+ema = 0.2                     # 嵌入 EMA 融合系数（kb 建议；iap 原 0.5 偏激进）
+ttl_sec = 600                 # gallery 轨迹保留 10min
+
+[pose]
+enabled = true
+model = "rtmpose-17-m.onnx"
+keyframe_every = 2 # 低帧率下周期更短（每 2 帧即 ~4s）
+min_hits = 1

@@ -8,9 +8,9 @@
    pose=None 时 kpts 全 None（P1 无 pose 路径）。
 3. ``run`` —— 生产入口：建阶段（builders）→ 调 ``run_pipeline``。
 
-builders 内部 lazy import 兄弟 impl（``decoder``/``detector``/``tracker``/``pose``），
-避免 ``import jxl.vdt.pipeline`` 拉入 ultralytics/onnxruntime。P1/P2 已接入
-（IoU 跟踪 + 条件性 Pose）；ReID 分支（``tracker='reid'``）P3 接入。
+builders 内部 lazy import 兄弟 impl（``decoder``/``detector``/``tracker``/
+``reid``/``reid_tracker``/``pose``），避免 ``import jxl.vdt.pipeline`` 拉入
+ultralytics/onnxruntime。IoU/ReID 双模跟踪 + 条件性 Pose 全部接入（P1/P2/P3）。
 
 依赖注入点全 Protocol 化（ISP）；``aggregate``/``run_pipeline`` 为纯函数（设计原则 6
 Functional Core），可确定性单测（设计原则 10）。
@@ -152,7 +152,7 @@ def run_pipeline(
     frames: list[FrameResult] = []
     for frame_idx, ts_ms, image in decoder:
         dets = detector.detect(image)
-        tracked = tracker.update(frame_idx, ts_ms, dets)
+        tracked = tracker.update(frame_idx, ts_ms, image, dets)
         kpts = (
             pose.step(image, tracked)
             if pose is not None
@@ -241,10 +241,10 @@ def build_tracker(config: VdtConfig) -> Tracker:
         config: 管线配置（``tracker`` 模式 + ``tracker_cfg`` 实参）。
 
     Returns:
-        Tracker: IoU 模式返回 ``IouTracker``。
+        Tracker: IoU 模式返回 ``IouTracker``；ReID 模式返回 ``ReidTracker``
+            （注入 ``ReidEmbedder``）。
 
     Raises:
-        NotImplementedError: ``tracker='reid'``（P3 接入）。
         VdtError: ``tracker_cfg`` 类型与模式不符（validator 应已拦截，此处
             仅作运行时不变量守护）。
     """
@@ -256,7 +256,14 @@ def build_tracker(config: VdtConfig) -> Tracker:
             raise VdtError("tracker='iou' 需 IouCfg（validator 应已保证）")
         return IouTracker(cfg)
     # config.tracker == "reid"（Literal 收窄）
-    raise NotImplementedError("ReID tracker 在 P3 实现")
+    from jxl.vdt.reid import ReidEmbedder
+    from jxl.vdt.reid_tracker import ReidTracker
+
+    cfg = config.tracker_cfg
+    if not isinstance(cfg, ReidCfg):
+        raise VdtError("tracker='reid' 需 ReidCfg（validator 应已保证）")
+    embedder = ReidEmbedder(cfg.model)
+    return ReidTracker(cfg, embedder)
 
 
 def build_pose(cfg: PoseCfg | None) -> PoseStep | None:
@@ -324,7 +331,11 @@ class _FakeTracker:
         self.reset_calls += 1
 
     def update(
-        self, frame_idx: int, ts_ms: int, dets: list[D2dObject]
+        self,
+        frame_idx: int,
+        ts_ms: int,
+        image: np.ndarray,
+        dets: list[D2dObject],
     ) -> list[D2dObject]:
         return [d.model_copy(update={"id": i + 1}) for i, d in enumerate(dets)]
 
@@ -533,15 +544,35 @@ def test_build_tracker_iou_returns_tracker() -> None:
     assert isinstance(trk, IouTracker)
 
 
-def test_build_tracker_reid_raises_p3() -> None:
-    """``tracker='reid'`` → NotImplementedError（P3 接入）。"""
+def test_build_tracker_reid_bad_model_raises() -> None:
+    """``tracker='reid'`` 但权重缺失 → ModelLoadError（fail-fast，不静默回退）。"""
+    import pytest
+
+    from jxl.vdt.types import ModelLoadError
+
+    cfg = VdtConfig(
+        tracker="reid",
+        decode=DecodeCfg(fps=0.5),
+        det=DetCfg(model="yolo26s.pt"),
+        tracker_cfg=ReidCfg(model="/nonexistent/dinov2.onnx"),
+    )
+    with pytest.raises(ModelLoadError):
+        build_tracker(cfg)
+
+
+def test_build_tracker_reid_constructs_tracker() -> None:
+    """``tracker='reid'`` + 真实权重 → ``ReidTracker``（注入 ``ReidEmbedder``）。"""
     import pytest
 
     cfg = VdtConfig(
         tracker="reid",
         decode=DecodeCfg(fps=0.5),
         det=DetCfg(model="yolo26s.pt"),
-        tracker_cfg=ReidCfg(model="dinov3-vits16.onnx"),
+        tracker_cfg=ReidCfg(model="dinov2_vits14.onnx"),
     )
-    with pytest.raises(NotImplementedError, match="P3"):
-        build_tracker(cfg)
+    try:
+        from jxl.vdt.reid_tracker import ReidTracker  # noqa: F401
+    except ImportError:
+        pytest.skip("jxl.vdt.reid_tracker 尚未实现")
+    trk = build_tracker(cfg)
+    assert isinstance(trk, ReidTracker)

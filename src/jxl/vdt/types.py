@@ -209,12 +209,21 @@ class Detector(Protocol):
 
 
 class Tracker(Protocol):
-    """跟踪器：吃检测框（不吃 image）→ 填 track_id。IoU/ReID 对称接口。"""
+    """跟踪器：吃检测框 + 当前帧（ReID 用帧提嵌入，IoU 忽略帧）→ 填 track_id。
+
+    ``image`` 透传给 tracker 仅供 ReID 提外观嵌入；tracker **绝不**在帧上跑检测
+    （检测由 Detector 阶段完成——这才是"detect 与 track 解耦"的本义）。IoU/ReID
+    共享同一接口（Plan B 对称）：换一次检测器两种跟踪模式同时受益。
+    """
 
     def update(
-        self, frame_idx: int, ts_ms: int, dets: list[D2dObject]
+        self, frame_idx: int, ts_ms: int, image: np.ndarray, dets: list[D2dObject]
     ) -> list[D2dObject]:
-        """将本帧检测关联到既有轨迹，返回带 ``track_id >= 1`` 的目标列表。"""
+        """将本帧检测关联到既有轨迹，返回带 ``track_id >= 1`` 的目标列表。
+
+        ``image`` = 当前 BGR 帧（ReID 提嵌入用；IoU 实现忽略）。``id=0`` 哨兵表示
+        未关联（无效嵌入/提取失败），由 aggregate 过滤。
+        """
 
     def reset(self) -> None:
         """视频边界清状态（批处理多视频防跨视频身份泄漏）。"""

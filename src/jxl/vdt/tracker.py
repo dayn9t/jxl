@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 from jvi.geo.rectangle import Rect
 
 from jxl.det.d2d import D2dObject
@@ -94,12 +95,16 @@ class IouTracker:
         self._next_id = 1
 
     def update(
-        self, frame_idx: int, ts_ms: int, dets: list[D2dObject]
+        self,
+        frame_idx: int,
+        ts_ms: int,
+        image: np.ndarray,
+        dets: list[D2dObject],
     ) -> list[D2dObject]:
         """将本帧检测关联到既有轨迹，返回带 ``track_id >= 1`` 的目标列表。
 
-        ``ts_ms`` 在 iou 模式忽略（仅用 ``frame_idx`` 关联，spec §4）；保留签名以
-        满足 ``Tracker`` 协议对称性（IoU/ReID 同接口）。
+        ``image`` / ``ts_ms`` 在 iou 模式**忽略**（仅用 ``frame_idx`` 关联，spec §4）；
+        保留签名以满足 ``Tracker`` 协议对称性（IoU/ReID 同接口，image 供 ReID 提嵌入）。
         """
         matched = self._match(dets)
         det_track = self._refresh(dets, matched, frame_idx)
@@ -203,6 +208,10 @@ class IouTracker:
         return out
 
 
+_IMG = np.zeros((4, 4, 3), np.uint8)
+"""IoU 测试用的占位帧（IoU 忽略 image，仅满足协议签名）。"""
+
+
 # ---------------------------------------------------------------------------
 # 单测（pytest 自动发现；spec §10 IouTracker 项）。
 # 合成检测序列（归一化 rect）+ 直接构造 IouTracker，零模型依赖，隔离可跑。
@@ -220,9 +229,9 @@ def test_static_object_reuses_id_across_frames() -> None:
     """静止目标跨帧复用 id：3 帧同一位置 det → 同一 track_id，hit_count 递增。"""
     trk = IouTracker(IouCfg(iou_thr=0.5, max_age=30, min_hits=1))
     d = _det(0.1, 0.1)
-    f1 = trk.update(0, 0, [d])
-    f2 = trk.update(1, 33, [d])
-    f3 = trk.update(2, 66, [d])
+    f1 = trk.update(0, 0, _IMG, [d])
+    f2 = trk.update(1, 33, _IMG, [d])
+    f3 = trk.update(2, 66, _IMG, [d])
 
     assert f1[0].id >= 1
     assert f1[0].id == f2[0].id == f3[0].id
@@ -235,8 +244,8 @@ def test_displaced_object_matches_when_iou_above_thr() -> None:
     a = _det(0.1, 0.1)
     b = _det(0.12, 0.1)  # 与 a 的 IoU ≈ 0.82 >= 0.5
 
-    f1 = trk.update(0, 0, [a])
-    f2 = trk.update(1, 33, [b])
+    f1 = trk.update(0, 0, _IMG, [a])
+    f2 = trk.update(1, 33, _IMG, [b])
 
     assert f2[0].id == f1[0].id >= 1
 
@@ -246,12 +255,12 @@ def test_miss_within_max_age_reuses_id() -> None:
     trk = IouTracker(IouCfg(iou_thr=0.5, max_age=2, min_hits=1))
     a = _det(0.1, 0.1)
 
-    f1 = trk.update(0, 0, [a])
+    f1 = trk.update(0, 0, _IMG, [a])
     oid = f1[0].id
-    miss = trk.update(1, 33, [])  # 漏一帧：miss_count=1 <= 2，存活
+    miss = trk.update(1, 33, _IMG, [])  # 漏一帧：miss_count=1 <= 2，存活
     assert miss == []
 
-    f3 = trk.update(2, 66, [a])  # 再现，IoU=1 -> 匹配存活轨迹
+    f3 = trk.update(2, 66, _IMG, [a])  # 再现，IoU=1 -> 匹配存活轨迹
     assert f3[0].id == oid >= 1
     assert trk._tracks[0].miss_count == 0
 
@@ -261,13 +270,13 @@ def test_max_age_expiry_assigns_new_id() -> None:
     trk = IouTracker(IouCfg(iou_thr=0.5, max_age=1, min_hits=1))
     a = _det(0.1, 0.1)
 
-    f1 = trk.update(0, 0, [a])
+    f1 = trk.update(0, 0, _IMG, [a])
     oid = f1[0].id
-    trk.update(1, 33, [])  # miss_count=1 <= 1，存活
-    trk.update(2, 66, [])  # miss_count=2 > 1，移除
+    trk.update(1, 33, _IMG, [])  # miss_count=1 <= 1，存活
+    trk.update(2, 66, _IMG, [])  # miss_count=2 > 1，移除
     assert trk._tracks == []
 
-    f4 = trk.update(3, 99, [a])  # 无既有轨迹，开新轨迹
+    f4 = trk.update(3, 99, _IMG, [a])  # 无既有轨迹，开新轨迹
     assert f4[0].id != oid
     assert f4[0].id >= 1
 
@@ -278,11 +287,11 @@ def test_two_disjoint_objects_keep_distinct_ids() -> None:
     a = _det(0.1, 0.1)
     b = _det(0.7, 0.1)  # 与 a 的 IoU = 0
 
-    f1 = trk.update(0, 0, [a, b])
+    f1 = trk.update(0, 0, _IMG, [a, b])
     assert f1[0].id != f1[1].id
     id_a, id_b = f1[0].id, f1[1].id
 
-    f2 = trk.update(1, 33, [_det(0.12, 0.1), _det(0.68, 0.1)])
+    f2 = trk.update(1, 33, _IMG, [_det(0.12, 0.1), _det(0.68, 0.1)])
     assert f2[0].id == id_a  # 位移后仍各归各位
     assert f2[1].id == id_b
 
@@ -292,10 +301,10 @@ def test_min_hits_confirmation() -> None:
     trk = IouTracker(IouCfg(iou_thr=0.5, max_age=30, min_hits=2))
     a = _det(0.1, 0.1)
 
-    f1 = trk.update(0, 0, [a])
+    f1 = trk.update(0, 0, _IMG, [a])
     assert f1[0].id == 0  # hit_count=1 < 2，未确认（哨兵）
 
-    f2 = trk.update(1, 33, [a])
+    f2 = trk.update(1, 33, _IMG, [a])
     assert f2[0].id >= 1  # hit_count=2 >= 2，已确认
 
 
@@ -303,14 +312,14 @@ def test_reset_clears_state_no_cross_video_leak() -> None:
     """reset 清空轨迹与 hit_count：新视频首帧不继承旧视频状态。"""
     trk = IouTracker(IouCfg(iou_thr=0.5, max_age=30, min_hits=1))
     a = _det(0.1, 0.1)
-    trk.update(0, 0, [a])
-    trk.update(1, 33, [a])
+    trk.update(0, 0, _IMG, [a])
+    trk.update(1, 33, _IMG, [a])
     assert trk._tracks[0].hit_count == 2  # 跨帧累积
 
     trk.reset()
     assert trk._tracks == []  # 状态清空
 
-    trk.update(0, 0, [a])  # 新视频首帧
+    trk.update(0, 0, _IMG, [a])  # 新视频首帧
     assert len(trk._tracks) == 1
     assert trk._tracks[0].hit_count == 1  # 新轨迹，不继承旧 hit_count
 
@@ -318,11 +327,11 @@ def test_reset_clears_state_no_cross_video_leak() -> None:
 def test_greedy_one_to_one_on_split() -> None:
     """两检测竞争一旧轨迹：更高 IoU 者胜出复用 id，另一者开新轨迹（贪心一对一）。"""
     trk = IouTracker(IouCfg(iou_thr=0.2, max_age=30, min_hits=1))
-    trk.update(0, 0, [_det(0.1, 0.1)])  # 旧轨迹 id=1
+    trk.update(0, 0, _IMG, [_det(0.1, 0.1)])  # 旧轨迹 id=1
 
     near = _det(0.12, 0.1)  # 与旧 IoU ≈ 0.82
     far = _det(0.22, 0.1)  # 与旧 IoU ≈ 0.25（>= thr 但低于 near）
-    out = trk.update(1, 33, [near, far])
+    out = trk.update(1, 33, _IMG, [near, far])
 
     assert out[0].id == 1  # near 贪心胜出，复用旧 id
     assert out[1].id == 2  # far 开新轨迹（旧轨迹已被 near 占用）
