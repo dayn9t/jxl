@@ -1,0 +1,26 @@
+# vdt 示例配置 — IoU 跟踪 + 条件性 Pose（spec §11/§13 P2）。
+# 用法:
+#   vdt run <video.mkv> --config experiments/vdt-iou-pose.toml --out-tracks tracks.json
+
+tracker = "iou"
+
+[decode]
+fps = 5.0 # 抽帧加速（pose smoke）；生产 IoU 可设源 fps
+
+[det]
+model = "yolo26n.pt"
+conf = 0.3 # 略降以多召回人（街景人小且远）
+iou = 0.5
+classes = [0]
+
+[tracker_cfg.iou]
+iou_thr = 0.3 # 小目标位移适配
+max_age = 30
+min_hits = 2 # 确认门槛略降，便于 smoke 观测 pose
+
+[pose]
+enabled = true
+model = "rtmpose-17-m.onnx"
+kpt_shape = [17, 3]
+keyframe_every = 5
+min_hits = 2

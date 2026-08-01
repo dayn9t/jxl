@@ -9,9 +9,8 @@
 3. ``run`` —— 生产入口：建阶段（builders）→ 调 ``run_pipeline``。
 
 builders 内部 lazy import 兄弟 impl（``decoder``/``detector``/``tracker``/``pose``），
-避免 ``import jxl.vdt.pipeline`` 拉入 ultralytics/onnxruntime，并支持并行期
-兄弟模块分阶段落地（P1/P2/P3）。ReID 与 pose 的 builder 分支已写好但 P1
-``raise NotImplementedError``，分别在 P3 / P2 接入。
+避免 ``import jxl.vdt.pipeline`` 拉入 ultralytics/onnxruntime。P1/P2 已接入
+（IoU 跟踪 + 条件性 Pose）；ReID 分支（``tracker='reid'``）P3 接入。
 
 依赖注入点全 Protocol 化（ISP）；``aggregate``/``run_pipeline`` 为纯函数（设计原则 6
 Functional Core），可确定性单测（设计原则 10）。
@@ -261,20 +260,22 @@ def build_tracker(config: VdtConfig) -> Tracker:
 
 
 def build_pose(cfg: PoseCfg | None) -> PoseStep | None:
-    """构造条件性 pose 步骤。
+    """构造条件性 pose 步骤（``RtmposeStep``）。
 
     Args:
-        cfg: pose 配置；None 关闭 pose 路径。
+        cfg: pose 配置；``None`` 或 ``enabled=False`` 关闭 pose 路径。
 
     Returns:
-        PoseStep | None: ``cfg=None`` 返回 None（无 pose）；否则 P2 接入。
+        PoseStep | None：关闭则 None；否则 ``RtmposeStep``（持有 ort session）。
 
     Raises:
-        NotImplementedError: ``cfg`` 非 None（P2 接入）。
+        ModelLoadError: 权重缺失 / ONNX 加载失败（由 ``RtmposeStep.__init__`` 抛）。
     """
-    if cfg is None:
+    if cfg is None or not cfg.enabled:
         return None
-    raise NotImplementedError("Pose 在 P2 实现")
+    from jxl.vdt.pose import RtmposeStep
+
+    return RtmposeStep(cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -498,12 +499,20 @@ def test_build_pose_none_returns_none() -> None:
     assert build_pose(None) is None
 
 
-def test_build_pose_set_raises_p2() -> None:
-    """``cfg`` 非 None → NotImplementedError（P2 接入）。"""
+def test_build_pose_disabled_returns_none() -> None:
+    """``cfg=None`` 或 ``enabled=False`` → None（关闭 pose 路径）。"""
+    assert build_pose(None) is None
+    assert build_pose(PoseCfg(model="rtmpose-17-m.onnx", enabled=False)) is None
+
+
+def test_build_pose_bad_model_raises_model_load_error() -> None:
+    """``enabled=True`` 但权重缺失 → ModelLoadError（fail-fast，不静默回退）。"""
     import pytest
 
-    cfg = PoseCfg(model="rtmpose-m.onnx")
-    with pytest.raises(NotImplementedError, match="P2"):
+    from jxl.vdt.types import ModelLoadError
+
+    cfg = PoseCfg(model="/nonexistent/rtmpose-17-m.onnx", enabled=True)
+    with pytest.raises(ModelLoadError):
         build_pose(cfg)
 
 
