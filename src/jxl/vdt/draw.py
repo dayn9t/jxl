@@ -50,6 +50,54 @@ COCO_SKELETON_EDGES: tuple[tuple[int, int], ...] = (
     (5, 6), (11, 12),                 # 肩间 / 髋间
 )
 
+
+def draw_track_box(
+    canvas: np.ndarray, obj: D2dObject, color: tuple[int, int, int]
+) -> None:
+    """画检测框（归一化 rect → 像素）+ 左上角 ID 标签（带色块背景）。"""
+    img_h, img_w = canvas.shape[:2]
+    r = obj.rect.absolutize(Size.new(img_w, img_h)).round()
+    x0, y0 = int(r.x), int(r.y)
+    x1, y1 = int(r.x + r.width), int(r.y + r.height)
+    cv2.rectangle(canvas, (x0, y0), (x1, y1), color, 2)
+    label = f"#{obj.id}"
+    (tw, th), _ = cv2.getTextSize(
+        label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
+    )
+    y_lbl = max(y0, th + 2)
+    cv2.rectangle(canvas, (x0, y_lbl - th - 4), (x0 + tw + 6, y_lbl + 2), color, -1)
+    cv2.putText(
+        canvas, label, (x0 + 2, y_lbl - 2),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2, cv2.LINE_AA,
+    )
+
+
+def draw_pose_skeleton(
+    canvas: np.ndarray,
+    kpts: Keypoints | None,
+    color: tuple[int, int, int],
+    kconf: float = 0.35,
+) -> None:
+    """画 COCO 17 点骨架：可见点（conf≥kconf）画圆点，两端皆可见的边画线。
+
+    ``kpts is None`` 或全低置信 → 不画。
+    """
+    if kpts is None:
+        return
+    img_h, img_w = canvas.shape[:2]
+    vis = [c >= kconf for c in kpts.conf]
+    if not any(vis):
+        return
+    for i, p in enumerate(kpts.pts):
+        if vis[i]:
+            cv2.circle(canvas, (int(p.x * img_w), int(p.y * img_h)), 4, color, -1)
+    for a, b in COCO_SKELETON_EDGES:
+        if a < len(vis) and b < len(vis) and vis[a] and vis[b]:
+            pa = (int(kpts.pts[a].x * img_w), int(kpts.pts[a].y * img_h))
+            pb = (int(kpts.pts[b].x * img_w), int(kpts.pts[b].y * img_h))
+            cv2.line(canvas, pa, pb, color, 2, cv2.LINE_AA)
+
+
 # ---------------------------------------------------------------------------
 # 单测（pytest 按文件发现；零模型依赖）
 # ---------------------------------------------------------------------------
@@ -72,3 +120,30 @@ def test_coco_skeleton_edges_valid() -> None:
     flat = [v for e in COCO_SKELETON_EDGES for v in e]
     assert all(0 <= v < 17 for v in flat), "端点必须 ∈ [0,17)"
     assert len(set(COCO_SKELETON_EDGES)) == len(COCO_SKELETON_EDGES), "无重复边"
+
+
+def test_draw_track_box_paints() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    ob = D2dObject(id=5, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
+    draw_track_box(canvas, ob, (0, 255, 0))
+    assert int(canvas.sum()) > 0
+
+
+def test_draw_pose_skeleton_none_no_change() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    draw_pose_skeleton(canvas, None, (0, 255, 0))
+    assert int(canvas.sum()) == 0
+
+
+def test_draw_pose_skeleton_low_conf_no_paint() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    kpts = Keypoints(pts=[Point(x=0.5, y=0.5)] * 17, conf=[0.1] * 17)
+    draw_pose_skeleton(canvas, kpts, (0, 255, 0))
+    assert int(canvas.sum()) == 0
+
+
+def test_draw_pose_skeleton_visible_paints() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    kpts = Keypoints(pts=[Point(x=0.5, y=0.5)] * 17, conf=[0.9] * 17)
+    draw_pose_skeleton(canvas, kpts, (0, 255, 0))
+    assert int(canvas.sum()) > 0
