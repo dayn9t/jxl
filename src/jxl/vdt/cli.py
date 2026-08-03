@@ -206,6 +206,9 @@ def run_cmd(
         bool, typer.Option("--no-pose", help="禁用 pose 阶段（等价 config.pose=None）"),
     ] = False,
     no_box: Annotated[bool, typer.Option("--no-box", help="演示视频不画检测框")] = False,
+    no_id: Annotated[
+        bool, typer.Option("--no-id", help="不画目标 ID 标签")
+    ] = False,
     no_skeleton: Annotated[
         bool, typer.Option("--no-skeleton", help="不画 pose 骨架")
     ] = False,
@@ -240,6 +243,7 @@ def run_cmd(
     if out_video is not None:
         opts = DrawOpts(
             box=not no_box,
+            id=not no_id,
             skeleton=not no_skeleton,
             trail=not no_trails,
             hud=not no_hud,
@@ -545,3 +549,24 @@ def test_run_cmd_bad_trail_len(tmp_path: _Path) -> None:
     )
     assert result.exit_code != 0
     assert "trail-len" in result.stderr
+
+
+def test_run_cmd_no_id_option_accepted(tmp_path: _Path) -> None:
+    """--no-id 是合法选项：解析阶段被接受，继续到 trail-len 校验。
+
+    若 --no-id 不存在，typer 在解析时报 "no such option" 而非到达 trail-len 分支。
+    """
+    from jxl.vdt.decoder import _make_synthetic_video
+
+    runner = CliRunner()
+    video = tmp_path / "s.mp4"
+    _make_synthetic_video(str(video), fps=5.0, frames=2)
+    result = runner.invoke(
+        app,
+        [
+            "run", str(video), "--out-video", str(tmp_path / "x.mp4"),
+            "--no-id", "--trail-len", "0",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "trail-len" in result.stderr  # --no-id 被接受，到达 trail-len 校验

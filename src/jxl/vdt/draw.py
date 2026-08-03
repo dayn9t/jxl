@@ -25,6 +25,7 @@ class DrawOpts:
     """绘制开关（不可变；cli 层从命令行选项构造）。"""
 
     box: bool = True
+    id: bool = True
     skeleton: bool = True
     trail: bool = True
     hud: bool = True
@@ -51,19 +52,30 @@ COCO_SKELETON_EDGES: tuple[tuple[int, int], ...] = (
 )
 
 
+def _box_rect_px(
+    canvas: np.ndarray, obj: D2dObject
+) -> tuple[int, int, int, int]:
+    """归一化 rect → 像素框四角 ``(x0, y0, x1, y1)``（框绘制与 ID 标签定位共享）。"""
+    img_h, img_w = canvas.shape[:2]
+    r = obj.rect.absolutize(Size.new(img_w, img_h)).round()
+    return int(r.x), int(r.y), int(r.x + r.width), int(r.y + r.height)
+
+
 def draw_track_box(
     canvas: np.ndarray, obj: D2dObject, color: tuple[int, int, int]
 ) -> None:
-    """画检测框（归一化 rect → 像素）+ 左上角 ID 标签（带色块背景）。"""
-    img_h, img_w = canvas.shape[:2]
-    r = obj.rect.absolutize(Size.new(img_w, img_h)).round()
-    x0, y0 = int(r.x), int(r.y)
-    x1, y1 = int(r.x + r.width), int(r.y + r.height)
+    """画检测框（归一化 rect → 像素），不含 ID 标签（见 :func:`draw_track_id`）。"""
+    x0, y0, x1, y1 = _box_rect_px(canvas, obj)
     cv2.rectangle(canvas, (x0, y0), (x1, y1), color, 2)
+
+
+def draw_track_id(
+    canvas: np.ndarray, obj: D2dObject, color: tuple[int, int, int]
+) -> None:
+    """画左上角 ID 标签（带色块背景 + 黑字 ``#id``）。"""
+    x0, y0, _, _ = _box_rect_px(canvas, obj)
     label = f"#{obj.id}"
-    (tw, th), _ = cv2.getTextSize(
-        label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-    )
+    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
     y_lbl = max(y0, th + 2)
     cv2.rectangle(canvas, (x0, y_lbl - th - 4), (x0 + tw + 6, y_lbl + 2), color, -1)
     cv2.putText(
@@ -170,8 +182,8 @@ def render_demo_frame(
     tracker_mode: str,
     opts: DrawOpts,
 ) -> None:
-    """按 opts 总装绘制一帧（顺序 skeleton→box→trail→hud；box 压在骨架上，
-    ID 标签可读；HUD 顶层不被遮）。"""
+    """按 opts 总装绘制一帧（顺序 skeleton→box→id→trail→hud；box 压在骨架上，
+    ID 标签压在框上可读；HUD 顶层不被遮）。"""
     n_valid = 0
     for ob, kp in zip(objects, kpts, strict=False):
         if ob.id == 0:
@@ -182,6 +194,8 @@ def render_demo_frame(
             draw_pose_skeleton(canvas, kp, color)
         if opts.box:
             draw_track_box(canvas, ob, color)
+        if opts.id:
+            draw_track_id(canvas, ob, color)
     if opts.trail:
         trails.draw(canvas)
     if opts.hud:
@@ -195,7 +209,7 @@ def render_demo_frame(
 
 def test_draw_opts_defaults() -> None:
     opts = DrawOpts()
-    assert opts.box and opts.skeleton and opts.trail and opts.hud
+    assert opts.box and opts.id and opts.skeleton and opts.trail and opts.hud
     assert opts.trail_len == 30
 
 
@@ -216,6 +230,13 @@ def test_draw_track_box_paints() -> None:
     canvas = np.zeros((100, 100, 3), np.uint8)
     ob = D2dObject(id=5, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
     draw_track_box(canvas, ob, (0, 255, 0))
+    assert int(canvas.sum()) > 0
+
+
+def test_draw_track_id_paints() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    ob = D2dObject(id=5, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
+    draw_track_id(canvas, ob, (0, 255, 0))
     assert int(canvas.sum()) > 0
 
 
@@ -282,9 +303,23 @@ def test_render_demo_frame_all_on_paints() -> None:
 
 def test_render_demo_frame_all_off_no_paint() -> None:
     canvas = np.zeros((100, 100, 3), np.uint8)
-    opts = DrawOpts(box=False, skeleton=False, trail=False, hud=False)
+    opts = DrawOpts(box=False, id=False, skeleton=False, trail=False, hud=False)
     render_demo_frame(canvas, [], [], TrailBuffer(3), 0, 0, "iou", opts)
     assert int(canvas.sum()) == 0
+
+
+def test_render_demo_frame_id_toggle_changes_pixels() -> None:
+    """opts.id 开关实际改变绘制：id=True 比 id=False 多画标签像素。"""
+
+    def _render(opts: DrawOpts) -> int:
+        canvas = np.zeros((100, 100, 3), np.uint8)
+        ob = D2dObject(id=7, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
+        render_demo_frame(canvas, [ob], [None], TrailBuffer(3), 0, 0, "iou", opts)
+        return int(canvas.sum())
+
+    on = _render(DrawOpts(box=True, id=True, skeleton=False, trail=False, hud=False))
+    off = _render(DrawOpts(box=True, id=False, skeleton=False, trail=False, hud=False))
+    assert on > off  # id 开启时多画了标签
 
 
 def test_render_demo_frame_skips_id0_sentinel() -> None:
