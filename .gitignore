@@ -15,4 +15,6 @@ models/
 *.onnx
 *.ts
 
+# 探针报告输出
+examples/oai/_runs/
 
