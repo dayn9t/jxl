@@ -170,7 +170,8 @@ def render_demo_frame(
     tracker_mode: str,
     opts: DrawOpts,
 ) -> None:
-    """按 opts 总装绘制一帧（顺序 box→skeleton→trail→hud；HUD 顶层不被遮）。"""
+    """按 opts 总装绘制一帧（顺序 skeleton→box→trail→hud；box 压在骨架上，
+    ID 标签可读；HUD 顶层不被遮）。"""
     n_valid = 0
     for ob, kp in zip(objects, kpts, strict=False):
         if ob.id == 0:

@@ -516,20 +516,32 @@ def test_render_video_writes_readable_mp4(tmp_path: _Path) -> None:
 def test_run_cmd_no_out_bad_param(tmp_path: _Path) -> None:
     """无 --out-* → BadParameter（无产出）。
 
-    校验顺序：tracker 合法 → video 存在 → 至少一个 out → trail_len → load_config。
-    视频不存在先报；用两 None（无 --out-*）场景验证 no-out 分支必抛（exit_code != 0）。
+    用真实合成视频，使 video-exists 检查通过，从而精确触发 no-out 校验分支
+    （非 exit_code!=0 的弱断言）。校验顺序：tracker → video 存在 → 至少一个 out → …。
     """
+    from jxl.vdt.decoder import _make_synthetic_video
+
     runner = CliRunner()
-    video = tmp_path / "nope.mkv"
+    video = tmp_path / "s.mp4"
+    _make_synthetic_video(str(video), fps=5.0, frames=2)
     result = runner.invoke(app, ["run", str(video)])
     assert result.exit_code != 0
+    assert "至少指定" in result.stderr
 
 
 def test_run_cmd_bad_trail_len(tmp_path: _Path) -> None:
-    """--trail-len 0 → BadParameter。"""
+    """--trail-len 0 → BadParameter。
+
+    用真实合成视频 + 有效 --out-video，使前置校验全过，精确触发 trail_len 分支。
+    """
+    from jxl.vdt.decoder import _make_synthetic_video
+
     runner = CliRunner()
-    video = tmp_path / "nope.mkv"
+    video = tmp_path / "s.mp4"
+    _make_synthetic_video(str(video), fps=5.0, frames=2)
     result = runner.invoke(
-        app, ["run", str(video), "--out-video", "x.mp4", "--trail-len", "0"]
+        app,
+        ["run", str(video), "--out-video", str(tmp_path / "x.mp4"), "--trail-len", "0"],
     )
     assert result.exit_code != 0
+    assert "trail-len" in result.stderr
