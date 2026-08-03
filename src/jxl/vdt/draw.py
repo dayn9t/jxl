@@ -160,6 +160,33 @@ def draw_hud(
     )
 
 
+def render_demo_frame(
+    canvas: np.ndarray,
+    objects: list[D2dObject],
+    kpts: list[Keypoints | None],
+    trails: TrailBuffer,
+    frame_idx: int,
+    ts_ms: int,
+    tracker_mode: str,
+    opts: DrawOpts,
+) -> None:
+    """按 opts 总装绘制一帧（顺序 box→skeleton→trail→hud；HUD 顶层不被遮）。"""
+    n_valid = 0
+    for ob, kp in zip(objects, kpts, strict=False):
+        if ob.id == 0:
+            continue
+        n_valid += 1
+        color = color_for_id(ob.id)
+        if opts.skeleton:
+            draw_pose_skeleton(canvas, kp, color)
+        if opts.box:
+            draw_track_box(canvas, ob, color)
+    if opts.trail:
+        trails.draw(canvas)
+    if opts.hud:
+        draw_hud(canvas, frame_idx, ts_ms, n_valid, tracker_mode)
+
+
 # ---------------------------------------------------------------------------
 # 单测（pytest 按文件发现；零模型依赖）
 # ---------------------------------------------------------------------------
@@ -239,3 +266,29 @@ def test_draw_hud_paints_top_bar() -> None:
     canvas = np.zeros((100, 200, 3), np.uint8)
     draw_hud(canvas, 5, 1000, 3, "iou")
     assert int(canvas[:30].sum()) > 0  # 顶部条被画
+
+
+def test_render_demo_frame_all_on_paints() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    ob = D2dObject(id=1, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
+    kpts = Keypoints(pts=[Point(x=0.5, y=0.5)] * 17, conf=[0.9] * 17)
+    tb = TrailBuffer(3)
+    tb.push(1, Point(x=0.5, y=0.5))
+    tb.push(1, Point(x=0.51, y=0.5))
+    render_demo_frame(canvas, [ob], [kpts], tb, 0, 0, "iou", DrawOpts())
+    assert int(canvas.sum()) > 0
+
+
+def test_render_demo_frame_all_off_no_paint() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    opts = DrawOpts(box=False, skeleton=False, trail=False, hud=False)
+    render_demo_frame(canvas, [], [], TrailBuffer(3), 0, 0, "iou", opts)
+    assert int(canvas.sum()) == 0
+
+
+def test_render_demo_frame_skips_id0_sentinel() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    ob0 = D2dObject(id=0, cls=0, conf=1.0, rect=Rect.new(0.1, 0.1, 0.2, 0.2))
+    opts = DrawOpts(box=True, skeleton=False, trail=False, hud=False)
+    render_demo_frame(canvas, [ob0], [None], TrailBuffer(3), 0, 0, "iou", opts)
+    assert int(canvas.sum()) == 0  # id=0 哨兵不画
