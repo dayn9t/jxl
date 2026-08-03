@@ -25,8 +25,12 @@ from pydantic import ValidationError
 
 from jxl.det.d2d import D2dObject, draw_d2d_objects
 from jxl.vdt.types import (
+    DecodeCfg,
     DecodeError,
+    DetCfg,
     FrameResult,
+    IouCfg,
+    PoseCfg,
     Track,
     Tracks,
     VdtConfig,
@@ -38,13 +42,29 @@ _TRACKR_MODES: tuple[str, ...] = get_args(VdtConfig.model_fields["tracker"].anno
 """合法 tracker 模式——**派生自** ``VdtConfig.tracker`` 的 Literal（单一数据源，
 新增模式仅改 types.py 一处，CLI 自动同步；j-design-principles 原则 8）。"""
 
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+"""py/jxl 仓库根（定位 gitignored 模型权重 yolo26n.pt / rtmpose-17-m.onnx）。"""
+
 
 # ---------------------------------------------------------------------------
 # 纯函数 helper（可单测，自包含）
 # ---------------------------------------------------------------------------
 
 
-def load_config(path: Path, tracker_override: str | None, no_pose: bool) -> VdtConfig:
+def _default_config() -> VdtConfig:
+    """零配置默认：iou 跟踪 + yolo26n 检测 + pose(rtmpose) 全开（spec §0）。"""
+    return VdtConfig(
+        tracker="iou",
+        decode=DecodeCfg(fps=25.0),
+        det=DetCfg(model=str(_REPO_ROOT / "yolo26n.pt"), conf=0.3, classes=[0]),
+        tracker_cfg=IouCfg(iou_thr=0.3, max_age=30, min_hits=2),
+        pose=PoseCfg(
+            model=str(_REPO_ROOT / "rtmpose-17-m.onnx"), keyframe_every=5, min_hits=2
+        ),
+    )
+
+
+def load_config(path: Path | None, tracker_override: str | None, no_pose: bool) -> VdtConfig:
     """读 TOML 配置 → ``VdtConfig``。
 
     TOML 中 ``tracker_cfg`` 以**鉴别子表** ``[tracker_cfg.iou]`` / ``[tracker_cfg.reid]``
@@ -56,6 +76,8 @@ def load_config(path: Path, tracker_override: str | None, no_pose: bool) -> VdtC
       ``BadParameter``（提示需匹配的 cfg 子表）。
     - ``no_pose`` → 剥离 ``pose``（等价于 ``config.pose=None``）。
     """
+    if path is None:
+        return _default_config()
     if not path.is_file():
         raise typer.BadParameter(f"配置文件不存在: {path}")
     with path.open("rb") as f:
@@ -160,7 +182,10 @@ def annotate_video(video_path: str, tracks: Tracks, out_path: Path) -> None:
 @app.command("run")
 def run_cmd(
     video: Annotated[Path, typer.Argument(help="输入视频路径 (mkv/mp4/...)")],
-    config: Annotated[Path, typer.Option("--config", help="TOML 配置路径 (spec §11)")],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="TOML 配置路径（可选；省略=内置默认配置）"),
+    ] = None,
     tracker: Annotated[
         str | None,
         typer.Option("--tracker", help=f"覆盖配置中的 tracker ({'/'.join(_TRACKR_MODES)})"),
@@ -399,6 +424,31 @@ def test_run_cmd_missing_video_bad_param(tmp_path: _Path) -> None:
     cfg = _write(tmp_path, "iou.toml", _IOU_TOML)
     video = tmp_path / "nope.mkv"
     result = runner.invoke(app, ["run", str(video), "--config", str(cfg)])
+    assert result.exit_code != 0
+
+
+def test_default_config_fields() -> None:
+    from jxl.vdt.cli import _default_config
+
+    cfg = _default_config()
+    assert cfg.tracker == "iou"
+    assert "yolo26n.pt" in cfg.det.model
+    assert cfg.pose is not None
+    assert "rtmpose" in cfg.pose.model
+
+
+def test_load_config_none_uses_default() -> None:
+    from jxl.vdt.cli import load_config
+
+    cfg = load_config(None, None, False)
+    assert cfg.tracker == "iou"  # 默认配置
+
+
+def test_run_cmd_without_config_option_is_accepted(tmp_path: _Path) -> None:
+    """--config 可选：不带 --config（视频不存在）→ BadParameter 在 run 前（不报 missing option）。"""
+    runner = CliRunner()
+    video = tmp_path / "nope.mkv"
+    result = runner.invoke(app, ["run", str(video)])  # 无 --config
     assert result.exit_code != 0
 
 
