@@ -42,6 +42,8 @@ class VideoReader:
         fps: 配置的输出帧率（``sample_fps``；``None`` 时为源 fps）——与 ``OcvDecoder.fps``
             语义一致，供 ``VideoWriter`` 以同速率写出。
         size: ``(width, height)``。
+        duration_ms: 源视频时长（ms），``round(frame_count / source_fps * 1000)``——
+            单一数据源暴露视频元数据，供 ``OcvDecoder`` 透传到 ``Tracks.duration_ms``。
     """
 
     def __init__(self, path: str, sample_fps: float | None = None) -> None:
@@ -89,6 +91,7 @@ class VideoReader:
         self._path = path
         self._cap = cap
         self._source_fps = source_fps
+        self._frame_count = frame_count
         self._stride = stride
         self._sample_fps = effective_fps
         self._size = (width, height)
@@ -103,6 +106,11 @@ class VideoReader:
     def size(self) -> tuple[int, int]:
         """``(width, height)``。"""
         return self._size
+
+    @property
+    def duration_ms(self) -> int:
+        """源视频时长（ms）：``round(frame_count / source_fps * 1000)``。"""
+        return round(self._frame_count / self._source_fps * 1000)
 
     def __enter__(self) -> VideoReader:
         return self

@@ -131,11 +131,12 @@ def render_video(
     """按 ``tracks`` 重解码视频并渲染完整演示（框/骨架/尾迹/HUD），写出 mp4。
 
     尾迹在渲染循环按 frame_idx 顺序累积（``Tracks`` 按 id 聚合，不直给尾迹）。
-    ``frame_idx`` 与 ``Tracks`` 对齐（``OcvDecoder`` 同 fps 采样）。
+    ``frame_idx`` 与 ``Tracks`` 对齐（``OcvDecoder`` 同 fps 采样）。视频写出由共享层
+    ``VideoWriter`` 完成（spec §3 单一数据源——编码逻辑仅此处一份）。
     """
-    import cv2  # noqa: PLC0415
     import numpy as np  # noqa: PLC0415
 
+    from jxl.io.video import VideoIoError, VideoWriter  # noqa: PLC0415
     from jxl.vdt.decoder import OcvDecoder  # noqa: PLC0415
     from jxl.vdt.draw import TrailBuffer, render_demo_frame  # noqa: PLC0415
 
@@ -148,36 +149,40 @@ def render_video(
             kpts.extend(fr.kpts)
 
     decoder = OcvDecoder(video_path, tracks.config.decode)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     trails = TrailBuffer(opts.trail_len)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
     frame_iter = iter(decoder)
     try:
         first_idx, _ts0, first_frame = next(frame_iter)
     except StopIteration as e:
         raise DecodeError(f"视频无帧可解码: {video_path}") from e
     height, width = first_frame.shape[:2]
-    writer = cv2.VideoWriter(str(out_path), fourcc, tracks.fps, (width, height))
-    if not writer.isOpened():
-        raise DecodeError(f"VideoWriter 打开失败: {out_path}")
-
-    def _emit(frame_idx: int, ts_ms: int, frame: np.ndarray) -> None:
-        objs, kpts = frame_map.get(frame_idx, ([], []))
-        canvas = frame.copy()
-        for ob in objs:
-            if ob.id != 0:
-                trails.push(ob.id, ob.rect.center())
-        render_demo_frame(
-            canvas, objs, kpts, trails, frame_idx, ts_ms, tracks.config.tracker, opts
-        )
-        writer.write(canvas)
 
     try:
-        _emit(first_idx, _ts0, first_frame)
-        for frame_idx, ts_ms, frame in frame_iter:
-            _emit(frame_idx, ts_ms, frame)
-    finally:
-        writer.release()
+        with VideoWriter(out_path, tracks.fps, (width, height)) as w:
+
+            def _emit(frame_idx: int, ts_ms: int, frame: np.ndarray) -> None:
+                objs, kpts = frame_map.get(frame_idx, ([], []))
+                canvas = frame.copy()
+                for ob in objs:
+                    if ob.id != 0:
+                        trails.push(ob.id, ob.rect.center())
+                render_demo_frame(
+                    canvas,
+                    objs,
+                    kpts,
+                    trails,
+                    frame_idx,
+                    ts_ms,
+                    tracks.config.tracker,
+                    opts,
+                )
+                w.write(canvas)
+
+            _emit(first_idx, _ts0, first_frame)
+            for frame_idx, ts_ms, frame in frame_iter:
+                _emit(frame_idx, ts_ms, frame)
+    except VideoIoError as e:
+        raise DecodeError(str(e)) from e
 
 
 # ---------------------------------------------------------------------------

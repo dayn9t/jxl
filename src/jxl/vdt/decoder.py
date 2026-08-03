@@ -1,11 +1,17 @@
 """视频解码器（``OcvDecoder``）—— vdt 管线第一阶。
 
-按 ``DecodeCfg.fps`` 对源视频等间隔抽帧，发射 ``(frame_idx, ts_ms, BGR image)``。
-``frame_idx`` 是**采样计数器**（0 起连续递增，非源帧索引），供下游 IoU 跟踪按连续
-帧关联；``ts_ms`` 是**源视频真实时间戳**（ReID 的 ttl/motion_radius 按秒，必须用源
-时间，spec §4 Decoder 行）。
+薄适配 ``jxl.io.video.VideoReader``：按 ``DecodeCfg.fps`` 等间隔抽帧，发射
+``(frame_idx, ts_ms, BGR image)``。``frame_idx`` 是**采样计数器**（0 起连续递增，
+非源帧索引），供下游 IoU 跟踪按连续帧关联；``ts_ms`` 是**源视频真实时间戳**
+（ReID 的 ttl/motion_radius 按秒，必须用源时间，spec §4 Decoder 行）。
 
-有状态、仅程序内构造（持 ``cv2.VideoCapture``，不可序列化、迭代器只能消费一次）。
+解码/采样逻辑由共享层 ``VideoReader`` 单一提供（spec §3 单一数据源——解码/编码逻辑
+仅此处一份）；本类仅做 ``VideoIoError → DecodeError`` 适配 + ``fps``/``duration_ms``/
+``size`` 转发。公共接口（构造签名、``__iter__`` yield 元组、属性）不变 → pipeline/cli
+调用方无需改。
+
+有状态、仅程序内构造（持 ``VideoReader`` → ``cv2.VideoCapture``，不可序列化、迭代器
+只能消费一次）。
 """
 
 from __future__ import annotations
@@ -15,105 +21,66 @@ from collections.abc import Iterator
 import cv2
 import numpy as np
 
+from jxl.io.video import VideoIoError, VideoReader
 from jxl.vdt.types import DecodeCfg, DecodeError
 
 
 class OcvDecoder:
-    """opencv ``VideoCapture`` 解码器，可配置 fps 采样。
+    """opencv 视频解码器适配器——委托 ``VideoReader``，可配置 fps 采样。
 
-    有状态、仅程序内构造——持 ``cv2.VideoCapture``（不可序列化）；``__iter__`` 是
-    一次性视频流语义，二次迭代 ``raise DecodeError``。
+    有状态、仅程序内构造——持 ``VideoReader``（不可序列化）；``__iter__`` 是一次性
+    视频流语义，二次迭代 ``raise DecodeError``。
 
     属性：
         fps: 采样帧率（= ``cfg.fps``），供 Aggregator 记录到 ``Tracks.fps``。
         duration_ms: 源视频时长（ms），供 Aggregator 记录到 ``Tracks.duration_ms``。
+        size: ``(width, height)``。
     """
 
-    fps: float
-    duration_ms: int
-
     def __init__(self, video_path: str, cfg: DecodeCfg) -> None:
-        """打开 ``video_path`` 并按 ``cfg.fps`` 计算采样步长。
+        """打开 ``video_path`` 并按 ``cfg.fps`` 采样。
 
         Args:
             video_path: 视频文件路径。
             cfg: 解码配置（``fps`` 为目标采样帧率）。
 
         Raises:
-            DecodeError: 视频打不开 / 源 fps 非正 / 帧数非正（No Silent Degradation）。
+            DecodeError: 视频打不开 / 源 fps 非正 / 帧数非正 / 尺寸非法 /
+                sample_fps 非正（No Silent Degradation；由 ``VideoReader`` 检测，
+                此处适配为 vdt 域的 ``DecodeError``）。
         """
-        cap = cv2.VideoCapture(video_path)
-        # cv2 无 stub，isOpened 返回 bool；打不开立即失败，不静默回退。
-        if not cap.isOpened():
-            cap.release()
-            raise DecodeError(f"无法打开视频: {video_path}")
-
-        source_fps = float(cap.get(cv2.CAP_PROP_FPS))
-        if source_fps <= 0.0:
-            cap.release()
-            raise DecodeError(f"视频 fps 非正（损坏？）: {video_path}, fps={source_fps}")
-
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        if frame_count <= 0:
-            cap.release()
-            raise DecodeError(
-                f"视频帧数非正（损坏？）: {video_path}, frames={frame_count}"
-            )
-
-        self._cap = cap
+        try:
+            self._reader = VideoReader(video_path, sample_fps=cfg.fps)
+        except VideoIoError as e:
+            raise DecodeError(str(e)) from e
         self._video_path = video_path
-        self._source_fps = source_fps
-        self._frame_count = frame_count
-        # round(source_fps / cfg.fps)：每 N 源帧取一帧；下界 1（采样不得超源 fps）。
-        self._sample_stride = max(1, round(source_fps / cfg.fps))
-        self._consumed = False
 
-        self.fps = cfg.fps
-        self.duration_ms = round(frame_count / source_fps * 1000)
+    @property
+    def fps(self) -> float:
+        """采样帧率（= ``cfg.fps``），供 Aggregator 记录到 ``Tracks.fps``。"""
+        return self._reader.fps
+
+    @property
+    def duration_ms(self) -> int:
+        """源视频时长（ms），供 Aggregator 记录到 ``Tracks.duration_ms``。"""
+        return self._reader.duration_ms
+
+    @property
+    def size(self) -> tuple[int, int]:
+        """``(width, height)``。"""
+        return self._reader.size
 
     def __iter__(self) -> Iterator[tuple[int, int, np.ndarray]]:
-        """按 ``sample_stride`` 抽帧，yield ``(frame_idx, ts_ms, BGR ndarray)``。
+        """转发 ``VideoReader`` 迭代，yield ``(frame_idx, ts_ms, BGR ndarray)``。
 
         ``frame_idx`` 为采样计数器（0 起连续）；``ts_ms`` 由源帧索引换算（源真实时间）。
-        到达尾部或读帧失败即停止；迭代结束（含提前 break）``cap.release()``。
-        迭代器只能消费一次。
-
-        实现用**顺序 ``grab()`` + 条件 ``retrieve()``**，而非 ``cap.set(POS_FRAMES)`` seek：
-        mp4v 等稀疏关键帧格式下，``set`` 每次 seek 会从最近 keyframe 全量重解码，实测
-        750 帧需 244s；顺序 ``grab``（仅解封装不解码）跳过非采样帧、仅对采样帧 ``retrieve``
-        解码，同 750 帧仅 1.5s（~160×）。对任意 stride 均快且正确。
+        迭代器只能消费一次；``VideoReader`` 的「抽帧得 0 帧 / 重复迭代」``VideoIoError``
+        适配为 ``DecodeError``。
         """
-        if self._consumed:
-            raise DecodeError(f"OcvDecoder 迭代器已消费，不可重复迭代: {self._video_path}")
-        self._consumed = True
-
-        cap = self._cap
-        source_fps = self._source_fps
-        stride = self._sample_stride
         try:
-            frame_idx = 0
-            src_idx = 0
-            # grab() 推进一帧（仅解封装，廉价）；每逢采样位置 retrieve() 解码该帧。
-            # 以 grab() 返回 False 作 EOF（比 CAP_PROP_FRAME_COUNT 更可靠——后者对部分编码不准）。
-            while cap.grab():
-                if src_idx % stride == 0:
-                    ret, frame = cap.retrieve()
-                    if not ret or frame is None:
-                        break
-                    ts_ms = round(src_idx / source_fps * 1000)
-                    # frame 来自 cv2（无 stub→Any），asarray 既是运行时恒等（已是 ndarray）
-                    # 又把类型窄化为 ndarray，满足 mypy 严格返回类型。
-                    yield (frame_idx, ts_ms, np.asarray(frame))
-                    frame_idx += 1
-                src_idx += 1
-            # spec §9：抽帧得 0 帧（损坏/不可解码，构造期 CAP_PROP_FRAME_COUNT 对部分
-            # 编码不准、可能误报正）→ raise，不静默产出空 Tracks（No Silent Degradation）。
-            if frame_idx == 0:
-                raise DecodeError(
-                    f"视频抽帧得 0 帧（损坏或不可解码）: {self._video_path}"
-                )
-        finally:
-            cap.release()
+            yield from self._reader
+        except VideoIoError as e:
+            raise DecodeError(str(e)) from e
 
 
 # ---------------------------------------------------------------------------
