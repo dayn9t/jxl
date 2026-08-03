@@ -4,8 +4,8 @@ imperative shell：参数校验 → 事件解析 → 视频逐帧 → ``draw_tag
 Functional Core（``parse_event``/``draw_tags``）在 ``overlay.py``，本模块仅编排与 IO。
 
 No Silent Degradation（spec §10）：视频/字体不存在、``--event`` 缺失或非法、事件时段
-越界、视频无帧、``VideoWriter``/字体加载失败 → ``typer.BadParameter`` 报错退出，
-绝不静默回退（如降级到 cv2.putText）。
+越界、``--font-size`` 非正、视频无帧、``VideoWriter``/字体加载失败 → ``typer.BadParameter``
+报错退出，绝不静默回退（如降级到 cv2.putText）。
 
 console script：``vtag = "jxl.vtag.cli:app"``（单命令 app，直接 ``vtag <video> --event …``）。
 """
@@ -69,7 +69,8 @@ def _load_font(opts: TagOpts) -> ImageFont.FreeTypeFont:
     """循环外加载字体一次（spec §8）。失败即报错，不回退 cv2.putText（No Silent Degradation）。"""
     try:
         return ImageFont.truetype(opts.font_path, opts.font_size)
-    except OSError as e:
+    except (OSError, ValueError) as e:
+        # OSError: 文件不可读/不存在；ValueError: font_size<=0（PIL 抛）。两者均 → BadParameter。
         raise typer.BadParameter(f"字体加载失败: {opts.font_path} ({e})") from e
 
 
@@ -95,6 +96,8 @@ def main(
     """
     if not video.is_file():
         raise typer.BadParameter(f"视频不存在: {video}")
+    if font_size <= 0:
+        raise typer.BadParameter(f"--font-size 必须 > 0，实际 {font_size}")
 
     font_path = _resolve_font(font)
     events = _parse_events(event)
@@ -125,13 +128,15 @@ if __name__ == "__main__":
 
 # ---------------------------------------------------------------------------
 # 单测（pytest 按文件发现；端到端用 _make_synthetic_video 合成短视频，零真实视频依赖）
+# 本模块是生产 console script 入口，pytest 仅 dev 可用——故 pytest 在各 test 函数内惰性
+# import（同 jxl/vdt/draw.py 模式），生产 import 不触发。typer.testing（CliRunner）属
+# typer runtime 依赖，可顶层 import。
 # ---------------------------------------------------------------------------
 
 from pathlib import Path as _Path  # noqa: E402
 
 import cv2  # noqa: E402
 import numpy as np  # noqa: E402
-import pytest  # noqa: E402
 from typer.testing import CliRunner  # noqa: E402
 
 from jxl.vtag.overlay import EventSpec as _EventSpec  # noqa: E402
@@ -181,6 +186,8 @@ def test_resolve_font_default_exists() -> None:
 
 
 def test_resolve_font_missing_raises_bad_parameter() -> None:
+    import pytest
+
     with pytest.raises(typer.BadParameter):
         _resolve_font(_Path("/nonexistent/font.ttf"))
 
@@ -195,17 +202,23 @@ def test_parse_events_ok() -> None:
 
 
 def test_parse_events_empty_raises_bad_parameter() -> None:
+    import pytest
+
     with pytest.raises(typer.BadParameter):
         _parse_events([])
 
 
 def test_parse_events_invalid_raises_bad_parameter() -> None:
+    import pytest
+
     with pytest.raises(typer.BadParameter):
         _parse_events(["无逗号"])
 
 
 def test_validate_event_ranges_out_of_bounds_raises() -> None:
     """事件 end 超出视频时长 → BadParameter（spec §10 不静默裁剪）。"""
+    import pytest
+
     events = [_EventSpec(name="甲", start=0.0, end=10.0)]
     with pytest.raises(typer.BadParameter):
         _validate_event_ranges(events, duration_s=2.0)
@@ -217,6 +230,7 @@ def test_validate_event_ranges_within_bounds_ok() -> None:
 
 
 # --- CLI（CliRunner；单命令 app 直接调用，无子命令前缀） --------------------
+# typer 把 BadParameter 包成 SystemExit(2)，故校验 exit_code == 2（精确于 !=0）。
 
 
 def test_app_help_exit_zero() -> None:
@@ -228,34 +242,34 @@ def test_app_help_exit_zero() -> None:
 
 
 def test_main_missing_event_bad_parameter(tmp_path: _Path) -> None:
-    """无 --event → BadParameter（spec §10：至少一个）。"""
+    """无 --event → BadParameter（exit 2；spec §10：至少一个）。"""
     video = tmp_path / "s.mp4"
     _make_video(video)
     runner = CliRunner()
     result = runner.invoke(app, [str(video)])
-    assert result.exit_code != 0
+    assert result.exit_code == 2
 
 
 def test_main_invalid_event_bad_parameter(tmp_path: _Path) -> None:
-    """--event 格式错 → BadParameter。"""
+    """--event 格式错 → BadParameter（exit 2）。"""
     video = tmp_path / "s.mp4"
     _make_video(video)
     runner = CliRunner()
     result = runner.invoke(app, [str(video), "--event", "无逗号"])
-    assert result.exit_code != 0
+    assert result.exit_code == 2
 
 
 def test_main_video_not_found_bad_parameter(tmp_path: _Path) -> None:
-    """视频不存在 → BadParameter。"""
+    """视频不存在 → BadParameter（exit 2）。"""
     runner = CliRunner()
     result = runner.invoke(
         app, [str(tmp_path / "nope.mp4"), "--event", "甲,0.5-1.5"]
     )
-    assert result.exit_code != 0
+    assert result.exit_code == 2
 
 
 def test_main_font_not_found_bad_parameter(tmp_path: _Path) -> None:
-    """--font 不存在 → BadParameter。"""
+    """--font 不存在 → BadParameter（exit 2）。"""
     video = tmp_path / "s.mp4"
     _make_video(video)
     runner = CliRunner()
@@ -263,7 +277,29 @@ def test_main_font_not_found_bad_parameter(tmp_path: _Path) -> None:
         app,
         [str(video), "--event", "甲,0.5-1.5", "--font", "/nonexistent/font.ttf"],
     )
-    assert result.exit_code != 0
+    assert result.exit_code == 2
+
+
+def test_main_font_size_non_positive_bad_parameter(tmp_path: _Path) -> None:
+    """--font-size <= 0 → BadParameter（exit 2；覆盖 ValueError 逃逸缺口）。"""
+    video = tmp_path / "s.mp4"
+    _make_video(video)
+    runner = CliRunner()
+    result = runner.invoke(
+        app, [str(video), "--event", "甲,0.5-1.5", "--font-size", "0"]
+    )
+    assert result.exit_code == 2
+
+
+def test_main_event_out_of_bounds_bad_parameter(tmp_path: _Path) -> None:
+    """事件 end 超视频时长 → BadParameter（exit 2；补 CLI 端到端覆盖 spec §10）。"""
+    video = tmp_path / "s.mp4"
+    _make_video(video, fps=5.0, frames=10)  # duration 2.0s
+    runner = CliRunner()
+    result = runner.invoke(
+        app, [str(video), "--event", "甲,0.5-3.0"]  # end=3.0 > 2.0
+    )
+    assert result.exit_code == 2
 
 
 def test_main_end_to_end(tmp_path: _Path) -> None:

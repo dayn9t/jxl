@@ -131,6 +131,11 @@ class VideoReader:
         ``frame_idx`` 为采样计数器（0 起连续递增）；``ts_ms`` 为源真实时间戳。
         以 ``grab()`` 返回 False 作 EOF（比 ``CAP_PROP_FRAME_COUNT`` 更可靠——后者对
         部分编码不准）。抽帧得 0 帧 → raise（No Silent Degradation）。迭代器只能消费一次。
+
+        取舍（No Silent Degradation 边界）：``grab()`` 成功后若 ``retrieve()`` 失败（流
+        中段损坏帧）会 ``break`` 静默结束、仅返回已抽到的部分帧——这与干净 EOF 无法可靠
+        区分（mp4v 尾包/部分编码下 ``retrieve()`` 亦返回 False），故不 raise；全损
+        （``frame_idx==0``）仍 raise。调用方若需严格，应在调用侧比对预期帧数。
         """
         if self._consumed:
             raise VideoIoError(

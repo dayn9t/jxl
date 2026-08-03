@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,9 +46,10 @@ def parse_event(s: str) -> EventSpec:
 
     格式 ``<名称>,<起>-<止>``（spec §7）：名称不含逗号；起/止为非负浮点秒；``起 < 止``。
 
-    非法（无逗号 / 非数 / ``起>=止`` / 负值 / 名称空）→ ``ValueError``。
+    非法（无逗号 / 非数 / 非有限数 nan·inf / ``起>=止`` / 负值 / 名称空）→ ``ValueError``。
     负值由时间段拆分天然拒绝——非负数无 ``-`` 前缀，故时间段串恰含一个 ``-``；
-    出现负号即拆出 ≠2 段 → 格式错。
+    出现负号即拆出 ≠2 段 → 格式错。nan/inf 经 ``float()`` 解析成功但会穿透后续比较
+    （nan 比较恒 False）致事件静默丢弃，故用 ``math.isfinite`` 显式拒绝（spec §10）。
     """
     parts = s.split(",")
     if len(parts) != 2:
@@ -64,6 +66,8 @@ def parse_event(s: str) -> EventSpec:
         end = float(time_parts[1])
     except ValueError as e:
         raise ValueError(f"时间段非数值: {time_str!r}") from e
+    if not (math.isfinite(start) and math.isfinite(end)):
+        raise ValueError(f"时间段必须为有限数值: {time_str!r}")
     if start >= end:
         raise ValueError(f"起必须 < 止: 起={start} 止={end}")
     return EventSpec(name=name, start=start, end=end)
@@ -114,11 +118,11 @@ def draw_tags(
 
 # ---------------------------------------------------------------------------
 # 单测（pytest 按文件发现；零视频依赖，仅需系统 CJK 字体）
+# 本模块是生产模块（被 cli import），pytest 仅 dev 可用——故 pytest 在各 test 函数内
+# 惰性 import（同 jxl/vdt/draw.py 模式），生产 import 不触发。
 # ---------------------------------------------------------------------------
 
 from pathlib import Path as _Path  # noqa: E402
-
-import pytest  # noqa: E402
 
 # spec §9 默认字体；测试需真实 CJK 字形（「打架/跌倒」）。
 _CJK_FONT = _Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
@@ -165,24 +169,44 @@ def test_parse_event_zero_start_ok() -> None:
 
 
 def test_parse_event_no_comma_raises() -> None:
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event("打架")
 
 
 def test_parse_event_extra_comma_raises() -> None:
     """名称含逗号（>1 逗号）→ 格式错。"""
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event("打,架,2.0-5.0")
 
 
 def test_parse_event_non_numeric_raises() -> None:
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event("打架,abc-5.0")
     with pytest.raises(ValueError):
         parse_event("打架,2.0-xyz")
 
 
+def test_parse_event_non_finite_raises() -> None:
+    """nan/inf 经 float() 解析成功但穿透比较致事件静默丢弃 → 显式拒绝（spec §10）。"""
+    import pytest
+
+    with pytest.raises(ValueError):
+        parse_event("打架,nan-5.0")
+    with pytest.raises(ValueError):
+        parse_event("打架,2.0-nan")
+    with pytest.raises(ValueError):
+        parse_event("打架,inf-5.0")
+
+
 def test_parse_event_start_ge_end_raises() -> None:
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event("打架,5.0-2.0")
     with pytest.raises(ValueError):
@@ -191,6 +215,8 @@ def test_parse_event_start_ge_end_raises() -> None:
 
 def test_parse_event_negative_raises() -> None:
     """负值 → 时间段拆出 ≠2 段 → ValueError（spec §10 严格不回退）。"""
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event("打架,-1.0-5.0")
     with pytest.raises(ValueError):
@@ -198,6 +224,8 @@ def test_parse_event_negative_raises() -> None:
 
 
 def test_parse_event_empty_name_raises() -> None:
+    import pytest
+
     with pytest.raises(ValueError):
         parse_event(",2.0-5.0")
 
