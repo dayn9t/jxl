@@ -83,7 +83,7 @@ def main(
     out: Annotated[
         Path | None, typer.Option("--out", help="输出（默认 <input>_tagged.<ext>）")
     ] = None,
-    font_size: Annotated[int, typer.Option("--font-size", help="字号（默认 48）")] = 48,
+    font_size: Annotated[int, typer.Option("--font-size", help="字号（默认 96）")] = 96,
     font: Annotated[
         Path | None, typer.Option("--font", help="字体文件（默认 Noto Sans CJK）")
     ] = None,

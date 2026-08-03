@@ -38,7 +38,7 @@ class TagOpts:
     """
 
     font_path: Path
-    font_size: int = 48
+    font_size: int = 96
     color_rgb: tuple[int, int, int] = (255, 0, 0)  # 红填充
     stroke_rgb: tuple[int, int, int] = (255, 255, 255)  # 白描边
     stroke_width: int = 2
@@ -252,7 +252,7 @@ def test_parse_event_empty_name_raises() -> None:
 
 def test_tag_opts_defaults() -> None:
     opts = TagOpts(font_path=_CJK_FONT)
-    assert opts.font_size == 48
+    assert opts.font_size == 96
     assert opts.color_rgb == (255, 0, 0)
     assert opts.stroke_rgb == (255, 255, 255)
     assert opts.stroke_width == 2
@@ -282,7 +282,7 @@ def test_draw_tags_empty_returns_identical() -> None:
     """names 空 → 原样返回同一对象（零开销，不转 PIL）。"""
     canvas = np.full((50, 50, 3), 128, np.uint8)
     font = ImageFont.truetype(_CJK_FONT, 48)
-    opts = TagOpts(font_path=_CJK_FONT)
+    opts = TagOpts(font_path=_CJK_FONT, font_size=48)
     out = draw_tags(canvas, [], font, opts)
     assert out is canvas
     assert np.array_equal(out, canvas)
@@ -293,7 +293,7 @@ def test_draw_tags_with_event_paints_bottom_right() -> None:
     canvas = np.full((200, 300, 3), 128, np.uint8)
     top_left_before = canvas[:60, :60].copy()
     font = ImageFont.truetype(_CJK_FONT, 48)
-    opts = TagOpts(font_path=_CJK_FONT)
+    opts = TagOpts(font_path=_CJK_FONT, font_size=48)
     out = draw_tags(canvas, ["打架"], font, opts)
 
     red = _red_mask(out)
@@ -312,7 +312,7 @@ def test_draw_tags_does_not_mutate_input() -> None:
     canvas = np.full((200, 300, 3), 128, np.uint8)
     before = canvas.copy()
     font = ImageFont.truetype(_CJK_FONT, 48)
-    opts = TagOpts(font_path=_CJK_FONT)
+    opts = TagOpts(font_path=_CJK_FONT, font_size=48)
     draw_tags(canvas, ["打架"], font, opts)
     assert np.array_equal(canvas, before)
 
@@ -321,7 +321,7 @@ def test_draw_tags_multi_event_vertical_nonoverlap() -> None:
     """多事件竖排：两个标签的 y 区间不重叠（首个事件最靠下）。"""
     canvas = np.full((300, 300, 3), 128, np.uint8)
     font = ImageFont.truetype(_CJK_FONT, 48)
-    opts = TagOpts(font_path=_CJK_FONT)
+    opts = TagOpts(font_path=_CJK_FONT, font_size=48)
     out = draw_tags(canvas, ["打架", "跌倒"], font, opts)
 
     bands = _red_bands(out)
@@ -333,7 +333,7 @@ def test_draw_tags_multi_event_vertical_nonoverlap() -> None:
 def test_draw_tags_first_event_at_bottom() -> None:
     """names[0] 最靠下：单事件底边 ≈ 高度 - margin；再加一个事件后底边不变。"""
     font = ImageFont.truetype(_CJK_FONT, 48)
-    opts = TagOpts(font_path=_CJK_FONT)
+    opts = TagOpts(font_path=_CJK_FONT, font_size=48)
     canvas = np.full((300, 300, 3), 128, np.uint8)
 
     one = draw_tags(canvas.copy(), ["打架"], font, opts)
