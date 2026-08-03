@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from openai import OpenAI
+from openai import APIError, OpenAI
 
 from jcx.text.txt_json import load_json
 from jxl.common import JXL_ASSERTS, JXL_OAI_DIR
@@ -193,8 +193,27 @@ def main(
         else:
             urls = [image_data_url(case.path)]
         content = build_user_content(urls, case.question)
-        pro = _run_once(client, cfg_pro.model, content, thinking)
-        flash = _run_once(client, cfg_flash.model, content, thinking)
+        # spec §7: 单 case API 失败隔离 — pro/flash 各自独立 try, 互不跳过.
+        # content 构造 (image_data_url / sample_video_frames / build_user_content)
+        # 是本地错误 (素材缺失/坏视频), 必须 abort 整个探针, 不在 try 内.
+        try:
+            pro = _run_once(client, cfg_pro.model, content, thinking)
+        except APIError as exc:
+            pro = CaseResult(
+                model=cfg_pro.model,
+                answer=f"[FAILED] {exc}",
+                elapsed_s=0.0,
+                total_tokens=0,
+            )
+        try:
+            flash = _run_once(client, cfg_flash.model, content, thinking)
+        except APIError as exc:
+            flash = CaseResult(
+                model=cfg_flash.model,
+                answer=f"[FAILED] {exc}",
+                elapsed_s=0.0,
+                total_tokens=0,
+            )
         _print_pair(case.tag, case.question, pro, flash)
         records.append((case.tag, case.question, pro, flash))
 
