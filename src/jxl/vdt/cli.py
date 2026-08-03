@@ -8,7 +8,7 @@ lazy import 拉起，避免 app import 即拖入 torch/ultralytics/onnxruntime�
 - ``vdt info`` 打印模型槽位与配置示例。
 
 约定（j-python-strict）：纯函数 helper（``load_config``/``write_tracks``/
-``annotate_video``）可独立单测，零模型依赖；``run_cmd`` 是 imperative shell。
+``render_video``）可独立单测，零模型依赖；``run_cmd`` 是 imperative shell。
 """
 
 from __future__ import annotations
@@ -23,13 +23,15 @@ import typer
 from loguru import logger
 from pydantic import ValidationError
 
-from jxl.det.d2d import D2dObject, draw_d2d_objects
+from jxl.det.d2d import D2dObject
+from jxl.vdt.draw import DrawOpts
 from jxl.vdt.types import (
     DecodeCfg,
     DecodeError,
     DetCfg,
     FrameResult,
     IouCfg,
+    Keypoints,
     PoseCfg,
     Track,
     Tracks,
@@ -123,53 +125,57 @@ def write_tracks(tracks: Tracks, path: Path) -> None:
     path.write_bytes(orjson.dumps(payload))
 
 
-def annotate_video(video_path: str, tracks: Tracks, out_path: Path) -> None:
-    """按 ``tracks`` 重解码视频并绘制标注，写出 mp4。
+def render_video(
+    video_path: str, tracks: Tracks, out_path: Path, opts: DrawOpts
+) -> None:
+    """按 ``tracks`` 重解码视频并渲染完整演示（框/骨架/尾迹/HUD），写出 mp4。
 
-    用 ``OcvDecoder`` 以**与管线相同的 fps 采样**重解码——确保 ``frame_idx`` 与
-    ``Tracks`` 对齐。逐帧：有标注则 ``draw_d2d_objects`` 后写出，无则写原帧（保持时长）。
-
-    注：``jxl.vdt.decoder`` 在 P1 并行期可能未就绪；本函数内 lazy import，集成后由主控验证。
+    尾迹在渲染循环按 frame_idx 顺序累积（``Tracks`` 按 id 聚合，不直给尾迹）。
+    ``frame_idx`` 与 ``Tracks`` 对齐（``OcvDecoder`` 同 fps 采样）。
     """
-    import cv2  # noqa: PLC0415（lazy import cv2 与 app import 解耦）
+    import cv2  # noqa: PLC0415
     import numpy as np  # noqa: PLC0415
 
-    from jvi.image.image_nda import ImageNda  # noqa: PLC0415
     from jxl.vdt.decoder import OcvDecoder  # noqa: PLC0415
+    from jxl.vdt.draw import TrailBuffer, render_demo_frame  # noqa: PLC0415
 
-    frame_map: dict[int, list[D2dObject]] = {}
+    # 从 Tracks（按 id 聚合）拆回逐帧：{frame_idx: (objects, kpts)}
+    frame_map: dict[int, tuple[list[D2dObject], list[Keypoints | None]]] = {}
     for tr in tracks.tracks:
         for fr in tr.frames:
-            frame_map.setdefault(fr.frame_idx, []).extend(fr.objects)
+            objs, kpts = frame_map.setdefault(fr.frame_idx, ([], []))
+            objs.extend(fr.objects)
+            kpts.extend(fr.kpts)
 
     decoder = OcvDecoder(video_path, tracks.config.decode)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    def _emit(frame_idx: int, frame_bgr: np.ndarray, writer: cv2.VideoWriter) -> None:
-        objs = frame_map.get(frame_idx, [])
-        if objs:
-            canvas = ImageNda(data=frame_bgr)
-            draw_d2d_objects(canvas, objs)
-            writer.write(canvas.data())
-        else:
-            writer.write(frame_bgr)
-
+    trails = TrailBuffer(opts.trail_len)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
     frame_iter = iter(decoder)
     try:
-        first = next(frame_iter)
+        first_idx, _ts0, first_frame = next(frame_iter)
     except StopIteration as e:
         raise DecodeError(f"视频无帧可解码: {video_path}") from e
-
-    first_idx, _ts0, first_frame = first
     height, width = first_frame.shape[:2]
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
     writer = cv2.VideoWriter(str(out_path), fourcc, tracks.fps, (width, height))
     if not writer.isOpened():
         raise DecodeError(f"VideoWriter 打开失败: {out_path}")
+
+    def _emit(frame_idx: int, ts_ms: int, frame: np.ndarray) -> None:
+        objs, kpts = frame_map.get(frame_idx, ([], []))
+        canvas = frame.copy()
+        for ob in objs:
+            if ob.id != 0:
+                trails.push(ob.id, ob.rect.center())
+        render_demo_frame(
+            canvas, objs, kpts, trails, frame_idx, ts_ms, tracks.config.tracker, opts
+        )
+        writer.write(canvas)
+
     try:
-        _emit(first_idx, first_frame, writer)
-        for frame_idx, _ts, frame in frame_iter:
-            _emit(frame_idx, frame, writer)
+        _emit(first_idx, _ts0, first_frame)
+        for frame_idx, ts_ms, frame in frame_iter:
+            _emit(frame_idx, ts_ms, frame)
     finally:
         writer.release()
 
@@ -199,12 +205,27 @@ def run_cmd(
     no_pose: Annotated[
         bool, typer.Option("--no-pose", help="禁用 pose 阶段（等价 config.pose=None）"),
     ] = False,
+    no_box: Annotated[bool, typer.Option("--no-box", help="演示视频不画检测框")] = False,
+    no_skeleton: Annotated[
+        bool, typer.Option("--no-skeleton", help="不画 pose 骨架")
+    ] = False,
+    no_trails: Annotated[
+        bool, typer.Option("--no-trails", help="不画轨迹尾迹")
+    ] = False,
+    no_hud: Annotated[bool, typer.Option("--no-hud", help="不画顶部 HUD")] = False,
+    trail_len: Annotated[
+        int, typer.Option("--trail-len", help="尾迹长度（帧，默认 30）")
+    ] = 30,
 ) -> None:
-    """对 ``video`` 跑 detect → track →（可选）pose 管线，产出 tracks JSON 与/或标注视频。"""
+    """对 ``video`` 跑 detect → track →（可选）pose 管线，产出 tracks JSON 与/或演示视频。"""
     if tracker is not None and tracker not in _TRACKR_MODES:
         raise typer.BadParameter(f"--tracker 非法: {tracker} (合法: {_TRACKR_MODES})")
     if not video.is_file():
         raise typer.BadParameter(f"视频不存在: {video}")
+    if out_tracks is None and out_video is None:
+        raise typer.BadParameter("至少指定 --out-tracks 或 --out-video 之一")
+    if trail_len <= 0:
+        raise typer.BadParameter(f"--trail-len 必须 > 0，实际 {trail_len}")
 
     cfg = load_config(config, tracker, no_pose)
 
@@ -217,8 +238,15 @@ def run_cmd(
         write_tracks(tracks, out_tracks)
         logger.info("tracks → {}", out_tracks)
     if out_video is not None:
-        annotate_video(str(video), tracks, out_video)
-        logger.info("annotated → {}", out_video)
+        opts = DrawOpts(
+            box=not no_box,
+            skeleton=not no_skeleton,
+            trail=not no_trails,
+            hud=not no_hud,
+            trail_len=trail_len,
+        )
+        render_video(str(video), tracks, out_video, opts)
+        logger.info("demo video → {}", out_video)
 
     duration_s = tracks.duration_ms / 1000.0
     n_objs = sum(len(fr.objects) for tr in tracks.tracks for fr in tr.frames)
@@ -380,9 +408,6 @@ def _synth_tracks() -> Tracks:
     obj = _D2dObject(id=1, cls=0, conf=0.9, rect=rect)
     fr = FrameResult(frame_idx=0, ts_ms=0, objects=[obj], kpts=[None])
     track = Track(id=1, cls=0, frames=[fr])
-    # 构造合法 VdtConfig（直连 pydantic，绕过 TOML 拍平）
-    from jxl.vdt.types import DecodeCfg, DetCfg, IouCfg
-
     vcfg = VdtConfig(
         tracker="iou",
         decode=DecodeCfg(fps=25.0),
@@ -452,13 +477,13 @@ def test_run_cmd_without_config_option_is_accepted(tmp_path: _Path) -> None:
     assert result.exit_code != 0
 
 
-def test_annotate_video_writes_readable_mp4(tmp_path: _Path) -> None:
-    """annotate_video（重解码+帧对齐+draw+VideoWriter）端到端：输出可读 mp4。"""
+def test_render_video_writes_readable_mp4(tmp_path: _Path) -> None:
+    """render_video 端到端：合成视频 + 合成 Tracks → 可读 mp4（零模型，纯渲染）。"""
     import cv2
 
-    from jxl.vdt.cli import annotate_video
+    from jxl.vdt.cli import render_video
     from jxl.vdt.decoder import _make_synthetic_video
-    from jxl.vdt.types import DecodeCfg, DetCfg, IouCfg
+    from jxl.vdt.draw import DrawOpts
 
     video = tmp_path / "s.mp4"
     _make_synthetic_video(str(video), fps=5.0, frames=5)
@@ -478,11 +503,33 @@ def test_annotate_video_writes_readable_mp4(tmp_path: _Path) -> None:
         tracks=[Track(id=1, cls=0, frames=[fr])],
         config=vcfg,
     )
-    out = tmp_path / "ann.mp4"
-    annotate_video(str(video), tracks, out)
+    out = tmp_path / "demo.mp4"
+    render_video(str(video), tracks, out, DrawOpts())
     assert out.is_file() and out.stat().st_size > 0
     cap = cv2.VideoCapture(str(out))
     assert cap.isOpened()
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     assert n >= 1
+
+
+def test_run_cmd_no_out_bad_param(tmp_path: _Path) -> None:
+    """无 --out-* → BadParameter（无产出）。
+
+    校验顺序：tracker 合法 → video 存在 → 至少一个 out → trail_len → load_config。
+    视频不存在先报；用两 None（无 --out-*）场景验证 no-out 分支必抛（exit_code != 0）。
+    """
+    runner = CliRunner()
+    video = tmp_path / "nope.mkv"
+    result = runner.invoke(app, ["run", str(video)])
+    assert result.exit_code != 0
+
+
+def test_run_cmd_bad_trail_len(tmp_path: _Path) -> None:
+    """--trail-len 0 → BadParameter。"""
+    runner = CliRunner()
+    video = tmp_path / "nope.mkv"
+    result = runner.invoke(
+        app, ["run", str(video), "--out-video", "x.mp4", "--trail-len", "0"]
+    )
+    assert result.exit_code != 0
