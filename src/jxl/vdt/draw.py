@@ -98,6 +98,68 @@ def draw_pose_skeleton(
             cv2.line(canvas, pa, pb, color, 2, cv2.LINE_AA)
 
 
+def _fade(color: tuple[int, int, int], alpha: float) -> tuple[int, int, int]:
+    """颜色按 alpha 向黑衰减（alpha=1 原色，alpha=0 全黑）。"""
+    return tuple(int(c * alpha) for c in color)  # type: ignore[return-value]
+
+
+class TrailBuffer:
+    """per-id 归一化中心点环形缓冲（命令式累积；``draw`` 是纯绘制）。
+
+    有状态、仅程序内构造（非 pydantic）；渲染循环每帧 ``push``，``draw`` 画衰减尾迹。
+    """
+
+    def __init__(self, max_len: int) -> None:
+        if max_len <= 0:
+            raise ValueError(f"trail_len 必须 > 0，实际 {max_len}")
+        self._max_len = max_len
+        self._buf: dict[int, deque[Point]] = {}
+
+    def push(self, track_id: int, center: Point) -> None:
+        """记录某 id 本帧的归一化中心；超过 max_len 自动丢最旧。"""
+        d = self._buf.get(track_id)
+        if d is None:
+            d = deque[Point](maxlen=self._max_len)
+            self._buf[track_id] = d
+        d.append(center)
+
+    def draw(self, canvas: np.ndarray) -> None:
+        """画所有 id 的尾迹：逐段按年龄衰减 alpha（旧 0.2→新 1.0）、线宽（旧 1→新 2）。"""
+        img_h, img_w = canvas.shape[:2]
+        for tid, pts in self._buf.items():
+            color = color_for_id(tid)
+            n = len(pts)
+            if n < 2:
+                continue
+            for i in range(1, n):
+                age = (n - 1 - i) / (n - 1)  # 0=最新段，1=最旧段
+                alpha = 1.0 - 0.8 * age  # 新 1.0 → 旧 0.2
+                thick = 2 if alpha > 0.6 else 1
+                p0 = (int(pts[i - 1].x * img_w), int(pts[i - 1].y * img_h))
+                p1 = (int(pts[i].x * img_w), int(pts[i].y * img_h))
+                cv2.line(canvas, p0, p1, _fade(color, alpha), thick, cv2.LINE_AA)
+
+
+def draw_hud(
+    canvas: np.ndarray,
+    frame_idx: int,
+    ts_ms: int,
+    n_objects: int,
+    tracker_mode: str,
+) -> None:
+    """顶部信息条（半透明黑底白字）：帧号 / 时间 / 目标数 / 跟踪模式。"""
+    text = f"f#{frame_idx}  {ts_ms / 1000:.1f}s  |  {n_objects} objs  |  {tracker_mode}"
+    (tw, th), _ = cv2.getTextSize(
+        text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
+    )
+    x1, y1 = tw + 20, th + 16
+    canvas[0:y1, 0:x1] = (canvas[0:y1, 0:x1] // 2)  # 局部变暗≈半透明黑底
+    cv2.putText(
+        canvas, text, (10, th + 6),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA,
+    )
+
+
 # ---------------------------------------------------------------------------
 # 单测（pytest 按文件发现；零模型依赖）
 # ---------------------------------------------------------------------------
@@ -147,3 +209,33 @@ def test_draw_pose_skeleton_visible_paints() -> None:
     kpts = Keypoints(pts=[Point(x=0.5, y=0.5)] * 17, conf=[0.9] * 17)
     draw_pose_skeleton(canvas, kpts, (0, 255, 0))
     assert int(canvas.sum()) > 0
+
+
+def test_trail_buffer_ring_drops_oldest() -> None:
+    tb = TrailBuffer(3)
+    for i in range(5):
+        tb.push(1, Point(x=i / 10, y=i / 10))
+    assert len(tb._buf[1]) == 3  # 环形：只保留最近 3
+    assert tb._buf[1][-1] == Point(x=0.4, y=0.4)  # 最后 push 的是 i=4
+
+
+def test_trail_buffer_invalid_len_raises() -> None:
+    import pytest
+
+    with pytest.raises(ValueError):
+        TrailBuffer(0)
+
+
+def test_trail_buffer_draw_no_crash() -> None:
+    canvas = np.zeros((100, 100, 3), np.uint8)
+    tb = TrailBuffer(3)
+    tb.push(1, Point(x=0.5, y=0.5))
+    tb.push(1, Point(x=0.51, y=0.5))
+    tb.draw(canvas)  # ≥2 点才画线；不崩
+    assert int(canvas.sum()) > 0
+
+
+def test_draw_hud_paints_top_bar() -> None:
+    canvas = np.zeros((100, 200, 3), np.uint8)
+    draw_hud(canvas, 5, 1000, 3, "iou")
+    assert int(canvas[:30].sum()) > 0  # 顶部条被画
