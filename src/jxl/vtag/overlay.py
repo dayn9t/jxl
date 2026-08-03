@@ -31,7 +31,11 @@ class EventSpec:
 
 @dataclass(frozen=True, slots=True)
 class TagOpts:
-    """叠加视觉参数（spec §9；右下角硬默认，仅字号/字体可调）。"""
+    """叠加视觉参数（spec §9；右下角硬默认，仅字号/字体可调）。
+
+    闪烁：标签按 ``blink_on`` 秒显示 / ``blink_off`` 秒消失循环，基于视频绝对时间
+    ``t`` 的相位（所有事件同步闪烁，spec 增补）。
+    """
 
     font_path: Path
     font_size: int = 48
@@ -39,6 +43,8 @@ class TagOpts:
     stroke_rgb: tuple[int, int, int] = (255, 255, 255)  # 白描边
     stroke_width: int = 2
     margin: int = 20
+    blink_on: float = 0.25  # 显示时长（秒）
+    blink_off: float = 0.525  # 消失时长（秒）
 
 
 def parse_event(s: str) -> EventSpec:
@@ -71,6 +77,20 @@ def parse_event(s: str) -> EventSpec:
     if start >= end:
         raise ValueError(f"起必须 < 止: 起={start} 止={end}")
     return EventSpec(name=name, start=start, end=end)
+
+
+def blink_visible(t: float, opts: TagOpts) -> bool:
+    """``t``（秒）是否落在闪烁的显示相位（on）。
+
+    周期 = ``blink_on + blink_off``；``t % 周期 < blink_on`` → 显示。
+    所有事件共享同一绝对时间相位（同步闪烁）。``blink_on <= 0`` → 恒不显示。
+    """
+    if opts.blink_on <= 0:
+        return False
+    period = opts.blink_on + opts.blink_off
+    if period <= 0:
+        return False
+    return (t % period) < opts.blink_on
 
 
 def draw_tags(
@@ -237,6 +257,22 @@ def test_tag_opts_defaults() -> None:
     assert opts.stroke_rgb == (255, 255, 255)
     assert opts.stroke_width == 2
     assert opts.margin == 20
+    assert opts.blink_on == 0.25
+    assert opts.blink_off == 0.525
+
+
+def test_blink_visible_phase() -> None:
+    """闪烁相位：on(0.25) → off(0.525) 循环，周期 0.775s（基于绝对 t）。"""
+    opts = TagOpts(font_path=_CJK_FONT)  # 默认 on=0.25 off=0.525
+    assert blink_visible(0.0, opts) is True  # 相位 0 < 0.25 → 显示
+    assert blink_visible(0.24, opts) is True  # 仍 on
+    assert blink_visible(0.25, opts) is False  # 边界进入 off
+    assert blink_visible(0.5, opts) is False  # off 中
+    assert blink_visible(0.775, opts) is True  # 新周期开始（0%周期=0 < 0.25）
+    assert blink_visible(1.0, opts) is True  # 1.0%0.775=0.225 < 0.25 → on
+    # blink_on<=0 → 恒不显示
+    off_opts = TagOpts(font_path=_CJK_FONT, blink_on=0.0)
+    assert blink_visible(0.0, off_opts) is False
 
 
 # --- draw_tags -----------------------------------------------------------

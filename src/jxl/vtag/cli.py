@@ -19,7 +19,7 @@ import typer
 from PIL import ImageFont
 
 from jxl.io.video import VideoIoError, VideoReader, VideoWriter
-from jxl.vtag.overlay import EventSpec, TagOpts, draw_tags, parse_event
+from jxl.vtag.overlay import EventSpec, TagOpts, blink_visible, draw_tags, parse_event
 
 app = typer.Typer(help="视频事件标签叠加（右下角中文红字）")
 
@@ -117,7 +117,9 @@ def main(
                 for _frame_idx, ts_ms, frame in reader:
                     t = ts_ms / 1000.0
                     active = [e.name for e in events if e.start <= t < e.end]
-                    writer.write(draw_tags(frame, active, font_obj, opts))
+                    # 闪烁：仅显示相位画（spec 增补）；off 相位或无事件 → draw_tags([]) 原样返回。
+                    visible = active if blink_visible(t, opts) else []
+                    writer.write(draw_tags(frame, visible, font_obj, opts))
     except VideoIoError as e:
         raise typer.BadParameter(str(e)) from e
 
