@@ -159,7 +159,7 @@ def draw_hud(
     n_objects: int,
     tracker_mode: str,
 ) -> None:
-    """顶部信息条（半透明黑底白字）：帧号 / 时间 / 目标数 / 跟踪模式。"""
+    """顶部信息条（半透明黑底绿字）：帧号 / 时间 / 目标数 / 跟踪模式。"""
     text = f"f#{frame_idx}  {ts_ms / 1000:.1f}s  |  {n_objects} objs  |  {tracker_mode}"
     (tw, th), _ = cv2.getTextSize(
         text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
@@ -168,7 +168,7 @@ def draw_hud(
     canvas[0:y1, 0:x1] = (canvas[0:y1, 0:x1] // 2)  # 局部变暗≈半透明黑底
     cv2.putText(
         canvas, text, (10, th + 6),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA,
+        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA,  # 绿字（同 label.viewer LIME）
     )
 
 
@@ -288,6 +288,15 @@ def test_draw_hud_paints_top_bar() -> None:
     canvas = np.zeros((100, 200, 3), np.uint8)
     draw_hud(canvas, 5, 1000, 3, "iou")
     assert int(canvas[:30].sum()) > 0  # 顶部条被画
+
+
+def test_draw_hud_uses_green_text() -> None:
+    """HUD 文字为绿色（G 高、R/B 低）——白→绿变更的回归保护。"""
+    canvas = np.zeros((100, 200, 3), np.uint8)
+    draw_hud(canvas, 5, 1000, 3, "iou")
+    g, r, b = canvas[:, :, 1], canvas[:, :, 2], canvas[:, :, 0]
+    green_pixels = (g > 200) & (r < 50) & (b < 50)
+    assert int(green_pixels.sum()) > 0  # 存在纯绿文字像素
 
 
 def test_render_demo_frame_all_on_paints() -> None:
