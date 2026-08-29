@@ -2,6 +2,9 @@
 
 > 背景：英伟达 2026-05-26 发布的 3B「定位万物」统一视觉定位模型（Eagle VLM 家族 Embodied 分支，ECCV 2026）。本文档群是多路调研工作流的完整存档。
 >
+> **已实施**：本模型已接入 jxl（det/locateanything/ 模块 + 独立 venv FastAPI 服务 + det_mine la 校验器），
+> 调研→实施→运维的总索引见 [../2026-08-29-LocateAnything-3B-接入.md](../2026-08-29-LocateAnything-3B-接入.md)。
+>
 > **知识库归并**：本主题的跨项目通用结论已提炼进个人知识库专题 `~/.claude/kb/30-areas/vlm-vision-grounding/`——
 > - 模型参考卡：`[[20260829-locateanything-3b-model-card]]`（选型决策级摘要，本项目及后续项目以该卡为引用锚点）
 > - 坐标协议已补进 `[[20260710-vlm-grounding-coordinate-protocols]]`（第五种协议形态：[0,1000] 整数 + 结构 token 块）
