@@ -186,6 +186,22 @@ def to_yolo_label(boxes: list[Box], cls_id: int = 0) -> str:
     return "\n".join(lines)
 
 
+def parse_yolo_label(text: str) -> list[Box]:
+    """YOLO 标注文本（cls cx cy w h）→ 归一化 xyxy Box 列表（conf 填 1.0）。
+
+    to_yolo_label 的逆变换（conf 不可恢复，恒填 1.0——la/基准标注均无真实 conf）。
+    空文本（负样本）→ 空列表。
+    """
+    boxes: list[Box] = []
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue  # 空行/残行
+        _, cx, cy, w, h = (float(x) for x in parts[:5])
+        boxes.append((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, 1.0))
+    return boxes
+
+
 def classify_sample(
     person_boxes: list[Box],
     yoloe_boxes: list[Box],

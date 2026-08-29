@@ -7,6 +7,7 @@ from jxl.det.hardmine import (
     classify_sample,
     find_consensus_positions,
     greedy_match,
+    parse_yolo_label,
     pick_by_priority,
     score_sample,
     to_yolo_label,
@@ -263,3 +264,29 @@ def test_score_sample_fp_and_fn_simultaneously() -> None:
     # fp = (1.0-0)/1.0 = 1.0; fn = 1.0/1.0 = 1.0; score = 2.0
     assert abs(r.score - 2.0) < 1e-9
     assert len(r.boxes) == 1  # 漏检共识 → 1 标注框
+
+
+def test_parse_yolo_label_roundtrip() -> None:
+    # xyxy → YOLO → xyxy 往返: 坐标恢复(conf 填 1.0)
+    boxes = [(0.1, 0.2, 0.3, 0.6, 0.9), (0.55, 0.05, 0.8, 0.4, 0.7)]
+    parsed = parse_yolo_label(to_yolo_label(boxes, cls_id=0))
+    assert len(parsed) == 2
+    for orig, got in zip(boxes, parsed, strict=True):
+        for o, g in zip(orig[:4], got[:4], strict=True):
+            assert abs(o - g) < 1e-5
+        assert got[4] == 1.0
+
+
+def test_parse_yolo_label_empty() -> None:
+    # 空标注(负样本) → 空列表
+    assert parse_yolo_label("") == []
+
+
+def test_parse_yolo_label_ignores_cls_id() -> None:
+    # 任意 cls id 都解析(只取坐标)
+    parsed = parse_yolo_label("3 0.2 0.3 0.2 0.2")
+    assert len(parsed) == 1
+    b = parsed[0]
+    assert b[4] == 1.0
+    for got, want in zip(b[:4], (0.1, 0.2, 0.3, 0.4), strict=True):
+        assert abs(got - want) < 1e-6
