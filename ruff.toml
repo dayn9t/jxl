@@ -9,6 +9,10 @@
 #   - ANN：j-python-strict 强制全量注解（bin/tests/examples 豁免——遗留脚本与实验代码）。
 #   - E/I/UP/SIM/RET/PIE：现代 Python 语法与轻量简化，低风险可自动修。
 #   - 不启用 pydocstyle D*：lib in flux，文档标点/缺 docstring ~1000 噪声，低价值；后续稳定再开。
+# vendored: NVIDIA 官方 locateanything_worker.py 原样拷贝(Apache-2.0 repo,
+# NVIDIA 文件头条款)，不按本仓风格改造 — 不 lint 第三方代码。
+extend-exclude = ["src/jxl/det/locateanything/vendored"]
+
 [lint]
 select = [
     "E",    # pycodestyle errors

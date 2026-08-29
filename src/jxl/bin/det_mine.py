@@ -10,6 +10,10 @@ target(person.pt 等) + 多校验器(YOLOE/GroundingDINO/RF-DETR) 同检 → har
         --target person --target-model /opt/howell/iap/current/ias/model/person.pt \
         --validators yoloe,gdino,rfdetr --consensus 2 \
         --validator-weights rfdetr:0.4,gdino:0.35,yoloe:0.25 --review-top 0.3 --device cuda:0
+
+    la 校验器(LocateAnything, 独立服务须先 script/la-serve.sh, 非商用):
+    det_mine <frames_dir> <out_dir> --validators la,yoloe --consensus 2 \
+        --validator-weights la:0.5,yoloe:0.5
 """
 
 import shutil
@@ -18,6 +22,7 @@ from pathlib import Path
 from typing import Annotated
 
 import cv2
+import httpx
 import orjson
 import typer
 from click.core import ParameterSource
@@ -28,11 +33,19 @@ from jxl.det.hardmine import (
     score_sample,
     to_yolo_label,
 )
+from jxl.det.locateanything.client import (
+    LA_DEFAULT_URL,
+    LaClient,
+    LaServerDownError,
+    LaServerError,
+)
 from jxl.target import load_target
 
-app = typer.Typer(add_completion=False, help="Det-Mine: N 模型加权争议分 + cascade 难例挖掘。")
+app = typer.Typer(
+    add_completion=False, help="Det-Mine: N 模型加权争议分 + cascade 难例挖掘。"
+)
 
-VALIDATOR_BACKENDS = {"yoloe", "gdino", "rfdetr"}
+VALIDATOR_BACKENDS = {"yoloe", "gdino", "rfdetr", "la"}
 _RFDETR_VARIANTS = {"base", "large"}
 _IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 _YOLOE_DEFAULT = Path("/home/jiang/cc/py/jxl/models/yoloe-11l-seg.pt")
@@ -68,7 +81,12 @@ def _detect(
     损坏图 ultralytics 静默跳过 → 该 stem 不在返回 dict（caller 据 None 判断损坏）。
     Box 坐标取 boxes.xyxyn（归一化）。
     """
-    kwargs: dict[str, object] = {"conf": conf, "iou": iou, "verbose": False, "stream": True}
+    kwargs: dict[str, object] = {
+        "conf": conf,
+        "iou": iou,
+        "verbose": False,
+        "stream": True,
+    }
     if device:
         kwargs["device"] = device
     out: dict[str, list[Box]] = {}
@@ -79,7 +97,9 @@ def _detect(
             cf = res.boxes.conf
             for i in range(len(xy)):
                 b = xy[i].tolist()
-                boxes.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(cf[i])))
+                boxes.append(
+                    (float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(cf[i]))
+                )
         out[Path(res.path).stem] = boxes
     return out
 
@@ -174,8 +194,40 @@ def detect_rfdetr(
             if int(detections.class_id[i]) != class_id:
                 continue
             x1, y1, x2, y2 = detections.xyxy[i].tolist()
-            boxes.append((x1 / w, y1 / h, x2 / w, y2 / h, float(detections.confidence[i])))
+            boxes.append(
+                (x1 / w, y1 / h, x2 / w, y2 / h, float(detections.confidence[i]))
+            )
         out[path.stem] = boxes
+    return out
+
+
+def detect_la(
+    paths: list[Path],
+    url: str,
+    text: str,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, list[Box]]:
+    """LocateAnything 开放词汇检测(本地 la-venv 服务): 单类 query → {stem: [Box]}。
+
+    服务须先启动(script/la-serve.sh)，未启动/中途挂掉 fail-fast；
+    单图失败(坏图/超时) → 该 stem 不入 out（caller 据 None 判断损坏）。
+    path 逐个 resolve(): la 服务端按其 CWD 解析相对路径, 须发绝对路径(其余校验器不受影响)。
+    transport 注入供单测错误路由(MockTransport), 生产传 None。
+    conf 恒 1.0(模型无 confidence)；坐标归一化 [0,1]（客户端完成去重）。
+    NVIDIA License 非商用，仅研究/评估链路。
+    """
+    client = LaClient(base_url=url, transport=transport)
+    client.health()  # fail-fast: 服务未启动
+    out: dict[str, list[Box]] = {}
+    for path in paths:
+        try:
+            out[path.stem] = client.detect_path(path.resolve(), text)
+        except LaServerDownError:
+            raise  # 服务中途挂: 整体失败，不逐图吞成"全损坏"
+        except LaServerError as e:
+            typer.secho(
+                f"警告: la 检测失败 {path.stem}: {e}", fg=typer.colors.YELLOW, err=True
+            )
     return out
 
 
@@ -196,25 +248,63 @@ def run(
     ctx: typer.Context,
     frames_dir: Annotated[Path, typer.Argument(help="候选帧目录（递归）")],
     out_dir: Annotated[Path, typer.Argument(help="输出目录")],
-    target: Annotated[str, typer.Option("--target", help="目标 profile 名(targets/<name>.toml); 空则用旧默认 person")] = "",
-    target_profile: Annotated[Path, typer.Option("--target-profile", help="显式 profile toml 路径(优先于 --target)")] = Path(),
-    target_model: Annotated[Path, typer.Option("--target-model", help="被校验专用 YOLO 权重")] = Path(
-        "/opt/howell/iap/current/ias/model/person.pt"
-    ),
+    target: Annotated[
+        str,
+        typer.Option(
+            "--target", help="目标 profile 名(targets/<name>.toml); 空则用旧默认 person"
+        ),
+    ] = "",
+    target_profile: Annotated[
+        Path,
+        typer.Option(
+            "--target-profile", help="显式 profile toml 路径(优先于 --target)"
+        ),
+    ] = Path(),
+    target_model: Annotated[
+        Path, typer.Option("--target-model", help="被校验专用 YOLO 权重")
+    ] = Path("/opt/howell/iap/current/ias/model/person.pt"),
     cls_id: Annotated[int, typer.Option("--cls-id", help="YOLO 标注类 id")] = 0,
-    validators: Annotated[str, typer.Option("--validators", help="校验器组合(逗号分隔)")] = "yoloe,gdino,rfdetr",
-    weights: Annotated[str, typer.Option("--validator-weights", help="权重 name:w,...")] = "rfdetr:0.4,gdino:0.35,yoloe:0.25",
-    yoloe_model: Annotated[Path, typer.Option("--yoloe-model", help="YOLOE 权重")] = _YOLOE_DEFAULT,
-    gdino_model: Annotated[str, typer.Option("--gdino-model", help="Grounding DINO HF 模型名")] = "IDEA-Research/grounding-dino-tiny",
-    rfdetr_variant: Annotated[str, typer.Option("--rfdetr-variant", help="RF-DETR 变体 base/large")] = "base",
-    rfdetr_cls_id: Annotated[int, typer.Option("--rfdetr-cls-id", help="RF-DETR COCO 类 id(person=0/phone=67)")] = 0,
+    validators: Annotated[
+        str, typer.Option("--validators", help="校验器组合(逗号分隔)")
+    ] = "yoloe,gdino,rfdetr",
+    weights: Annotated[
+        str, typer.Option("--validator-weights", help="权重 name:w,...")
+    ] = "rfdetr:0.4,gdino:0.35,yoloe:0.25",
+    yoloe_model: Annotated[
+        Path, typer.Option("--yoloe-model", help="YOLOE 权重")
+    ] = _YOLOE_DEFAULT,
+    gdino_model: Annotated[
+        str, typer.Option("--gdino-model", help="Grounding DINO HF 模型名")
+    ] = "IDEA-Research/grounding-dino-tiny",
+    rfdetr_variant: Annotated[
+        str, typer.Option("--rfdetr-variant", help="RF-DETR 变体 base/large")
+    ] = "base",
+    rfdetr_cls_id: Annotated[
+        int,
+        typer.Option("--rfdetr-cls-id", help="RF-DETR COCO 类 id(person=0/phone=67)"),
+    ] = 0,
+    la_url: Annotated[
+        str,
+        typer.Option("--la-url", help="LocateAnything 服务地址(script/la-serve.sh)"),
+    ] = LA_DEFAULT_URL,
     iou: Annotated[float, typer.Option("--iou", help="IoU 匹配阈值")] = 0.3,
     consensus: Annotated[int, typer.Option("--consensus", help="共识校验器数 K")] = 2,
-    review_top: Annotated[float, typer.Option("--review-top", help="高争议进 review 的比例")] = 0.3,
-    review_threshold: Annotated[float, typer.Option("--review-threshold", help="绝对争议分阈值(>=0 启用, 覆盖 review_top)")] = -1.0,
-    conf: Annotated[float, typer.Option("--conf", help="检测置信度(所有校验器共用)")] = 0.25,
+    review_top: Annotated[
+        float, typer.Option("--review-top", help="高争议进 review 的比例")
+    ] = 0.3,
+    review_threshold: Annotated[
+        float,
+        typer.Option(
+            "--review-threshold", help="绝对争议分阈值(>=0 启用, 覆盖 review_top)"
+        ),
+    ] = -1.0,
+    conf: Annotated[
+        float, typer.Option("--conf", help="检测置信度(所有校验器共用)")
+    ] = 0.25,
     device: Annotated[str, typer.Option("--device", help="cuda:0/cpu")] = "",
-    force: Annotated[bool, typer.Option("--force", help="强制覆盖非 det_mine 产物的输出目录")] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="强制覆盖非 det_mine 产物的输出目录")
+    ] = False,
 ) -> None:
     """N 模型加权争议分 + cascade: L0 丢弃 / L1 自动标注 / L2-L3 review 候选集。"""
     vlist = [v.strip() for v in validators.split(",") if v.strip()]
@@ -238,7 +328,9 @@ def run(
             vlist = [v for v in vlist if v != "rfdetr"]
             # 同步剔除 weights 中 rfdetr, 避免 validator/weights 不一致警告
             weights = ",".join(
-                p for p in weights.split(",") if p.strip() and not p.strip().startswith("rfdetr")
+                p
+                for p in weights.split(",")
+                if p.strip() and not p.strip().startswith("rfdetr")
             )
             typer.secho(
                 "提示: profile rfdetr_cls_id=None, 自动跳过 RF-DETR 校验器",
@@ -250,17 +342,31 @@ def run(
         typer.secho("--iou/--conf 须在 [0,1]", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
     if not 0.0 <= review_top <= 1.0:
-        typer.secho(f"--review-top 须在 [0,1]: {review_top}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"--review-top 须在 [0,1]: {review_top}", fg=typer.colors.RED, err=True
+        )
         raise typer.Exit(1)
     if rfdetr_variant not in _RFDETR_VARIANTS:
-        typer.secho(f"--rfdetr-variant 须 ∈ {_RFDETR_VARIANTS}: {rfdetr_variant}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"--rfdetr-variant 须 ∈ {_RFDETR_VARIANTS}: {rfdetr_variant}",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(1)
     bad = [v for v in vlist if v not in VALIDATOR_BACKENDS]
     if bad:
-        typer.secho(f"未知 validator: {bad}（可选 {VALIDATOR_BACKENDS}）", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"未知 validator: {bad}（可选 {VALIDATOR_BACKENDS}）",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(1)
     if consensus > len(vlist):
-        typer.secho(f"--consensus {consensus} > 校验器数 {len(vlist)}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"--consensus {consensus} > 校验器数 {len(vlist)}",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(1)
     if not target_model.is_file():
         typer.secho(f"target 模型不存在: {target_model}", fg=typer.colors.RED, err=True)
@@ -276,8 +382,15 @@ def run(
         )
     wsum = sum(wmap.values())
     if abs(wsum - 1.0) > 1e-6:
-        typer.secho(f"警告: 权重和 {wsum} != 1.0，内部按归一化处理", fg=typer.colors.YELLOW, err=True)
+        typer.secho(
+            f"警告: 权重和 {wsum} != 1.0，内部按归一化处理",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
 
+    # la 校验器走服务端读图须绝对路径, 统一在入口 resolve(其余后端同进程 CWD 解析, 行为不变);
+    # 必须在删除旧 out_dir 之前, 避免相对路径错误造成破坏后崩溃
+    frames_dir = frames_dir.expanduser().resolve()
     imgs = gather_images(frames_dir)
     if not imgs:
         typer.secho(f"候选目录无图: {frames_dir}", fg=typer.colors.RED, err=True)
@@ -312,6 +425,8 @@ def run(
 
         cls = RFDETRBase if rfdetr_variant == "base" else RFDETRLarge
         vmaps["rfdetr"] = detect_rfdetr(imgs, cls(), class_id=rfdetr_cls_id, conf=conf)
+    if "la" in vlist:
+        vmaps["la"] = detect_la(imgs, la_url, target_text)
 
     # 评分: None=backend 损坏跳过(不等于无框), []=检测无框
     scored: list[ScoredSample] = []
@@ -320,19 +435,29 @@ def run(
         stem = img.stem
         tb = target_map.get(stem)  # None=损坏
         vs_raw = {vn: vmaps[vn].get(stem) for vn in vlist}  # None=损坏
-        broken = [vn for vn in vlist if vs_raw[vn] is None] + (["target"] if tb is None else [])
+        broken = [vn for vn in vlist if vs_raw[vn] is None] + (
+            ["target"] if tb is None else []
+        )
         if broken:
             # 损坏图: 全损坏→静默 skip; 部分损坏→警告 skip(不静默用错数据)
             if not (tb is None and all(vs_raw[vn] is None for vn in vlist)):
-                typer.secho(f"警告: {stem} 部分 backend 损坏 {broken}，跳过", fg=typer.colors.YELLOW, err=True)
+                typer.secho(
+                    f"警告: {stem} 部分 backend 损坏 {broken}，跳过",
+                    fg=typer.colors.YELLOW,
+                    err=True,
+                )
             skipped += 1
             continue
         vs = {vn: vs_raw[vn] or [] for vn in vlist}
         r = score_sample(tb or [], vs, wmap, iou, consensus)
-        scored.append(ScoredSample(img, r.score, r.boxes, r.fp_count, r.fn_count, vs, tb or []))
+        scored.append(
+            ScoredSample(img, r.score, r.boxes, r.fp_count, r.fn_count, vs, tb or [])
+        )
 
     # cascade 分流: review_threshold>=0 用绝对阈值，否则 review_top 比例
-    nonzero = sorted([s for s in scored if s.score > 0], key=lambda x: x.score, reverse=True)
+    nonzero = sorted(
+        [s for s in scored if s.score > 0], key=lambda x: x.score, reverse=True
+    )
     if review_threshold >= 0:
         review_stems = {s.img.stem for s in nonzero if s.score >= review_threshold}
     else:
@@ -380,7 +505,9 @@ def run(
         "review_top": review_top,
         "review_threshold": review_threshold,
     }
-    (out_dir / "mining_report.json").write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2))
+    (out_dir / "mining_report.json").write_bytes(
+        orjson.dumps(report, option=orjson.OPT_INDENT_2)
+    )
     typer.secho(
         f"L0 丢 {l0} | L1 自动 {l1} | review {l2} | skip {skipped} → {out_dir}",
         fg=typer.colors.GREEN,

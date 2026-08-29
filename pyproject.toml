@@ -98,7 +98,8 @@ check_untyped_defs = true
 # TODO(dayn9t): bin/ argparse→typer 重写后纳入 mypy 检查。
 #   注: 新增的 typer 脚本 (如 d2d_peoplenet_check.py) 已写完整类型注解,
 #   但仍被此 blanket exclude 拦截; 待 bin/ 整体迁移完成后按脚本粒度纳入。
-exclude = ["src/jxl/bin/"]
+# vendored/: NVIDIA 官方 worker 原样拷贝（见 ruff.toml extend-exclude 同款注释）。
+exclude = ["src/jxl/bin/", "src/jxl/det/locateanything/vendored/"]
 
 # 第三方 ML/工具库无 py.typed stub，按模块豁免（精确到模块，不禁全局 missing-imports）。
 [[tool.mypy.overrides]]
@@ -130,6 +131,13 @@ module = [
     "torchsummary",
     # volcenginesdkarkruntime：火山方舟 Ark runtime SDK，已安装但无 py.typed stub（str2vec_demo 引用）。
     "volcenginesdkarkruntime",
+    # locateanything: la_server.py 跑在独立 la-venv（fastapi/uvicorn 主环境不装）；
+    # vendored worker 经运行时 sys.path 注入导入（官方代码，不含于主环境）。
+    "fastapi",
+    "fastapi.*",
+    "uvicorn",
+    "uvicorn.*",
+    "locateanything_worker",
     # 以下为未安装/可选第三方库（异常检测、AutoML、标注转换、变化检测）：
     "pyod.*",
     "autogluon.*",
