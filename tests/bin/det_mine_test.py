@@ -166,7 +166,6 @@ def test_load_la_labels_reads_yolo_dir(tmp_path) -> None:
     labels.mkdir()
     (labels / "a.txt").write_text("0 0.5 0.5 0.2 0.2\n0 0.2 0.2 0.1 0.1")
     (labels / "b.txt").write_text("")  # 空标(负样本语义)
-    from pathlib import Path
 
     imgs = [tmp_path / "a.jpg", tmp_path / "b.jpg", tmp_path / "c.jpg"]
     m = load_la_labels(labels, imgs)
