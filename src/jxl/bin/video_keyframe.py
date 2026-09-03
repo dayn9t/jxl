@@ -3,7 +3,8 @@
 
 ffmpeg skip_frame nokey 解码仅 I 帧(快), 落盘序号 idx%every==0 保留.
 断点续跑: 已处理 mkv 记录 _state.jsonl, 重跑跳过.
-命名 {mkv_stem}_{i:05d}.jpg 保源可溯(mkv 名含日期时间在父目录, 记入状态行).
+输出/状态键均按 mkv 相对 video_dir 路径(mkv 名跨日期/跨相机重名, 相对路径防撞):
+帧 out_dir/<相对路径去后缀>/<NNNNN>.jpg, 状态键 = 相对路径(含 .mkv).
 
 用法: video_keyframe <video_dir> <out_dir> [--every 4] [--jobs 4]
 """
@@ -30,16 +31,22 @@ def select_frames(count: int, every: int) -> list[int]:
     return list(range(0, count, every))
 
 
-def _state_key(mkv: Path) -> str:
-    """状态判重键: 父目录名/文件名(n001 mkv 名跨日期重名, 需日期防撞)."""
-    return f"{mkv.parent.name}/{mkv.name}"
+def rel_stem_dir(video_dir: Path, mkv: Path) -> Path:
+    """mkv → 帧输出子目录: 相对 video_dir 路径去 .mkv 后缀(保源结构, 同名不撞)."""
+    return mkv.relative_to(video_dir).with_suffix("")
 
 
-def extract_one(mkv: Path, out_dir: Path, every: int) -> int:
-    """单 mkv: 抽全部 I 帧到临时目录 → 按序保留 every:1 → out_dir. 返回保留数."""
+def _state_key(video_dir: Path, mkv: Path) -> str:
+    """状态判重键: mkv 相对 video_dir 路径(n001 mkv 名跨日期/跨相机重名, 全相对路径防撞)."""
+    return str(mkv.relative_to(video_dir))
+
+
+def extract_one(mkv: Path, out_dir: Path, every: int, video_dir: Path) -> int:
+    """单 mkv: 抽全部 I 帧到临时目录 → 按序保留 every:1 → out_dir 保源相对结构. 返回保留数."""
     if every < 1:
         raise ValueError(f"every 须 >=1: {every}")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    stem_dir = out_dir / rel_stem_dir(video_dir, mkv)
+    stem_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="keyframe-") as tmp:
         tmp_dir = Path(tmp)
         # -nostats -loglevel error: 静默; scale 保持原分辨率
@@ -73,7 +80,7 @@ def extract_one(mkv: Path, out_dir: Path, every: int) -> int:
         frames = sorted(tmp_dir.glob("f*.jpg"))
         keep = select_frames(len(frames), every)
         for i in keep:
-            dst = out_dir / f"{mkv.stem}_{i // every:05d}.jpg"
+            dst = stem_dir / f"{i // every:05d}.jpg"
             shutil.copy2(frames[i], dst)
         return len(keep)
 
@@ -86,7 +93,8 @@ def run(
     jobs: Annotated[int, typer.Option("--jobs", help="并行 ffmpeg 数")] = 4,
 ) -> None:
     """I 帧 N:1 抽取, 状态断点续跑."""
-    mkvs = sorted(video_dir.rglob("*.mkv"))
+    video_root = video_dir.resolve()
+    mkvs = sorted(video_root.rglob("*.mkv"))
     if not mkvs:
         typer.secho(f"无 mkv: {video_dir}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
@@ -99,15 +107,15 @@ def run(
             for line in state.read_text(encoding="utf-8").splitlines()
             if line
         }
-    todo = [m for m in mkvs if _state_key(m) not in done]
+    todo = [m for m in mkvs if _state_key(video_root, m) not in done]
     typer.secho(
         f"mkv {len(mkvs)} done {len(done)} todo {len(todo)}",
         fg=typer.colors.CYAN,
     )
 
     def work(m: Path) -> int:
-        n = extract_one(m, out_dir, every)
-        row = {"mkv": _state_key(m), "rel": str(m.parent), "kept": n}
+        n = extract_one(m, out_dir, every, video_root)
+        row = {"mkv": _state_key(video_root, m), "rel": str(m.parent), "kept": n}
         with state.open("a", encoding="utf-8") as f:
             f.write(orjson.dumps(row).decode() + "\n")
         return n
