@@ -297,8 +297,11 @@ def run(
     ] = "base",
     rfdetr_cls_id: Annotated[
         int,
-        typer.Option("--rfdetr-cls-id", help="RF-DETR COCO 类 id(person=0/phone=67)"),
-    ] = 0,
+        typer.Option(
+            "--rfdetr-cls-id",
+            help="RF-DETR 类 id; rf-detr 官方类别表 person=1(非 COCO 0, 2026-09-03 dump 实测)",
+        ),
+    ] = 1,
     la_url: Annotated[
         str,
         typer.Option("--la-url", help="LocateAnything 服务地址(script/la-serve.sh)"),
