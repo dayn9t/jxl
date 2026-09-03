@@ -7,6 +7,8 @@ detect_gdino/detect_rfdetr 与 cascade 分流属 imperative shell，依赖模型
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import httpx
@@ -98,3 +100,14 @@ def test_detect_la_per_image_error_skips_stem() -> None:
     assert "bad" not in out
     assert out["good"] == []
     assert all(p.startswith("/") for p in seen), "detect_la 须发绝对路径给服务端"
+
+
+def test_dump_validators_flag_exists() -> None:
+    """--help 输出含 --dump-validators(接口存在性; 行为靠 Phase A 端到端)."""
+    r = subprocess.run(
+        [sys.executable, "-m", "jxl.bin.det_mine", "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "--dump-validators" in r.stdout

@@ -298,6 +298,10 @@ def run(
             "--review-threshold", help="绝对争议分阈值(>=0 启用, 覆盖 review_top)"
         ),
     ] = -1.0,
+    dump_validators: Annotated[
+        Path,
+        typer.Option("--dump-validators", help="全量图逐模型输出 jsonl(矩阵分析用)"),
+    ] = Path(),
     conf: Annotated[
         float, typer.Option("--conf", help="检测置信度(所有校验器共用)")
     ] = 0.25,
@@ -467,6 +471,22 @@ def run(
     l0 = l1 = l2 = 0
     manifest_lines: list[str] = []
     for s in scored:
+        # 全量图(含 L0)逐模型 dump: 先判 level 再写行, L0 continue 之前完成
+        level = ("review" if s.img.stem in review_stems else "L1") if s.score > 0 else "L0"
+        if dump_validators.name:
+            with dump_validators.open("a", encoding="utf-8") as df:
+                df.write(
+                    orjson.dumps(
+                        {
+                            "stem": s.img.stem,
+                            "target": s.target_boxes,
+                            "validators": s.validators,
+                            "score": s.score,
+                            "level": level,
+                        }
+                    ).decode()
+                    + "\n"
+                )
         if s.score <= 0.0:
             l0 += 1
             continue
