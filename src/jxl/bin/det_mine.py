@@ -30,6 +30,7 @@ from ultralytics import YOLO, YOLOE
 
 from jxl.det.hardmine import (
     Box,
+    parse_yolo_label,
     score_sample,
     to_yolo_label,
 )
@@ -201,6 +202,21 @@ def detect_rfdetr(
     return out
 
 
+def load_la_labels(labels_dir: Path, paths: list[Path]) -> dict[str, list[Box]]:
+    """la 预跑 dump(la_relabel 产物 labels/*.txt YOLO) → {stem: [Box]}.
+
+    分时架构: la 独占 GPU 先跑(la_relabel), det_mine 时从 dump 读票不调服务
+    ——16G 单卡五模型同批会挤爆(s4 Xid 79 实测). 无 label 文件的 stem 缺席
+    (未跑/损坏语义, 与 detect_la 服务端单图失败一致).
+    """
+    out: dict[str, list[Box]] = {}
+    for p in paths:
+        txt = labels_dir / (p.stem + ".txt")
+        if txt.is_file():
+            out[p.stem] = parse_yolo_label(txt.read_text(encoding="utf-8"))
+    return out
+
+
 def detect_la(
     paths: list[Path],
     url: str,
@@ -287,6 +303,13 @@ def run(
         str,
         typer.Option("--la-url", help="LocateAnything 服务地址(script/la-serve.sh)"),
     ] = LA_DEFAULT_URL,
+    la_dump: Annotated[
+        Path,
+        typer.Option(
+            "--la-dump",
+            help="la 预跑 dump 目录(labels/, la_relabel 产物); 指定时 la 从 dump 读不调服务",
+        ),
+    ] = Path(),
     iou: Annotated[float, typer.Option("--iou", help="IoU 匹配阈值")] = 0.3,
     consensus: Annotated[int, typer.Option("--consensus", help="共识校验器数 K")] = 2,
     review_top: Annotated[
@@ -439,7 +462,10 @@ def run(
         cls = RFDETRBase if rfdetr_variant == "base" else RFDETRLarge
         vmaps["rfdetr"] = detect_rfdetr(imgs, cls(), class_id=rfdetr_cls_id, conf=conf)
     if "la" in vlist:
-        vmaps["la"] = detect_la(imgs, la_url, target_text)
+        if la_dump.name:
+            vmaps["la"] = load_la_labels(la_dump / "labels", imgs)
+        else:
+            vmaps["la"] = detect_la(imgs, la_url, target_text)
 
     # 评分: None=backend 损坏跳过(不等于无框), []=检测无框
     scored: list[ScoredSample] = []

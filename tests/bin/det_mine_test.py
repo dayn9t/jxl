@@ -156,3 +156,21 @@ def test_dump_validators_parent_created_before_inference(
     assert len(lines) == 1
     row = orjson.loads(lines[0])
     assert row["stem"] == "a" and row["level"] == "L0"  # 空检全一致 → L0 但仍 dump
+
+
+def test_load_la_labels_reads_yolo_dir(tmp_path) -> None:
+    # la-dump 预跑目录(labels/*.txt YOLO) → {stem: [Box(xyxy, conf=1.0)]}
+    from jxl.bin.det_mine import load_la_labels
+
+    labels = tmp_path / "labels"
+    labels.mkdir()
+    (labels / "a.txt").write_text("0 0.5 0.5 0.2 0.2\n0 0.2 0.2 0.1 0.1")
+    (labels / "b.txt").write_text("")  # 空标(负样本语义)
+    from pathlib import Path
+
+    imgs = [tmp_path / "a.jpg", tmp_path / "b.jpg", tmp_path / "c.jpg"]
+    m = load_la_labels(labels, imgs)
+    assert len(m["a"]) == 2
+    assert m["a"][0][4] == 1.0
+    assert m["b"] == []
+    assert "c" not in m  # 无 label 文件 = 损坏/未跑 → 缺席语义
