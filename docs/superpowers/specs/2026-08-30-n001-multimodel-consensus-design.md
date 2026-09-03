@@ -22,6 +22,7 @@ n001 部署点存有 134h 营业厅监控视频（已有部署 person.pt 的逐�
 | 产出用途 | 先保留不入池，做完再决定 |
 | target 模型 | person.pt（部署模型，分歧即其改进点）|
 | 编排 | 新编排 bin 串 5 stage，各 stage 独立可重跑（分批断点）|
+| **分布式标注** | **本机(4060Ti) + s4(RTX 5080 16G) 双机**：帧对半分片，各自独立跑全套 det_mine（含各自 la 服务），产物合并。sgcc0/6/1 不可达，不参与。s4 按「同步到相同目录」方式部署（rsync jxl repo + 模型 + 帧分片）|
 
 ## 3. 总流程
 
@@ -60,10 +61,20 @@ datasets/sgcc-n001/（不入池）
 - 负样本保留语义：无 crop 图原样保留（07-09 修复后行为）——全员空删交给 Stage 3 L0
 - **Phase A 可靠性验证**：抽样对比去重前后，统计「有人图被去重删除」数（应为 0）
 
-### Stage 3 共识标注（现成 det_mine + 编排分批）
+### Stage 3 共识标注（现成 det_mine + 编排分批 + 双机分片）
 - 校验器：yoloe + gdino + rfdetr + la（la 服务 :18306 须常驻）
 - 分批调用（每批 ~2000 图，断点粒度=批；服务中断续跑），批产物合并
 - 参数：`--iou 0.3 --consensus 2 --review-top 0.3`（沿用 07-08 校准）
+- **双机分片**（标注时长减半）：
+  - 前置：s4 部署（Phase A 完成）——rsync jxl repo → `~/cc/py/jxl`、模型权重 →
+    相同路径、`uv sync` 主环境、`la-setup.sh` 重建 la-venv、la-serve.sh 起服务
+  - frames_dedup 按 stem 排序奇偶分两片：`rsync` 偶数片 → s4 相同数据路径
+  - 本机/s4 各自跑分片内 det_mine（各自 la 服务，`--la-url` 默认本机即可）
+  - 产物按片合并回 `consensus/`（stem 无碰撞，直接拼）
+- **s4 部署风险**：RTX 5080 = Blackwell sm_120，本机 la-venv（torch 2.6 cu12 +
+  sm89 flash-attn wheel）**不可复用**——s4 重建 la-venv 需 torch ≥2.7 cu128；
+  flash-attn 无 sm_120 预编译 wheel 时 `--attn sdpa` 显式降级（质量等价、速度略降，
+  降级需在 s4 报告中标注）。Phase A 首项验证
 
 ### Stage 4 分级 + 模型能力矩阵（新 bin `consensus_report.py`）
 - 汇总各批 review manifest + L1 labels + 各模型逐图输出（det_mine 需扩展：全量图记录
@@ -82,11 +93,13 @@ datasets/sgcc-n001/（不入池）
 
 ## 5. 两阶段推进
 
-- **Phase A 校准**（8 个 mkv 随机，~600 帧去重前）：全链路跑通，产出
-  去重率 / 空图率 / L1:review 比 / 模型矩阵初版 → 外推全量（帧数、GPU 时、审核量）
-  → **用户确认后再跑 Phase B**
-- **Phase B 全量**：806 mkv 全量（预计抽帧 ~1h 并行 / 去重 ~1h / 标注 10-20h /
-  报告分钟级）
+- **Phase A 校准**（8 个 mkv 随机，~600 帧去重前）：
+  1. **s4 部署验证**（首项）：repo/模型/环境同步 → la 服务起（sdpa 降级路径可接受）
+     → 20 图冒烟对比本机（框 IoU 一致性）
+  2. 全链路跑通（本机），产出去重率 / 空图率 / L1:review 比 / 模型矩阵初版
+  3. 外推全量（帧数、双机 GPU 时、审核量）→ **用户确认后再跑 Phase B**
+- **Phase B 全量**：806 mkv（本机抽帧 ~1h 并行 / 去重 ~1h / **双机标注 ~5-10h** /
+  rsync 分片 ~分钟级 / 报告分钟级）
 
 ## 6. 产出目录
 
@@ -105,6 +118,9 @@ datasets/sgcc-n001/
 | 风险 | 对策 |
 |---|---|
 | la 服务 20h+ 长跑中断 | 分批断点续跑（批粒度）；la_relabel 同模式已验证 |
+| s4 sm_120 环境不兼容 | Phase A 首项验证；sdpa 显式降级保底（质量等价）|
+| 双机产物 stem 碰撞 | stem 含 mkv 源名+序号全局唯一；合并按片拼接 |
+| s4 中途失联 | 分片独立断点，失联不影响本机片；恢复后续跑 |
 | GPU 13.3G/16.4G 贴边 | 业务服务保持停止；分批间检查显存 |
 | 去重误删有人图 | Phase A 抽样验证删除对（07-09 实战 0 误删）|
 | det_mine 全量图模型输出缺失 | 扩展记录 validators 逐图输出（Stage4 依赖）|
