@@ -18,16 +18,13 @@ from typing import Annotated, NamedTuple
 
 import orjson
 import typer
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 from jxl.bin.det_mine import gather_images
 from jxl.det.hardmine import greedy_match, parse_yolo_label
+from jxl.det.viz import draw_boxes, grid, label_header, scale_to_width
 
 app = typer.Typer(add_completion=False, help="la 重标注 vs 基准对比评估.")
-
-_PREVIEW_W = 640
-_GRID_COLS = 4
-_COLORS = {"base": (0, 200, 0), "la": (255, 40, 40)}
 
 
 class ImageDiff(NamedTuple):
@@ -80,42 +77,6 @@ def aggregate(diffs: list[ImageDiff]) -> dict[str, object]:
     }
 
 
-def draw_one(img_path: Path, d: ImageDiff, base_boxes: list, la_boxes: list) -> Image.Image:
-    """单图绘制: 缩到预览宽, 绿框=基准, 红框=la, 顶部 stem+分歧数."""
-    im = Image.open(img_path).convert("RGB")
-    ratio = _PREVIEW_W / im.width
-    im = im.resize((_PREVIEW_W, max(1, int(im.height * ratio))))
-    draw = ImageDraw.Draw(im)
-    try:
-        font: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18
-        )
-    except OSError:
-        font = ImageFont.load_default()
-    for b in base_boxes:
-        x1, y1, x2, y2 = (v * im.width if i % 2 == 0 else v * im.height
-                          for i, v in enumerate(b[:4]))
-        draw.rectangle((x1, y1, x2, y2), outline=_COLORS["base"], width=3)
-    for b in la_boxes:
-        x1, y1, x2, y2 = (v * im.width if i % 2 == 0 else v * im.height
-                          for i, v in enumerate(b[:4]))
-        draw.rectangle((x1, y1, x2, y2), outline=_COLORS["la"], width=3)
-    draw.rectangle((0, 0, im.width, 26), fill=(0, 0, 0))
-    draw.text((4, 4), f"{d.stem[:28]} m{len(d.missed)}/e{len(d.extra)}", font=font,
-              fill=(255, 255, 255))
-    return im
-
-
-def grid(images: list[Image.Image]) -> Image.Image:
-    """等高拼网格(cols 固定, 行数自适应)."""
-    h = max(im.height for im in images) + 26
-    rows = (len(images) + _GRID_COLS - 1) // _GRID_COLS
-    canvas = Image.new("RGB", (_PREVIEW_W * _GRID_COLS, h * rows), (30, 30, 30))
-    for i, im in enumerate(images):
-        canvas.paste(im, ((i % _GRID_COLS) * _PREVIEW_W, (i // _GRID_COLS) * h))
-    return canvas
-
-
 @app.command()
 def run(
     base_labels: Annotated[Path, typer.Argument(help="基准 labels 目录(YOLO txt)")],
@@ -162,11 +123,15 @@ def run(
     def render(sample: list[ImageDiff], name: str) -> None:
         if not sample:
             return
-        tiles = [draw_one(img_by_stem[d.stem], d,
-                          parse_yolo_label(base_by_stem[d.stem].read_text(encoding="utf-8")),
-                          parse_yolo_label(la_by_stem[d.stem].read_text(encoding="utf-8")))
-                 for d in sample]
-        grid(tiles).save(out_dir / name, quality=88)
+        tiles = []
+        for d in sample:
+            im = scale_to_width(Image.open(img_by_stem[d.stem]).convert("RGB"), 640)
+            base = parse_yolo_label(base_by_stem[d.stem].read_text(encoding="utf-8"))
+            la = parse_yolo_label(la_by_stem[d.stem].read_text(encoding="utf-8"))
+            im = draw_boxes(im, base, (0, 200, 0))
+            im = draw_boxes(im, la, (255, 40, 0))
+            tiles.append(label_header(im, f"{d.stem[:28]} m{len(d.missed)}/e{len(d.extra)}"))
+        grid(tiles, cols=4, tile_w=640).save(out_dir / name, quality=88)
 
     render(divergent[:top], "preview_divergent_top.jpg")
     render(random.Random(seed).sample(diffs, min(rand, len(diffs))),
