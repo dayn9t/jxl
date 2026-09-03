@@ -36,6 +36,7 @@ PHASEA_N="${PHASEA_N:-8}"
 PHASEA_SEED="${PHASEA_SEED:-42}"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DINOV2_MODEL="${DINOV2_MODEL:-$REPO/models/dinov2-small}"  # 本地权重(外网断时 ModelScope 下载), 覆盖 embed_dino 默认 HF 名
 cd "$REPO" # uv run 须在仓根(项目环境)
 
 die() { echo "错误: $*" >&2; exit 1; }
@@ -127,7 +128,7 @@ PY
 
   # 2.1-2.4 去重四步链(规范 bin 名; 旧 person_*/samples_* 名是 07-09 修复前实现, 弃用)
   uv run python "$REPO/src/jxl/bin/crop_foreground.py" "$samples" "$crops"
-  uv run python "$REPO/src/jxl/bin/embed_dino.py" "$crops" "$embeds" --device "$DEVICE"
+  uv run python "$REPO/src/jxl/bin/embed_dino.py" "$crops" "$embeds" --device "$DEVICE" --model "$DINOV2_MODEL"
   # --target 只影响 core-set 代表 crop 的复制量; 整图指纹用的是覆盖全量 crop 的
   # sem_cluster_map.npy(与 --target 无关), 故取默认 8000 即可
   uv run python "$REPO/src/jxl/bin/dedup_sem.py" \
