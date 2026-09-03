@@ -137,7 +137,8 @@ PY
   echo "stage2 完成: $(find "$frames/images" -maxdepth 1 -name '*.jpg' | wc -l) 帧 → $frames"
 }
 
-# Stage 3: 分批 det_mine(断点 = 批粒度: 已有 mining_report.json 的批跳过).
+# Stage 3: 分批 det_mine(断点 = 批粒度: 已有 mining_report.json 的批跳过;
+# _batch_meta 批指纹防 BATCH/输入集变化后续跑批边界错位 → validators 重复/缺失).
 stage3() {
   [[ $# -eq 2 ]] || die "用法: stage3 <src_dir> <out_dir>"
   local src="$1" out="$2"
@@ -152,6 +153,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import orjson
+
 src = Path(os.environ["SRC"])
 out = Path(os.environ["OUT"])
 batch_n = int(os.environ["BATCH_N"])
@@ -165,14 +168,43 @@ if not imgs:
 chunks = [imgs[i : i + batch_n] for i in range(0, len(imgs), batch_n)]
 print(f"stage3: {len(imgs)} 图 / {len(chunks)} 批(批大小 {batch_n}) → {out}")
 
+meta_dir = out / "_batch_meta"  # 批指纹 sidecar(批目录是 det_mine 输出, 会被重建, 放不下)
 for i, chunk in enumerate(chunks):
     bdir = out / f"batch_{i:04d}"
+    # 指纹防护: 断点键是批序号, 而批边界由本次运行 sorted(src)+BATCH 实时切;
+    # BATCH 或输入集变化后续跑会让新旧批内容错位 → 先比对指纹才允许跳过/重跑
+    cur_meta = {
+        "src_count": len(imgs),
+        "batch": batch_n,
+        "first": chunk[0].name,
+        "last": chunk[-1].name,
+    }
+    meta_path = meta_dir / f"batch_{i:04d}.json"
+    if bdir.exists():
+        if not meta_path.is_file():
+            sys.exit(
+                f"批 {bdir.name} 已存在但缺指纹 {meta_path}(旧版产物), 续跑不安全: "
+                f"删除 {out} 重跑"
+            )
+        old_meta = orjson.loads(meta_path.read_bytes())
+        diff = {
+            k: {"old": old_meta.get(k), "new": v}
+            for k, v in cur_meta.items()
+            if old_meta.get(k) != v
+        }
+        if diff:
+            sys.exit(
+                f"批 {bdir.name} 指纹冲突: {diff}\n"
+                f"BATCH 或输入集已变化, 续跑不安全: 删除 {out} 重跑或恢复原参数"
+            )
     if (bdir / "mining_report.json").is_file():
         print(f"[{i + 1}/{len(chunks)}] 已完成, 跳过 {bdir.name}")
         continue
     if bdir.exists():
         # 中断残批: 本编排自建目录, 清掉重跑(避免触发 det_mine 目录覆盖保护)
         shutil.rmtree(bdir)
+    meta_dir.mkdir(parents=True, exist_ok=True)
+    meta_path.write_bytes(orjson.dumps(cur_meta))  # 批开始前写指纹(残批重跑也不丢)
     fdir = out / "_batch_links" / f"batch_{i:04d}"
     if fdir.exists():
         shutil.rmtree(fdir)

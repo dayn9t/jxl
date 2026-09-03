@@ -300,7 +300,12 @@ def run(
     ] = -1.0,
     dump_validators: Annotated[
         Path,
-        typer.Option("--dump-validators", help="全量图逐模型输出 jsonl(矩阵分析用)"),
+        typer.Option(
+            "--dump-validators",
+            help="全量图逐模型输出 jsonl(矩阵分析用); "
+            "append 语义: 重跑同目标文件会累积重复行"
+            "(管线内每批独立文件+merge 截断写, 安全)",
+        ),
     ] = Path(),
     conf: Annotated[
         float, typer.Option("--conf", help="检测置信度(所有校验器共用)")
@@ -345,6 +350,10 @@ def run(
     if not 0.0 <= iou <= 1.0 or not 0.0 <= conf <= 1.0:
         typer.secho("--iou/--conf 须在 [0,1]", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
+    if dump_validators.name:
+        # dump 父目录推理前建好: 路径 typo/权限问题在入口期暴露,
+        # 不等数小时推理后写 jsonl 时才 FileNotFoundError
+        dump_validators.parent.mkdir(parents=True, exist_ok=True)
     if not 0.0 <= review_top <= 1.0:
         typer.secho(
             f"--review-top 须在 [0,1]: {review_top}", fg=typer.colors.RED, err=True

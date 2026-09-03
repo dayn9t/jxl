@@ -12,8 +12,11 @@ import sys
 from pathlib import Path
 
 import httpx
+import orjson
 import pytest
+from typer.testing import CliRunner
 
+from jxl.bin import det_mine
 from jxl.bin.det_mine import _parse_weights, detect_la
 from jxl.det.locateanything.client import LaServerDownError
 
@@ -111,3 +114,45 @@ def test_dump_validators_flag_exists() -> None:
         check=True,
     )
     assert "--dump-validators" in r.stdout
+
+
+def test_dump_validators_parent_created_before_inference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """--dump-validators 父目录在推理前创建: 深层不存在的路径入口期建好,
+    不等全量推理后写 jsonl 时才 FileNotFoundError(路径 typo 提前暴露)."""
+    frames = tmp_path / "frames"
+    frames.mkdir()
+    (frames / "a.jpg").write_bytes(b"x")  # gather_images 只看后缀
+    target_model = tmp_path / "t.pt"
+    target_model.write_bytes(b"x")
+    dump = tmp_path / "typo" / "nested" / "dir" / "validators.jsonl"
+
+    # 推理层全量桩化(空检): 只验证入口期建目录 + dump 落盘, 不依赖模型/GPU
+    monkeypatch.setattr(det_mine, "YOLO", lambda p: object())
+    monkeypatch.setattr(det_mine, "_detect", lambda *a, **k: {"a": []})
+    monkeypatch.setattr(det_mine, "detect_yoloe", lambda *a, **k: {"a": []})
+
+    r = CliRunner().invoke(
+        det_mine.app,
+        [
+            str(frames),
+            str(tmp_path / "out"),
+            "--target-model",
+            str(target_model),
+            "--validators",
+            "yoloe",
+            "--validator-weights",
+            "yoloe:1.0",
+            "--consensus",
+            "1",
+            "--dump-validators",
+            str(dump),
+        ],
+    )
+    assert r.exit_code == 0, r.output
+    assert dump.parent.is_dir()
+    lines = dump.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    row = orjson.loads(lines[0])
+    assert row["stem"] == "a" and row["level"] == "L0"  # 空检全一致 → L0 但仍 dump
