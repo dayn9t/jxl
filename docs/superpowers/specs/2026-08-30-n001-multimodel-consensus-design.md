@@ -20,7 +20,7 @@ n001 部署点存有 134h 营业厅监控视频（已有部署 person.pt 的逐�
 | 豆包 | 不进管线，review 集停在豆包之前，规模出来再定 |
 | 人工审核形态 | PIL 预览网格（每模型一色框）+ manifest.jsonl |
 | 产出用途 | 先保留不入池，做完再决定 |
-| target 模型 | person.pt（部署模型，分歧即其改进点）|
+| target 模型 | `person_yolo26n/weights/best.pt`（sgcc0 从头训 mAP 0.862；旧 person.pt 本机已不存在）|
 | 编排 | 新编排 bin 串 5 stage，各 stage 独立可重跑（分批断点）|
 | **分布式标注** | **本机(4060Ti) + s4(RTX 5080 16G) 双机**：帧对半分片，各自独立跑全套 det_mine（含各自 la 服务），产物合并。sgcc0/6/1 不可达，不参与。s4 按「同步到相同目录」方式部署（rsync jxl repo + 模型 + 帧分片）|
 
