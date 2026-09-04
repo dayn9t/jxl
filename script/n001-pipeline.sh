@@ -8,6 +8,8 @@
 #   script/n001-pipeline.sh merge [root]                各批产物合并 + pipeline_report.json
 #   script/n001-pipeline.sh report [root]               consensus_report + review_pack
 #   script/n001-pipeline.sh phaseA                      随机 8 mkv 全链路(数据根 $ROOT/phaseA*)
+#   全量(分时单机): stage1 → stage2 → stage3a(la dump 独占) →
+#                    stage3 <frames_dedup/images> <root>/consensus <root> → merge → report
 #
 # GPU 资源要求(运行前置, 硬约束):
 #   1. la 校验器走独立服务: stage3 前必须先启动 script/la-serve.sh(:18306, .la-venv);
@@ -138,15 +140,55 @@ PY
   echo "stage2 完成: $(find "$frames/images" -maxdepth 1 -name '*.jpg' | wc -l) 帧 → $frames"
 }
 
-# Stage 3: 分批 det_mine(断点 = 批粒度: 已有 mining_report.json 的批跳过;
-# _batch_meta 批指纹防 BATCH/输入集变化后续跑批边界错位 → validators 重复/缺失).
-stage3() {
-  [[ $# -eq 2 ]] || die "用法: stage3 <src_dir> <out_dir>"
-  local src="$1" out="$2"
+
+# la 服务管理(分时架构: stage3a 独占跑 la dump, stage3b 前停服务腾显存;
+# 16G 单卡五模型同批会挤爆—s4 Xid 79 GPU 掉卡实测 2026-09-03)
+la_ensure() {
+  if curl -sf --max-time 3 http://127.0.0.1:18306/health > /dev/null 2>&1; then
+    echo "la 服务已在运行"
+    return 0
+  fi
+  echo "启动 la 服务(script/la-serve.sh, 加载 ~40s)..."
+  setsid nohup bash "$REPO/script/la-serve.sh" > /tmp/la-serve.log 2>&1 &
+  for _ in $(seq 1 40); do
+    curl -sf --max-time 2 http://127.0.0.1:18306/health > /dev/null 2>&1 && { echo "la 服务就绪"; return 0; }
+    sleep 3
+  done
+  die "la 服务启动超时(120s), 见 /tmp/la-serve.log"
+}
+
+la_stop() {
+  pkill -f "la_server[.]py" 2>/dev/null || true
+  sleep 3
+  if curl -sf --max-time 2 http://127.0.0.1:18306/health > /dev/null 2>&1; then
+    die "la 服务未停(仍响应 health), 手动处理: pkill -f la_server"
+  fi
+  echo "la 服务已停(显存释放给 det_mine)"
+}
+
+# Stage 3a: la 独占跑 dump(la_relabel 断点续跑, 与业务服务共存 ~12.2G/16.4G)
+stage3a() {
+  [[ $# -eq 2 ]] || die "用法: stage3a <src_dir> <out_root>"
+  local src="$1" root="$2"
   [[ -d "$src" ]] || die "src 不存在: $src"
+  la_ensure
+  uv run python "$REPO/src/jxl/bin/la_relabel.py" "$src" "$root/la_dump" --batch 100
+  echo "stage3a 完成: $root/la_dump"
+}
+
+# Stage 3b: 分批 det_mine(la 从 stage3a dump 读票; 断点 = 批粒度: 已有
+# mining_report.json 的批跳过; _batch_meta 批指纹防 BATCH/输入集变化后续跑
+# 批边界错位 → validators 重复/缺失).
+stage3() {
+  [[ $# -eq 3 ]] || die "用法: stage3 <src_dir> <out_dir> <la_dump_root>"
+  local src="$1" out="$2" la_root="$3"
+  [[ -d "$src" ]] || die "src 不存在: $src"
+  [[ -d "$la_root/labels" ]] || die "la dump 不存在(先跑 stage3a): $la_root/labels"
+  la_stop
   SRC="$src" OUT="$out" BATCH_N="$BATCH" TARGET_MODEL="$TARGET" \
   VALIDATORS="$VALIDATORS" WEIGHTS="$WEIGHTS" CONSENSUS_N="$CONSENSUS" \
   IOU="$IOU" REVIEW_TOP="$REVIEW_TOP" DEVICE="$DEVICE" REPO="$REPO" \
+  LA_DUMP="$la_root" \
     uv run python - <<'PY'
 import os
 import shutil
@@ -221,6 +263,7 @@ for i, chunk in enumerate(chunks):
         "--iou", os.environ["IOU"],
         "--review-top", os.environ["REVIEW_TOP"],
         "--dump-validators", str(bdir / "validators.jsonl"),
+        "--la-dump", os.environ["LA_DUMP"],
         "--device", os.environ["DEVICE"],
     ]
     print(f"[{i + 1}/{len(chunks)}] {len(chunk)} 图 → {bdir.name}")
@@ -316,7 +359,8 @@ PY
   echo "== phaseA 全链(每步独立断点, 中断后重跑 phaseA 续): root=$root =="
   stage1 "$vdir" "$root"
   stage2 "$root"
-  stage3 "$root/frames_dedup/images" "$root/consensus"
+  stage3a "$root/frames_dedup/images" "$root"
+  stage3 "$root/frames_dedup/images" "$root/consensus" "$root"
   merge "$root"
   report "$root"
   echo "== phaseA 完成: $root/pipeline_report.json =="
@@ -326,6 +370,6 @@ PY
 cmd="$1"
 shift
 case "$cmd" in
-  stage1 | stage2 | stage3 | merge | report | phaseA) "$cmd" "$@" ;;
+  stage1 | stage2 | stage3a | stage3 | merge | report | phaseA) "$cmd" "$@" ;;
   *) die "未知子命令: $cmd(可选 stage1|stage2|stage3|merge|report|phaseA)" ;;
 esac
