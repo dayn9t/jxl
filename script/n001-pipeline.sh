@@ -38,6 +38,7 @@ PHASEA_N="${PHASEA_N:-8}"
 PHASEA_SEED="${PHASEA_SEED:-42}"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"  # 权重全在本地缓存; 本机外网断时 HF 联网检查会挂 gdino 加载
 DINOV2_MODEL="${DINOV2_MODEL:-$REPO/models/dinov2-small}"  # 本地权重(外网断时 ModelScope 下载), 覆盖 embed_dino 默认 HF 名
 cd "$REPO" # uv run 须在仓根(项目环境)
 
