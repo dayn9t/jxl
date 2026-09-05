@@ -7,7 +7,7 @@ n001 共识标注管线的分歧层二级仲裁。读 <consensus_dir>/review/man
 1. 豆包 vision grounding(复用 doubao_relabel.ground_one, prompt 取 --target 加载
    的 TargetProfile.vlm_prompt)得豆包框集;
 2. find_consensus_positions(validators, iou_thr=--iou-consensus, k=2) 求模型共识
-   位置(第一层放宽口径 IoU 0.3, 每位置支持模型数 ≥2);
+   位置(IoU 0.4, 每位置支持模型数 ≥2);
 3. 多数确认(严格口径 IoU≥--iou-major, 贪心一对一): 图内所有共识位置均获豆包
    重叠且豆包无无人支持的新位置 → 仲裁通过, 标注框取 pick_by_priority 固定
    优先序的代表框(la conf 恒 1.0, 不能按 conf 排序); 任一位置未获赞同或豆包
@@ -178,8 +178,8 @@ def run(
         str, typer.Option("--model", help="覆盖模型名")
     ] = "doubao-seed-2-0-lite-260215",
     iou_major: Annotated[
-        float, typer.Option("--iou-major", help="豆包多数确认 IoU 阈值(严格口径)")
-    ] = 0.5,
+        float, typer.Option("--iou-major", help="豆包多数确认 IoU 阈值(与共识层统一 0.4)")
+    ] = 0.4,
     iou_consensus: Annotated[
         float,
         typer.Option("--iou-consensus", help="共识位置聚类 IoU 阈值(第一层放宽口径)"),

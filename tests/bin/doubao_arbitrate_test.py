@@ -16,7 +16,7 @@ from jxl.det.hardmine import Box
 _REP: Box = (0.1, 0.1, 0.5, 0.5, 0.9)
 _RFDETR: Box = (0.12, 0.1, 0.52, 0.48, 0.8)
 _YOLOE: Box = (0.1, 0.12, 0.48, 0.5, 0.7)
-_AGREE: Box = (0.1, 0.1, 0.5, 0.5, 0.95)  # 与 pick 框(rfdetr) IoU≈0.86 ≥ 0.5
+_AGREE: Box = (0.1, 0.1, 0.5, 0.5, 0.95)  # 与 pick 框(rfdetr) IoU≈0.86 ≥ 0.4
 _FAR: Box = (0.6, 0.6, 0.9, 0.9, 0.9)  # 与任何位置零重叠
 _EXTRA: Box = (0.7, 0.05, 0.95, 0.4, 0.8)  # 豆包独有位置(无共识位置支持)
 
@@ -27,8 +27,8 @@ def _pos() -> tuple[Box, dict[str, Box]]:
 
 
 def test_arbitrate_confirmed() -> None:
-    """赞同确认: 豆包框与位置 IoU≥0.5 → 通过, 标注框取优先序代表框."""
-    arb = arbitrate_image([_pos()], [_AGREE], 0.5)
+    """赞同确认: 豆包框与位置 IoU≥0.4 → 通过, 标注框取优先序代表框."""
+    arb = arbitrate_image([_pos()], [_AGREE], 0.4)
     assert arb.confirmed
     assert arb.label_boxes == [_RFDETR]  # pick 优先序 rfdetr 先于 yoloe
     assert arb.unapproved == []
@@ -37,14 +37,14 @@ def test_arbitrate_confirmed() -> None:
 
 def test_arbitrate_position_unapproved() -> None:
     """不赞同: 豆包框零重叠 → 无多数; 远处豆包框同时构成豆包独有位置."""
-    arb = arbitrate_image([_pos()], [_FAR], 0.5)
+    arb = arbitrate_image([_pos()], [_FAR], 0.4)
     assert not arb.confirmed
     assert arb.label_boxes == []
     assert len(arb.unapproved) == 1
     v = arb.unapproved[0]
     assert v.box == _RFDETR
     assert v.supporters == ["rfdetr", "yoloe"]
-    assert v.best_doubao_iou < 0.5
+    assert v.best_doubao_iou < 0.4
     assert arb.doubao_only == [_FAR]
 
 
