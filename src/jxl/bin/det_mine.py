@@ -376,10 +376,6 @@ def run(
     if not 0.0 <= iou <= 1.0 or not 0.0 <= conf <= 1.0:
         typer.secho("--iou/--conf 须在 [0,1]", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
-    if dump_validators.name:
-        # dump 父目录推理前建好: 路径 typo/权限问题在入口期暴露,
-        # 不等数小时推理后写 jsonl 时才 FileNotFoundError
-        dump_validators.parent.mkdir(parents=True, exist_ok=True)
     if not 0.0 <= review_top <= 1.0:
         typer.secho(
             f"--review-top 须在 [0,1]: {review_top}", fg=typer.colors.RED, err=True
@@ -448,6 +444,11 @@ def run(
     (out_dir / "images").mkdir(parents=True)
     (out_dir / "labels").mkdir(parents=True)
     (out_dir / "review").mkdir(parents=True)
+    if dump_validators.name:
+        # dump 父目录建好: typo/权限入口期暴露(不等推理完才报错)。
+        # 须在 out_dir 覆盖检查之后 — dump 放 out_dir 内时, 先建目录
+        # 会让上面的"已存在非产物拒绝删除"误拒自己(2026-09-06 批内 dump 踩雷)
+        dump_validators.parent.mkdir(parents=True, exist_ok=True)
 
     typer.secho(
         f"det_mine target={target_text} validators={vlist} frames={len(imgs)}",
