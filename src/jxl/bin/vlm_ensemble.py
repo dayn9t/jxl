@@ -52,10 +52,17 @@ app = typer.Typer(add_completion=False, help="三 VLM 多数仲裁(Qwen+MiniMax 
 
 QWEN_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 QWEN_MODEL = "qwen3-vl-plus"
-# qwen bbox_2d 为 0-1000 归一化刻度(非官方文档所称绝对像素; 35 帧人工真值标定,
-# 误按像素÷640 时 F1 0.035, ÷1000 修正后 0.661 —— 2026-09-06)
+# qwen bbox_2d 为 0-1000 归一化刻度. 官方依据(核查版本更新用):
+# - Qwen3-VL 官方 grounding 文档: https://qwenlm-qwen3-vl.mintlify.app/capabilities/grounding-2d
+#   (技术报告: "Different from Qwen2.5-VL, we adopt a normalized coordinate
+#    system scaled to the range [0, 1000]"; Qwen2.5-VL 为绝对像素, 跨代必查)
+# - ms-swift Best Practices: https://swift.readthedocs.io/en/v3.9/BestPractices/Qwen3-VL-Best-Practice.html
+# 实测佐证: 35 帧人工真值标定, 误按像素÷640 时 F1 0.035, ÷1000 修正后 0.661 (2026-09-06)
 QWEN_COORD_DIV = 1000.0
 MM_BASE = "https://api.minimaxi.com/v1"
+# MiniMax-M3 官方无 grounding 格式规范(HF transformers 文档仅架构+describe:
+# https://huggingface.co/docs/transformers/en/model_doc/minimax_m3_vl ),
+# 像素刻度为 35 帧真值实测标定(F1 0.617 无系统偏移)
 MM_MODEL = "MiniMax-M3"
 
 QWEN_PROMPT_TMPL = (
