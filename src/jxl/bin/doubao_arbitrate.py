@@ -182,8 +182,8 @@ def run(
     ] = 0.4,
     iou_consensus: Annotated[
         float,
-        typer.Option("--iou-consensus", help="共识位置聚类 IoU 阈值(第一层放宽口径)"),
-    ] = 0.3,
+        typer.Option("--iou-consensus", help="共识位置聚类 IoU 阈值(与仲裁层统一 0.4)"),
+    ] = 0.4,
     concurrency: Annotated[
         int, typer.Option("--concurrency", help="豆包 API 并发数")
     ] = 6,
