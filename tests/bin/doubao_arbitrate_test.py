@@ -117,15 +117,15 @@ def test_cli_zero_review_rows_errors(tmp_path: Path) -> None:
 def test_parse_vlm_json_basic() -> None:
     from jxl.bin.vlm_ensemble import parse_vlm_json
 
-    # Qwen 官方 bbox_2d 绝对像素 → 归一化(conf 不解析, 恒 1.0)
+    # Qwen bbox_2d 是 0-1000 归一化刻度(÷1000, 非官方文档所称绝对像素)
     boxes = parse_vlm_json(
-        '[{"label":"person","bbox_2d":[64,128,320,384],"confidence":0.9}]', 640, 640
+        '[{"label":"person","bbox_2d":[100,200,500,600],"confidence":0.9}]', 1000, 1000
     )
     assert boxes == [(0.1, 0.2, 0.5, 0.6, 1.0)]
     # markdown 包裹容忍 + 坐标乱序 min/max 修正
-    boxes2 = parse_vlm_json('```json\n[{"bbox_2d":[128,64,384,320]}]\n```', 640, 640)
-    assert boxes2 == [(0.2, 0.1, 0.6, 0.5, 1.0)]
-    # 非方形图按各自边长归一化
+    boxes2 = parse_vlm_json('```json\n[{"bbox_2d":[200,100,500,320]}]\n```', 1000, 1000)
+    assert boxes2 == [(0.2, 0.1, 0.5, 0.32, 1.0)]
+    # MiniMax-M3: 输入图绝对像素刻度(非方形图按各自边长归一化)
     boxes3 = parse_vlm_json('[{"bbox_2d":[50,30,100,60]}]', 200, 100)
     assert boxes3 == [(0.25, 0.3, 0.5, 0.6, 1.0)]
     # MiniMax-M3 <think> 推理前缀剥离(思考内含方括号不污染切片)
@@ -137,27 +137,27 @@ def test_parse_vlm_json_basic() -> None:
     # qwen 重复 bbox_2d 键(多框挤一对象) → 全部恢复
     boxes5 = parse_vlm_json(
         '```json\n[\n\t{"label": "person", "bbox_2d": [376, 91, 635, 448], '
-        '"bbox_2d": [420, 0, 675, 84]}\n]\n```', 640, 640
+        '"bbox_2d": [420, 0, 675, 84]}\n]\n```', 1000, 1000
     )
-    assert boxes5 == [(376 / 640, 91 / 640, 635 / 640, 448 / 640, 1.0),
-                      (420 / 640, 0.0, 1.0, 84 / 640, 1.0)]
+    assert boxes5 == [(0.376, 0.091, 0.635, 0.448, 1.0),
+                      (0.42, 0.0, 0.675, 0.084, 1.0)]
     # qwen 畸形收尾(花括号代替方括号) → 数字组仍可恢复
-    boxes7 = parse_vlm_json('{"bbox_2d": [376, 91, 635, 445}}', 640, 640)
-    assert boxes7 == [(376 / 640, 91 / 640, 635 / 640, 445 / 640, 1.0)]
+    boxes7 = parse_vlm_json('{"bbox_2d": [376, 91, 635, 445}}', 1000, 1000)
+    assert boxes7 == [(0.376, 0.091, 0.635, 0.445, 1.0)]
     # qwen 键名变体 coordinate_2d / label_2d(全量实测出现的第三种)
     boxes8 = parse_vlm_json(
-        '[{"label": "person", "coordinate_2d": [0, 0, 289, 397]}]', 640, 640
+        '[{"label": "person", "coordinate_2d": [0, 0, 289, 397]}]', 1000, 1000
     )
-    assert boxes8 == [(0.0, 0.0, 289 / 640, 397 / 640, 1.0)]
+    assert boxes8 == [(0.0, 0.0, 0.289, 0.397, 1.0)]
     boxes9 = parse_vlm_json(
-        '[{"label": "person", "label_2d": [330, 348, 669, 657]}]', 640, 640
+        '[{"label": "person", "label_2d": [330, 348, 669, 657]}]', 1000, 1000
     )
-    assert boxes9 == [(330 / 640, 348 / 640, 1.0, 1.0, 1.0)]
-    # 越界坐标 clamp [0,1]
-    boxes6 = parse_vlm_json('[{"bbox_2d":[600,500,1000,700]}]', 640, 640)
-    assert boxes6 == [(600 / 640, 500 / 640, 1.0, 1.0, 1.0)]
+    assert boxes9 == [(0.33, 0.348, 0.669, 0.657, 1.0)]
+    # 越界坐标 clamp [0,1](如 qwen 926/1000 边缘部分目标)
+    boxes6 = parse_vlm_json('[{"bbox_2d":[926,507,1000,650]}]', 1000, 1000)
+    assert boxes6 == [(0.926, 0.507, 1.0, 0.65, 1.0)]
     # 空检出 [] → 空列表
-    assert parse_vlm_json("[]", 640, 640) == []
+    assert parse_vlm_json("[]", 1000, 1000) == []
     assert parse_vlm_json("<think>none</think>\n[]", 640, 640) == []
 
 

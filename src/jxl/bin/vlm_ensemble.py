@@ -52,6 +52,9 @@ app = typer.Typer(add_completion=False, help="三 VLM 多数仲裁(Qwen+MiniMax 
 
 QWEN_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 QWEN_MODEL = "qwen3-vl-plus"
+# qwen bbox_2d 为 0-1000 归一化刻度(非官方文档所称绝对像素; 35 帧人工真值标定,
+# 误按像素÷640 时 F1 0.035, ÷1000 修正后 0.661 —— 2026-09-06)
+QWEN_COORD_DIV = 1000.0
 MM_BASE = "https://api.minimaxi.com/v1"
 MM_MODEL = "MiniMax-M3"
 
@@ -84,13 +87,15 @@ _BBOX_RE = re.compile(
 )
 
 
-def parse_vlm_json(text: str, img_w: int, img_h: int) -> list[Box]:
-    """VLM JSON 输出(官方 bbox_2d 绝对像素) → 归一化 [Box].
+def parse_vlm_json(text: str, div_x: float, div_y: float) -> list[Box]:
+    """VLM JSON 输出(bbox_2d 数值) → 归一化 [Box].
 
-    先剥 MiniMax-M3 的 <think> 推理前缀(其内可能含方括号污染切片);
-    正则提取全部 bbox_2d 数字组 —— qwen3-vl-plus 偶发把多框挤进一个对象的
-    重复 bbox_2d 键(2026-09-06 冒烟实测), 逐对象解析会静默丢框.
-    坐标 clamp [0,1](qwen 偶发越界, 如 926/1000 > 640).
+    div_x/div_y = 坐标刻度除数, 各家不同(2026-09-06 35 帧人工真值标定):
+    - qwen3-vl-plus: 0-1000 归一化刻度(÷1000; 曾误按像素÷640 → F1 0.035,
+      修正后 0.661. 虽官方 prompt 声明 absolute pixels, 实际输出 0-1000)
+    - MiniMax-M3: 输入图绝对像素(÷img_w/img_h)
+    先剥 <think> 推理前缀; 正则提取全部 bbox_2d 数字组(容忍重复键/键名变体/
+    畸形收尾). 坐标 clamp [0,1], 塌缩框丢弃.
     解析失败抛 ValueError(调用方转弃权票, 不中断整体).
     """
     if "</think>" in text:
@@ -105,13 +110,13 @@ def parse_vlm_json(text: str, img_w: int, img_h: int) -> list[Box]:
         nums = [float(v) for v in cap.split(",")]
         x1, y1, x2, y2 = nums[:4]
         x1, y1, x2, y2 = (
-            min(max(min(x1, x2) / img_w, 0.0), 1.0),
-            min(max(min(y1, y2) / img_h, 0.0), 1.0),
-            min(max(max(x1, x2) / img_w, 0.0), 1.0),
-            min(max(max(y1, y2) / img_h, 0.0), 1.0),
+            min(max(min(x1, x2) / div_x, 0.0), 1.0),
+            min(max(min(y1, y2) / div_y, 0.0), 1.0),
+            min(max(max(x1, x2) / div_x, 0.0), 1.0),
+            min(max(max(y1, y2) / div_y, 0.0), 1.0),
         )
         if x2 <= x1 or y2 <= y1:
-            continue  # 越界 clamp 后塌缩成点/线(整框出画的幻觉) → 丢弃
+            continue  # clamp 后塌缩成点/线(整框出画) → 丢弃
         boxes.append((x1, y1, x2, y2, 1.0))
     return boxes
 
@@ -123,11 +128,14 @@ async def call_vlm(
     model: str,
     prompt: str,
     img_b64: str,
-    img_w: int,
-    img_h: int,
+    div_x: float,
+    div_y: float,
     sem: asyncio.Semaphore,
 ) -> VlmVote:
-    """OpenAI 兼容 chat+vision 调用(Qwen/MiniMax 同构). 单帧一票, 失败弃权."""
+    """OpenAI 兼容 chat+vision 调用(Qwen/MiniMax 同构). 单帧一票, 失败弃权.
+
+    div_x/div_y: 该模型 bbox_2d 坐标刻度除数(qwen 0-1000 归一化; M3 像素).
+    """
     body = {
         "model": model,
         "messages": [
@@ -152,7 +160,7 @@ async def call_vlm(
                 # 响应体入错误串(诊断用; 不含 key, 请求头不回显)
                 raise ValueError(f"HTTP {r.status_code}: {r.text[:200]}")
             text = r.json()["choices"][0]["message"]["content"]
-            return VlmVote(parse_vlm_json(text, img_w, img_h))
+            return VlmVote(parse_vlm_json(text, div_x, div_y))
         except Exception as e:  # 单 VLM 失败弃权(错误串入 manifest), 不中断整体
             return VlmVote([], error=f"{type(e).__name__}: {e}"[:400])
 
@@ -254,9 +262,9 @@ def run(
         b64 = base64.b64encode(img.read_bytes()).decode()
         qwen, mm = await asyncio.gather(
             call_vlm(client, QWEN_BASE, qwen_key, QWEN_MODEL,
-                     QWEN_PROMPT_TMPL.format(target=target), b64, img_w, img_h, sem),
+                     QWEN_PROMPT_TMPL.format(target=target), b64, QWEN_COORD_DIV, QWEN_COORD_DIV, sem),
             call_vlm(client, MM_BASE, mm_key, MM_MODEL,
-                     MM_PROMPT_TMPL.format(target=target), b64, img_w, img_h, sem),
+                     MM_PROMPT_TMPL.format(target=target), b64, float(img_w), float(img_h), sem),
         )
         entry = parse_entry(orjson.dumps(row).decode())
         validators = {n: bs for n, bs in entry.boxes_by_model.items() if n != "target"}
