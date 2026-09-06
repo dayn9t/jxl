@@ -144,11 +144,15 @@ def test_parse_vlm_json_basic() -> None:
     # qwen 畸形收尾(花括号代替方括号) → 数字组仍可恢复
     boxes7 = parse_vlm_json('{"bbox_2d": [376, 91, 635, 445}}', 640, 640)
     assert boxes7 == [(376 / 640, 91 / 640, 635 / 640, 445 / 640, 1.0)]
-    # qwen 键名变体 coordinate_2d
+    # qwen 键名变体 coordinate_2d / label_2d(全量实测出现的第三种)
     boxes8 = parse_vlm_json(
         '[{"label": "person", "coordinate_2d": [0, 0, 289, 397]}]', 640, 640
     )
     assert boxes8 == [(0.0, 0.0, 289 / 640, 397 / 640, 1.0)]
+    boxes9 = parse_vlm_json(
+        '[{"label": "person", "label_2d": [330, 348, 669, 657]}]', 640, 640
+    )
+    assert boxes9 == [(330 / 640, 348 / 640, 1.0, 1.0, 1.0)]
     # 越界坐标 clamp [0,1]
     boxes6 = parse_vlm_json('[{"bbox_2d":[600,500,1000,700]}]', 640, 640)
     assert boxes6 == [(600 / 640, 500 / 640, 1.0, 1.0, 1.0)]

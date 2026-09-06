@@ -11,12 +11,17 @@ from jxl.bin.review_pack import MODEL_COLORS, app, render_tile
 
 
 def test_model_colors_complete() -> None:
-    assert set(MODEL_COLORS) == {"target", "yoloe", "gdino", "rfdetr", "la"}
+    assert set(MODEL_COLORS) == {
+        "target", "yoloe", "gdino", "rfdetr", "la", "doubao", "qwen", "minimax",
+    }
     assert MODEL_COLORS["target"] == (0, 0, 0)
     assert MODEL_COLORS["yoloe"] == (60, 120, 255)
     assert MODEL_COLORS["gdino"] == (255, 200, 0)
     assert MODEL_COLORS["rfdetr"] == (0, 200, 0)
     assert MODEL_COLORS["la"] == (255, 40, 40)
+    assert MODEL_COLORS["doubao"] == (148, 0, 211)
+    assert MODEL_COLORS["qwen"] == (0, 191, 191)
+    assert MODEL_COLORS["minimax"] == (255, 0, 255)
 
 
 def test_render_tile_sizes() -> None:
@@ -86,6 +91,35 @@ def test_cli_end_to_end(tmp_path: Path) -> None:
     assert "labels" in readme and "target" in readme
     missing = (out / "_missing.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(missing) == 1 and "gone.jpg" in missing[0]
+
+
+def test_cli_renders_vlm_boxes(tmp_path: Path) -> None:
+    """仲裁 manifest 行的 VLM 框字段(doubao/qwen/minimax)并入渲染, 不画未知键."""
+    images = tmp_path / "frames"
+    images.mkdir()
+    Image.new("RGB", (320, 240), (10, 10, 10)).save(images / "a.jpg")
+    consensus = tmp_path / "consensus"
+    (consensus / "review").mkdir(parents=True)
+    row = {
+        "image": "a.jpg",
+        "score": 0.5,
+        "target_boxes": [],
+        "validators": {},
+        "breakdown": {"fp_count": 0, "fn_count": 0},
+        "doubao_boxes": [[0.1, 0.1, 0.5, 0.5, 1.0]],
+        "qwen_boxes": [],
+        "minimax_boxes": [[0.1, 0.1, 0.5, 0.5, 1.0]],
+    }
+    (consensus / "review" / "manifest.jsonl").write_text(
+        orjson.dumps(row).decode() + "\n", encoding="utf-8"
+    )
+    out = tmp_path / "pack"
+    r = CliRunner().invoke(app, [str(consensus), str(images), str(out)])
+    assert r.exit_code == 0, r.output
+    im = Image.open(out / "review_grid_001.jpg")
+    # 框边缘像素: doubao 紫 / minimax 洋红 叠画(后画覆盖), 底图区域不受污染
+    assert im.getpixel((64, 74)) in {MODEL_COLORS["doubao"], MODEL_COLORS["minimax"]}
+    assert im.getpixel((300, 200)) == (10, 10, 10)
 
 
 def test_cli_empty_manifest_errors(tmp_path: Path) -> None:

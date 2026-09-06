@@ -28,7 +28,12 @@ MODEL_COLORS: dict[str, RGB] = {
     "gdino": (255, 200, 0),
     "rfdetr": (0, 200, 0),
     "la": (255, 40, 40),
+    "doubao": (148, 0, 211),
+    "qwen": (0, 191, 191),
+    "minimax": (255, 0, 255),
 }
+# 仲裁 manifest 行的 VLM 框字段(manifest 键 → 渲染模型名)
+_VLM_FIELDS = {"doubao_boxes": "doubao", "qwen_boxes": "qwen", "minimax_boxes": "minimax"}
 _TILE_W = 640
 _GRID_COLS = 4
 _HEADER_STEM_MAX = 28
@@ -93,7 +98,10 @@ def find_manifests(consensus_dir: Path) -> list[Path]:
 
 def _readme_text(consensus_dir: Path, per_grid: int) -> str:
     """README.txt 内容: 色图例 + 文件说明 + 审核操作指引."""
-    words = {"target": "黑", "yoloe": "蓝", "gdino": "黄", "rfdetr": "绿", "la": "红"}
+    words = {
+        "target": "黑", "yoloe": "蓝", "gdino": "黄", "rfdetr": "绿", "la": "红",
+        "doubao": "紫", "qwen": "青", "minimax": "洋红",
+    }
     legend = "\n".join(
         f"  {name:<7} {words[name]} rgb{color}" for name, color in MODEL_COLORS.items()
     )
@@ -147,6 +155,15 @@ def run(
     tiles: list[Image.Image] = []
     missing: list[str] = []
     for ln, entry in zip(lines, entries, strict=True):
+        # 仲裁层 manifest 行追加的 VLM 框(doubao/qwen/minimax)并入渲染集
+        row: dict[str, object] = orjson.loads(ln)
+        vlm_boxes = {
+            name: _coerce_boxes(row[field])
+            for field, name in _VLM_FIELDS.items()
+            if field in row
+        }
+        if vlm_boxes:
+            entry = ReviewEntry(entry.image, entry.score, {**entry.boxes_by_model, **vlm_boxes})
         stem = Path(entry.image).stem
         img_path = img_by_stem.get(stem)
         if img_path is None:

@@ -76,10 +76,11 @@ class VlmVote(NamedTuple):
 
 
 _NUM = r"\d+(?:\.\d+)?"
-# 键名后紧跟 4 个数字: 兼容 bbox_2d(官方) / coordinate_2d(qwen 偶发变体),
-# 且容忍畸形收尾(如 "..., 445}}", 花括号收尾冒烟实测) —— 只锚定数字组本身
+# 键名后紧跟 4 个数字: 键名泛化任意 \w+_2d —— qwen3-vl-plus 冒烟/全量实测已见
+# bbox_2d(官方)/coordinate_2d/label_2d 三种变体, 值恒为 4 数字像素组;
+# 且容忍畸形收尾(如 "..., 445}}", 花括号收尾) —— 只锚定数字组本身
 _BBOX_RE = re.compile(
-    rf'"?(?:bbox_2d|coordinate_2d)"?\s*:\s*\[\s*({_NUM}\s*,\s*{_NUM}\s*,\s*{_NUM}\s*,\s*{_NUM})'
+    rf'"?\w+_2d"?\s*:\s*\[\s*({_NUM}\s*,\s*{_NUM}\s*,\s*{_NUM}\s*,\s*{_NUM})'
 )
 
 
