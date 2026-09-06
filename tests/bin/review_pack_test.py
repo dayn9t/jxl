@@ -108,7 +108,7 @@ def test_cli_renders_vlm_boxes(tmp_path: Path) -> None:
         "breakdown": {"fp_count": 0, "fn_count": 0},
         "doubao_boxes": [[0.1, 0.1, 0.5, 0.5, 1.0]],
         "qwen_boxes": [],
-        "minimax_boxes": [[0.1, 0.1, 0.5, 0.5, 1.0]],
+        "minimax_boxes": [],
     }
     (consensus / "review" / "manifest.jsonl").write_text(
         orjson.dumps(row).decode() + "\n", encoding="utf-8"
@@ -117,9 +117,14 @@ def test_cli_renders_vlm_boxes(tmp_path: Path) -> None:
     r = CliRunner().invoke(app, [str(consensus), str(images), str(out)])
     assert r.exit_code == 0, r.output
     im = Image.open(out / "review_grid_001.jpg")
-    # 框边缘像素: doubao 紫 / minimax 洋红 叠画(后画覆盖), 底图区域不受污染
-    assert im.getpixel((64, 74)) in {MODEL_COLORS["doubao"], MODEL_COLORS["minimax"]}
-    assert im.getpixel((300, 200)) == (10, 10, 10)
+
+    def _near(px: tuple[int, ...], want: tuple[int, int, int], tol: int = 40) -> bool:
+        return all(abs(a - b) <= tol for a, b in zip(px[:3], want))
+
+    # 框边缘竖线像素 ≈ doubao 紫(JPEG q88 与暗底混叠, 采样线上多像素任一命中)
+    edge = [im.getpixel((x, 74)) for x in (63, 64, 65)]
+    assert any(_near(px, MODEL_COLORS["doubao"], tol=45) for px in edge)
+    assert _near(im.getpixel((300, 200)), (10, 10, 10), tol=12)
 
 
 def test_cli_empty_manifest_errors(tmp_path: Path) -> None:
