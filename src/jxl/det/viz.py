@@ -24,10 +24,16 @@ def scale_to_width(im: Image.Image, width: int) -> Image.Image:
 
 
 def draw_boxes(im: Image.Image, boxes: list[Box], color: RGB, width_px: int = 3) -> Image.Image:
-    """归一化 xyxy 框画到图上(返回新图, 不改原图)."""
+    """归一化 xyxy 框画到图上(返回新图, 不改原图).
+
+    跳过退化框(w/h≤0 或翻转) —— PIL rectangle 对 y2<y1 直接抛错; VLM 偶发
+    越界塌缩/坐标翻转框(2026-09-06 ensemble manifest 实测), 渲染层静默跳过.
+    """
     out = im.copy()
     dr = ImageDraw.Draw(out)
     for b in boxes:
+        if b[2] <= b[0] or b[3] <= b[1]:
+            continue
         dr.rectangle(
             (b[0] * im.width, b[1] * im.height, b[2] * im.width, b[3] * im.height),
             outline=color,

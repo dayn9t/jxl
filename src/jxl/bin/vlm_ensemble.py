@@ -104,13 +104,15 @@ def parse_vlm_json(text: str, img_w: int, img_h: int) -> list[Box]:
     for cap in captures:
         nums = [float(v) for v in cap.split(",")]
         x1, y1, x2, y2 = nums[:4]
-        boxes.append((
+        x1, y1, x2, y2 = (
             min(max(min(x1, x2) / img_w, 0.0), 1.0),
             min(max(min(y1, y2) / img_h, 0.0), 1.0),
             min(max(max(x1, x2) / img_w, 0.0), 1.0),
             min(max(max(y1, y2) / img_h, 0.0), 1.0),
-            1.0,
-        ))
+        )
+        if x2 <= x1 or y2 <= y1:
+            continue  # 越界 clamp 后塌缩成点/线(整框出画的幻觉) → 丢弃
+        boxes.append((x1, y1, x2, y2, 1.0))
     return boxes
 
 
