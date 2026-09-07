@@ -4,15 +4,15 @@
 把标注管线的分层产物合并为可直接训练的数据集(2026-09-06 n001 dataset_v2
 流程的工具化——当时为内联脚本):
 
-标注源(LabelKind)三格式, 统一展开为 (stem, 归一化 xyxy 框, 图片):
+标注源(LabelKind)三格式, 统一展开为 (stem, 带类框, 图片), cls 全链保留:
 - `--dump <jsonl>:<images_dir>`: det_mine --dump-validators 产物按 level 过滤.
   领域约定: **L0 = 确认样本而非丢弃**(五模型全一致, 标注 = target 框;
-  难例挖掘视角的"丢弃"是旧账本误记, 2026-09-06 修正)
+  难例挖掘视角的"丢弃"是旧账本误记, 2026-09-06 修正); dump 无类别 → cls 恒 0
 - `--yolo <labels_dir>:<images_dir>`: 现成 YOLO labels(det_mine batch /
-  doubao·vlm confirmed / 人工 YOLO 终版), 可重复; 经 parse_yolo_label →
-  to_yolo_label 往返(数值等价, 文本统一 6 位小数格式)
+  doubao·vlm confirmed / 人工 YOLO 终版), 可重复; cls 保留原值(多类可用),
+  坐标经解析统一 6 位小数格式(数值等价)
 - `--xanylabel <yaml_dir>:<images_dir>`: X-AnyLabeling 标注(version 2.0,
-  objects[].polygon 归一化顶点 → xyxy; rois 为监测区不属标注)
+  objects[].polygon 归一化顶点 → xyxy, category → cls; rois 为监测区不属标注)
 
 产出 `<out>/all/{images(symlink), labels}` + `classes.txt` + `data.yaml`
 (data.yaml 的 train/val/test 为相对路径, 与划分比例无关, 划分前生成零信息缺失).
@@ -35,7 +35,7 @@ import orjson
 import typer
 import yaml
 
-from jxl.det.hardmine import Box, parse_yolo_label, to_yolo_label
+from jxl.det.hardmine import Box
 
 app = typer.Typer(add_completion=False, help="共识管线产物层 → 平铺集 + data.yaml")
 
@@ -50,8 +50,11 @@ class LabelKind(StrEnum):
     XANYLABEL = "xanylabel"
 
 
-type StemBoxes = tuple[str, list[Box], Path]
-"""单帧标注: (stem, 归一化 xyxy 框列表, 图片路径)."""
+type LabeledBox = tuple[Box, int]
+"""带类框: (归一化 xyxy 框, cls id)."""
+
+type StemBoxes = tuple[str, list[LabeledBox], Path]
+"""单帧标注: (stem, 带类框列表, 图片路径)."""
 
 
 class SourceSpec(NamedTuple):
@@ -79,14 +82,45 @@ class LayerStats(NamedTuple):
 
 
 def img_by_stem(images_dir: Path) -> dict[str, Path]:
-    """图片目录递归索引 {stem: path}(多扩展名兼容)."""
-    return {
-        p.stem: p for p in sorted(images_dir.rglob("*")) if p.suffix.lower() in _IMG_EXTS
-    }
+    """图片目录递归索引 {stem: path}; 同 stem 多图(不同扩展名)即失败(防配错图)."""
+    out: dict[str, Path] = {}
+    for p in sorted(images_dir.rglob("*")):
+        if p.suffix.lower() not in _IMG_EXTS:
+            continue
+        if p.stem in out:
+            raise ValueError(f"图片目录 stem 重复: {p.stem} ({out[p.stem]} 与 {p})")
+        out[p.stem] = p
+    return out
+
+
+def parse_labeled_yolo(text: str, name: str) -> list[LabeledBox]:
+    """YOLO label 文本(cls cx cy w h) → 带类框(cls 保留, conf 不可恢复恒 1.0)."""
+    out: list[LabeledBox] = []
+    for ln in text.splitlines():
+        parts = ln.split()
+        if not parts:
+            continue
+        if len(parts) != 5:
+            raise ValueError(f"{name}: 非 5 字段行: {ln[:50]}")
+        cls = int(parts[0])
+        cx, cy, w, h = (float(v) for v in parts[1:])
+        out.append(((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, 1.0), cls))
+    return out
+
+
+def labeled_to_text(boxes: Sequence[LabeledBox]) -> str:
+    """带类框 → YOLO label 文本(与 to_yolo_label 同 6 位小数格式, cls per 框)."""
+    lines = []
+    for (x1, y1, x2, y2, _conf), cls in boxes:
+        lines.append(
+            f"{cls} {(x1 + x2) / 2:.6f} {(y1 + y2) / 2:.6f} "
+            f"{x2 - x1:.6f} {y2 - y1:.6f}"
+        )
+    return "\n".join(lines)
 
 
 def iter_dump(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
-    """dump 层展开: jsonl 行按 level 过滤, 标注 = target 框."""
+    """dump 层展开: jsonl 行按 level 过滤, 标注 = target 框(cls 恒 0——dump 无类别)."""
     imgs = img_by_stem(spec.images_dir)
     for line in spec.labels_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -98,44 +132,47 @@ def iter_dump(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
         if stem not in imgs:
             raise ValueError(f"dump 缺图: {stem} (images_dir={spec.images_dir})")
         boxes = [tuple(b) for b in row["target"]]
-        yield stem, boxes, imgs[stem]
+        yield stem, [(b, 0) for b in boxes], imgs[stem]
 
 
 def iter_yolo(spec: SourceSpec) -> Iterator[StemBoxes]:
-    """现成 YOLO labels 层展开(parse → Box, 与其他层同构)."""
+    """现成 YOLO labels 层展开(cls 保留原值, 多类数据集可用)."""
     imgs = img_by_stem(spec.images_dir)
     for lbl in sorted(spec.labels_path.glob("*.txt")):
         img = imgs.get(lbl.stem)
         if img is None:
             raise ValueError(f"labels 缺图: {lbl.stem} (images_dir={spec.images_dir})")
-        yield lbl.stem, parse_yolo_label(lbl.read_text(encoding="utf-8")), img
+        text = lbl.read_text(encoding="utf-8")
+        yield lbl.stem, parse_labeled_yolo(text, lbl.name), img
 
 
-def boxes_from_xanylabel(yaml_path: Path) -> list[Box]:
-    """X-AnyLabeling 标注 YAML(version 2.0) → [Box].
+def labeled_boxes_from_xanylabel(yaml_path: Path) -> list[LabeledBox]:
+    """X-AnyLabeling 标注 YAML(version 2.0) → [带类框].
 
-    objects[].polygon 归一化顶点 → xyxy(min/max); rois 为监测区不属标注, 忽略.
+    objects[].polygon 归一化顶点 → xyxy(min/max), category → cls;
+    rois 为监测区不属标注, 忽略.
     """
     doc = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-    boxes: list[Box] = []
+    boxes: list[LabeledBox] = []
     for obj in doc.get("objects", []):
         pts = [(float(p["x"]), float(p["y"])) for p in obj.get("polygon", [])]
         if len(pts) < 3:
             raise ValueError(f"{yaml_path.name}: polygon 点数 {len(pts)} < 3")
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
-        boxes.append((min(xs), min(ys), max(xs), max(ys), float(obj.get("confidence", 1.0))))
+        box = (min(xs), min(ys), max(xs), max(ys), float(obj.get("confidence", 1.0)))
+        boxes.append((box, int(obj.get("category", 0))))
     return boxes
 
 
 def iter_xanylabel(spec: SourceSpec) -> Iterator[StemBoxes]:
-    """X-AnyLabeling 层展开: 逐 YAML objects → xyxy 框."""
+    """X-AnyLabeling 层展开: 逐 YAML objects → 带类框(category → cls)."""
     imgs = img_by_stem(spec.images_dir)
     for yp in sorted(spec.labels_path.glob("*.yaml")):
         img = imgs.get(yp.stem)
         if img is None:
             raise ValueError(f"xanylabel 缺图: {yp.stem} (images_dir={spec.images_dir})")
-        yield yp.stem, boxes_from_xanylabel(yp), img
+        yield yp.stem, labeled_boxes_from_xanylabel(yp), img
 
 
 def iter_layer(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
@@ -149,10 +186,14 @@ def iter_layer(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
             yield from iter_xanylabel(spec)
 
 
-def _write_frame(all_dir: Path, stem: str, boxes: list[Box], img: Path) -> int:
-    """写单帧(label 文本 + 图 symlink), 返回框数."""
-    (all_dir / "labels" / f"{stem}.txt").write_text(to_yolo_label(boxes), encoding="utf-8")
-    (all_dir / "images" / img.name).symlink_to(img.resolve())
+def _write_frame(all_dir: Path, stem: str, boxes: list[LabeledBox], img: Path) -> int:
+    """写单帧(label 文本 + 图 symlink), 返回框数; 已存在产物覆盖(重跑安全)."""
+    (all_dir / "labels" / f"{stem}.txt").write_text(
+        labeled_to_text(boxes), encoding="utf-8"
+    )
+    link = all_dir / "images" / img.name
+    link.unlink(missing_ok=True)
+    link.symlink_to(img.resolve())
     return len(boxes)
 
 
@@ -180,15 +221,21 @@ def merge(
 ) -> list[LayerStats]:
     """按序合并层 → <out>/all/ + classes.txt + data.yaml, 返回各层统计.
 
-    冲突检测与写入同帧同步(先检后写, 失败即中止, 不留半写状态语义).
+    冲突检测与写入同帧同步(先检后写, 失败即中止). 失败可留半写 all/,
+    同 out_dir 重跑安全(已存在产物覆盖)——冲突修复后重跑是标准恢复路径.
     """
     if not sources:
         raise ValueError("零标注源")
+    for spec in sources:  # 入口校验: typo 路径立即失败, 不静默产出零帧层
+        if not spec.labels_path.exists():
+            raise ValueError(f"层标注路径不存在: {spec.labels_path} ({spec.kind.value})")
+        if not spec.images_dir.is_dir():
+            raise ValueError(f"层图片目录不存在: {spec.images_dir} ({spec.kind.value})")
     seen: dict[str, LabelKind] = {}
     stats: list[LayerStats] = []
     all_dir = out_dir / "all"
     (all_dir / "images").mkdir(parents=True, exist_ok=True)
-    (all_dir / "labels").mkdir(parents=True)
+    (all_dir / "labels").mkdir(parents=True, exist_ok=True)
     for spec in sources:
         frames = boxes = 0
         for stem, bs, img in iter_layer(spec, levels):
@@ -243,8 +290,8 @@ def main(
         raise typer.Exit(1)
     try:
         stats = merge(specs, out_dir, classes, frozenset(dump_level))
-    except ValueError as e:
-        typer.secho(str(e), fg=typer.colors.RED, err=True)
+    except (ValueError, orjson.JSONDecodeError, yaml.YAMLError) as e:
+        typer.secho(f"合并失败: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from e
     for s in stats:
         typer.echo(f"  {s.kind.value:10s} {s.frames:6d} 帧 / {s.boxes:6d} 框")

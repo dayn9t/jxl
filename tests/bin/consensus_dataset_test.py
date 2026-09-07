@@ -13,7 +13,7 @@ from jxl.bin.consensus_dataset import (
     LabelKind,
     SourceSpec,
     app,
-    boxes_from_xanylabel,
+    labeled_boxes_from_xanylabel,
     merge,
 )
 
@@ -35,7 +35,7 @@ def test_source_spec_from_str() -> None:
             assert "格式" in str(e)
 
 
-def test_boxes_from_xanylabel(tmp_path: Path) -> None:
+def test_labeled_boxes_from_xanylabel(tmp_path: Path) -> None:
     """polygon 顶点 → xyxy(乱序 min/max); rois 忽略; 空对象; 点数不足报错."""
     doc = {
         "version": "2.0",
@@ -53,14 +53,14 @@ def test_boxes_from_xanylabel(tmp_path: Path) -> None:
     }
     f = tmp_path / "a.yaml"
     f.write_text(yaml.safe_dump(doc), encoding="utf-8")
-    assert boxes_from_xanylabel(f) == [(0.35, 0.12, 0.633, 0.425, 0.9)]
+    assert labeled_boxes_from_xanylabel(f) == [((0.35, 0.12, 0.633, 0.425, 0.9), 0)]
     doc["objects"] = []
     f.write_text(yaml.safe_dump(doc), encoding="utf-8")
-    assert boxes_from_xanylabel(f) == []
+    assert labeled_boxes_from_xanylabel(f) == []
     doc["objects"] = [{"polygon": [{"x": 0.1, "y": 0.1}, {"x": 0.2, "y": 0.2}]}]
     f.write_text(yaml.safe_dump(doc), encoding="utf-8")
     try:
-        boxes_from_xanylabel(f)
+        labeled_boxes_from_xanylabel(f)
         raise AssertionError("点数不足应抛 ValueError")
     except ValueError:
         pass
@@ -143,6 +143,68 @@ def test_merge_rejects_conflict_and_empty(tmp_path: Path) -> None:
         raise AssertionError("零源应抛 ValueError")
     except ValueError:
         pass
+
+
+def test_merge_rerun_overwrites(tmp_path: Path) -> None:
+    """同 out_dir 重跑安全: 冲突中止留半写 all/, 修复后重跑(标准恢复路径)覆盖旧产物."""
+    sources = _make_layers(tmp_path)
+    conflict = tmp_path / "yolo_labels/l0a.txt"
+    conflict.write_text(_BOX_YOLO, encoding="utf-8")
+    out = tmp_path / "ds"
+    try:
+        merge(sources, out, ["person"], frozenset({"L0"}))
+        raise AssertionError("冲突应抛 ValueError")
+    except ValueError:
+        pass
+    assert (out / "all/labels/l0a.txt").exists()  # 半写状态(冲突帧前的帧已落盘)
+    conflict.unlink()
+    for _ in range(2):  # 恢复重跑 + 成功后重跑(全量 symlink 已存在)
+        stats = merge(sources, out, ["person"], frozenset({"L0"}))
+        assert sum(s.frames for s in stats) == 3
+    assert all(p.is_symlink() for p in (out / "all/images").glob("*.jpg"))
+    assert (out / "all/labels/x1.txt").read_text(encoding="utf-8").strip() == (
+        "0 0.250000 0.300000 0.300000 0.400000"
+    )
+
+
+def test_multiclass_and_guards(tmp_path: Path) -> None:
+    """多类: xanylabel category → cls, yolo cls 保留; 守卫: 路径校验/图 stem 重复."""
+    imgs = tmp_path / "images"
+    imgs.mkdir()
+    Image.new("RGB", (64, 64)).save(imgs / "a.jpg")
+    Image.new("RGB", (64, 64), (9, 9, 9)).save(imgs / "a.png")  # 同 stem 异扩展名
+    try:
+        merge([SourceSpec(LabelKind.YOLO, tmp_path, imgs)], tmp_path / "x", ["p"], frozenset())
+        raise AssertionError("图 stem 重复应失败")
+    except ValueError as e:
+        assert "stem 重复" in str(e)
+    imgs.joinpath("a.png").unlink()
+    (tmp_path / "multi").mkdir()
+    labels = tmp_path / "multi_labels"
+    labels.mkdir()
+    (labels / "a.txt").write_text("1 0.5 0.5 0.2 0.2\n", encoding="utf-8")  # cls 1
+    xdir = tmp_path / "multi_xany"
+    xdir.mkdir()
+    (xdir / "b.yaml").write_text(yaml.safe_dump({
+        "objects": [{"category": 1, "polygon": [
+            {"x": 0.1, "y": 0.1}, {"x": 0.3, "y": 0.1}, {"x": 0.3, "y": 0.3}, {"x": 0.1, "y": 0.3},
+        ]}]
+    }), encoding="utf-8")
+    Image.new("RGB", (64, 64)).save(imgs / "b.jpg")
+    out = tmp_path / "ds_multi"
+    stats = merge(
+        [SourceSpec(LabelKind.YOLO, labels, imgs), SourceSpec(LabelKind.XANYLABEL, xdir, imgs)],
+        out, ["cat", "dog"], frozenset(),
+    )
+    assert sum(s.frames for s in stats) == 2
+    assert (out / "all/labels/a.txt").read_text(encoding="utf-8") == "1 0.500000 0.500000 0.200000 0.200000"
+    assert (out / "all/labels/b.txt").read_text(encoding="utf-8") == "1 0.200000 0.200000 0.200000 0.200000"
+    # 路径校验: typo 目录 fail-fast
+    try:
+        merge([SourceSpec(LabelKind.YOLO, tmp_path / "nope", imgs)], tmp_path / "y", ["p"], frozenset())
+        raise AssertionError("typo 路径应失败")
+    except ValueError as e:
+        assert "不存在" in str(e)
 
 
 def test_cli_smoke(tmp_path: Path) -> None:
