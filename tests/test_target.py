@@ -21,7 +21,7 @@ def test_load_target_builtin_person() -> None:
     p = load_target("person")  # targets/person.toml
     assert p.name == "person"
     assert p.yolo_text == "person"
-    assert p.rfdetr_cls_id == 0
+    assert p.rfdetr_cls_id == 1  # rf-detr 官方类别表 person=1(非 COCO 0)
 
 
 def test_load_target_explicit_path() -> None:
