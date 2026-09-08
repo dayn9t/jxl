@@ -26,6 +26,7 @@ n001 共识标注管线的分歧层二级仲裁。读 <consensus_dir>/review/man
 from __future__ import annotations
 
 import asyncio
+import shutil
 from pathlib import Path
 from typing import Annotated, NamedTuple
 
@@ -226,8 +227,13 @@ def run(
         typer.secho(f"候选目录无图: {images_dir}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
     base_url, api_key, use_model = load_backend(Backend.DOUBAO, model, cfg)
-    labels_dir = out_dir / "confirmed" / "labels"
-    labels_dir.mkdir(parents=True, exist_ok=True)
+    confirmed_dir = out_dir / "confirmed"
+    if confirmed_dir.exists():
+        # 重跑全清: 确认→人工的 stem 陈旧标签不残留(否则被 consensus_dataset
+        # --yolo 合入, 已剔除帧继续流入训练)
+        shutil.rmtree(confirmed_dir)
+    labels_dir = confirmed_dir / "labels"
+    labels_dir.mkdir(parents=True)
     (out_dir / "manual").mkdir(parents=True, exist_ok=True)
     typer.secho(
         f"豆包二级仲裁 {len(entries)} review 图 @ {use_model}", fg=typer.colors.CYAN
@@ -281,10 +287,11 @@ def run(
     (out_dir / "manual" / "manifest.jsonl").write_text(
         "\n".join(manual_lines) + ("\n" if manual_lines else ""), encoding="utf-8"
     )
+    err_path = out_dir / "_errors.jsonl"
     if err_lines:
-        (out_dir / "_errors.jsonl").write_text(
-            "\n".join(err_lines) + "\n", encoding="utf-8"
-        )
+        err_path.write_text("\n".join(err_lines) + "\n", encoding="utf-8")
+    else:
+        err_path.unlink(missing_ok=True)  # 上次错误清单不残留
     report: dict[str, object] = {
         "target": prof.name,
         "model": use_model,

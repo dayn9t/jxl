@@ -19,16 +19,16 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import numpy as np
-
 from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
+
 from jxl.det.d2d import D2dObject
 from jxl.vdt.types import ReidCfg
 
 __all__ = [
     "Embedder",
-    "TrackState",
     "Gallery",
+    "TrackState",
     "associate",
     "cosine",
     "embedding_norm",
@@ -474,7 +474,7 @@ def test_associate_does_not_mutate_inputs() -> None:
     det_id_before = det.id
     g_emb_before = g.tracks[1].embedding.copy()
 
-    out, new_g = associate([emb], [det], g, ts_ms=1000, cfg=_cfg())
+    _, new_g = associate([emb], [det], g, ts_ms=1000, cfg=_cfg())
 
     # 入参未变
     assert det.id == det_id_before

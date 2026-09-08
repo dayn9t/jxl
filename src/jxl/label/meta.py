@@ -195,6 +195,11 @@ class CatMeta(BaseModel):
                     return p.type
         return None
 
+    def prop_name(self, prop_id: int) -> str:
+        """根据属性ID获取属性名, 属性ID即properties列表索引"""
+        assert self.properties
+        return self.properties[prop_id].name
+
     def check(self, ob: PHasRect) -> Result[None, str]:
         """检查对象合法性"""
         return Ok(None) if self.filter is None else self.filter.check(ob)

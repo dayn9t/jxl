@@ -119,7 +119,7 @@ def test_cli_renders_vlm_boxes(tmp_path: Path) -> None:
     im = Image.open(out / "review_grid_001.jpg")
 
     def _near(px: tuple[int, ...], want: tuple[int, int, int], tol: int = 40) -> bool:
-        return all(abs(a - b) <= tol for a, b in zip(px[:3], want))
+        return all(abs(a - b) <= tol for a, b in zip(px[:3], want, strict=True))
 
     # 框边缘竖线像素 ≈ doubao 紫(JPEG q88 与暗底混叠, 采样线上多像素任一命中)
     edge = [im.getpixel((x, 74)) for x in (63, 64, 65)]
@@ -132,3 +132,35 @@ def test_cli_empty_manifest_errors(tmp_path: Path) -> None:
     (consensus / "review").mkdir(parents=True)  # 无 manifest → 空输入
     r = CliRunner().invoke(app, [str(consensus), str(tmp_path / "imgs"), str(tmp_path / "pack")])
     assert r.exit_code == 1
+
+
+def test_cli_rerun_shrunk_manifest_cleans_stale(tmp_path: Path) -> None:
+    """缩量重跑: 陈旧网格与上次 _missing.jsonl 不残留(审核者不会看到已剔除帧)."""
+    consensus, images, _ = _make_case(tmp_path)
+    out = tmp_path / "pack"
+    r = CliRunner().invoke(app, [str(consensus), str(images), str(out), "--per-grid", "1"])
+    assert r.exit_code == 0, r.output
+    assert (out / "review_grid_001.jpg").exists()
+    assert (out / "review_grid_002.jpg").exists()  # 2 tile + per-grid=1 → 2 网格
+    assert (out / "_missing.jsonl").exists()  # gone.jpg 缺图
+    # 清单缩为单条(a, 有图)重跑 → 旧网格_002 与 _missing.jsonl 均被清
+    manifest = consensus / "review" / "manifest.jsonl"
+    row_a = manifest.read_text(encoding="utf-8").splitlines()[0]
+    manifest.write_text(row_a + "\n", encoding="utf-8")
+    r2 = CliRunner().invoke(app, [str(consensus), str(images), str(out)])
+    assert r2.exit_code == 0, r2.output
+    assert (out / "review_grid_001.jpg").exists()
+    assert not (out / "review_grid_002.jpg").exists()
+    assert not (out / "_missing.jsonl").exists()
+
+
+def test_cli_all_missing_no_half_products(tmp_path: Path) -> None:
+    """全部缺图: exit 1 且零产物落盘(不留无网格的半成品 manifest/README)."""
+    consensus, images, _ = _make_case(tmp_path)
+    manifest = consensus / "review" / "manifest.jsonl"
+    gone = [ln for ln in manifest.read_text(encoding="utf-8").splitlines() if "gone.jpg" in ln]
+    manifest.write_text("\n".join(gone) + "\n", encoding="utf-8")
+    out = tmp_path / "pack"
+    r = CliRunner().invoke(app, [str(consensus), str(images), str(out)])
+    assert r.exit_code == 1
+    assert not out.exists()

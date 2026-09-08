@@ -413,7 +413,9 @@ def test_integration_real_dinov2_same_person_reuses_id() -> None:
     if not onnx.is_file():
         pytest.skip("无 dinov2_vits14.onnx（集成 smoke 跳过）")
 
-    from jxl.vdt.reid import ReidEmbedder  # 兄弟模块；签名 (model_path) — 集成时按实际对齐
+    from jxl.vdt.reid import (
+        ReidEmbedder,  # 兄弟模块；签名 (model_path) — 集成时按实际对齐
+    )
 
     cfg = ReidCfg(model=str(onnx))
     emb = ReidEmbedder(str(onnx))

@@ -25,8 +25,8 @@ import math
 
 import cv2
 import numpy as np
-
 from jvi.geo.point2d import Point
+
 from jxl.vdt.types import Keypoints
 
 # ---------------------------------------------------------------------------
@@ -370,7 +370,7 @@ def test_top_down_affine_aspect_wide_crop() -> None:
 def test_preprocess_crop_shape_dtype() -> None:
     """输出 tensor shape == (1,3,256,192) float32。"""
     crop = np.zeros((300, 200, 3), dtype=np.uint8)
-    tensor, center, scale = preprocess_crop(crop)
+    tensor, _, _ = preprocess_crop(crop)
     assert tensor.shape == (1, 3, 256, 192)
     assert tensor.dtype == np.float32
 
@@ -385,9 +385,9 @@ def test_preprocess_crop_normalize_not_divide_255() -> None:
     """
     crop = np.zeros((256, 192, 3), dtype=np.uint8)
     # BGR[c] = RGB_MEAN[2-c]，使 BGR→RGB 后通道对齐各自均值。
-    crop[:, :, 0] = int(round(RTMPOSE_MEAN[2]))
-    crop[:, :, 1] = int(round(RTMPOSE_MEAN[1]))
-    crop[:, :, 2] = int(round(RTMPOSE_MEAN[0]))
+    crop[:, :, 0] = round(RTMPOSE_MEAN[2])
+    crop[:, :, 1] = round(RTMPOSE_MEAN[1])
+    crop[:, :, 2] = round(RTMPOSE_MEAN[0])
     tensor, _, _ = preprocess_crop(crop)
     # 中心像素映射自 crop 内部 → 不除 255 时三通道均 ≈ 0
     for c in range(3):

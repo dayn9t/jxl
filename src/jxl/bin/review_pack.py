@@ -174,16 +174,20 @@ def run(
         img = Image.open(img_path).convert("RGB")
         tiles.append(render_tile(img, entry.boxes_by_model, header))
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "manifest.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    if missing:
-        (out_dir / "_missing.jsonl").write_text("\n".join(missing) + "\n", encoding="utf-8")
-    (out_dir / "README.txt").write_text(_readme_text(consensus_dir, per_grid), encoding="utf-8")
     if not tiles:
         typer.secho(
             f"全部 {len(lines)} 条目图片缺失, 未产出网格", fg=typer.colors.RED, err=True
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1)  # 零产物落盘: 不留无网格的半成品 manifest/README
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for stale in out_dir.glob("review_grid_*.jpg"):  # 缩量重跑: 陈旧网格不残留
+        stale.unlink()
+    (out_dir / "_missing.jsonl").unlink(missing_ok=True)  # 上次缺图清单不残留
+    (out_dir / "manifest.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if missing:
+        (out_dir / "_missing.jsonl").write_text("\n".join(missing) + "\n", encoding="utf-8")
+    (out_dir / "README.txt").write_text(_readme_text(consensus_dir, per_grid), encoding="utf-8")
 
     n_grids = 0
     for i in range(0, len(tiles), per_grid):

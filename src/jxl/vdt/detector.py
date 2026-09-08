@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
-
 from jvi.image.image_nda import ImageNda
+
 from jxl.det.d2d import D2dObject
 from jxl.vdt.types import DetCfg, ModelLoadError
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class _DetectorLike(Protocol):
     """``D2dYolo`` 的结构化窄接口（ISP）：仅依赖 ``detect(image)->D2dResult``。"""
 
-    def detect(self, image: ImageNda) -> "D2dResult": ...
+    def detect(self, image: ImageNda) -> D2dResult: ...
 
 
 class YoloDetector:
@@ -113,7 +113,7 @@ class _FakeD2dYolo:
     def __init__(self, factory: Callable[[], list[D2dObject]]) -> None:
         self._factory = factory
 
-    def detect(self, image: ImageNda) -> "D2dResult":  # noqa: ARG002
+    def detect(self, image: ImageNda) -> D2dResult:
         """fake detect：忽略 image，返回注入构造的对象。"""
         from jxl.det.d2d import D2dResult
 
@@ -163,7 +163,7 @@ def test_detect_sentinel_id_zero() -> None:
 def test_detect_handles_empty_result() -> None:
     """D2dResult.objects 为空时 detect 返回空列表（无人场景）。"""
     det = YoloDetector.__new__(YoloDetector)
-    det._det = _FakeD2dYolo(lambda: [])
+    det._det = _FakeD2dYolo(list)
     det._classes = set()
     assert det.detect(np.zeros((4, 4, 3), dtype=np.uint8)) == []
 

@@ -59,7 +59,7 @@ def main(
     emb = np.load(embeddings_npy).astype(np.float32)
     files = embeddings_npy.with_suffix(".txt").read_text(encoding="utf-8").splitlines()
     n = len(files)
-    assert len(files) == n, f"embedding {n} != files {len(files)}"
+    assert len(files) == len(emb), f"emb {len(emb)} != files {len(files)}"
     logger.info("加载 {} embedding, dim={}", n, emb.shape[1])
 
     # ---- Stage 1: SemDeDup(Faiss 余弦近邻 + 并查集) ----

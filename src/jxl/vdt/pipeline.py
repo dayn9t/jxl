@@ -28,8 +28,8 @@ from jxl.det.d2d import D2dObject
 from jxl.vdt.types import (
     DecodeCfg,
     Decoder,
-    Detector,
     DetCfg,
+    Detector,
     FrameResult,
     IouCfg,
     Keypoints,
@@ -560,7 +560,7 @@ def test_build_tracker_iou_returns_tracker() -> None:
 
     cfg = _make_iou_config()
     try:
-        from jxl.vdt.tracker import IouTracker  # noqa: F401
+        from jxl.vdt.tracker import IouTracker
     except ImportError:  # 兄弟模块未就绪 → 跳过
         pytest.skip("jxl.vdt.tracker 尚未实现（并行期）")
     trk = build_tracker(cfg)
@@ -593,7 +593,7 @@ def test_build_tracker_reid_constructs_tracker() -> None:
     if not onnx.is_file():
         pytest.skip("缺 dinov2_vits14.onnx（gitignored），跳过 reid builder 集成")
     try:
-        from jxl.vdt.reid_tracker import ReidTracker  # noqa: F401
+        from jxl.vdt.reid_tracker import ReidTracker
     except ImportError:
         pytest.skip("jxl.vdt.reid_tracker 尚未实现")
     cfg = VdtConfig(

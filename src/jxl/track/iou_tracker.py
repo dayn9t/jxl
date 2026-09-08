@@ -68,34 +68,44 @@ def test_iou() -> None:
 
 
 def test_tracker() -> None:
-    from jxl.det.idetector import DetObject
+    """track() 逻辑：新目标发 id、重叠复用旧 id、分裂发新 id、匹配项 life 递增。
+
+    用 RectObject 协议的最小可变实现作 fake（track() 就地写 id/life），
+    不依赖已删除的 jxl.det.idetector.DetObject。
+    """
+
+    class Ob:
+        """RectObject 协议最小实现（id/life 可变 + rect()）。"""
+
+        def __init__(self, rect: Rect) -> None:
+            self.id = 0
+            self.life = 0
+            self._rect = rect
+
+        def rect(self) -> Rect:
+            return self._rect
 
     tracker = IouTracker()
     id_counter = iter([1, 2, 3, 4, 5])
 
-    # 1.一个目标
-    obs = [DetObject.new(0, 1, rect=Rect.one())]
-    assert obs[0].id == 0
+    # 1.一个新目标 → 从计数器取 id，life 不变
+    obs = [Ob(Rect.one())]
+    tracker.track(obs, id_counter)
+    assert len(tracker.objects) == 1
+    assert obs[0].id == 1
+    assert obs[0].life == 0
 
+    # 2.一个重叠目标 → 复用旧 id，life 递增
+    obs = [Ob(Rect.one())]
     tracker.track(obs, id_counter)
     assert len(tracker.objects) == 1
     assert tracker.objects[0].id == 1
+    assert obs[0].life == 1
 
-    # 2.一个重叠目标
-    obs = [DetObject.new(0, 1, rect=Rect.one())]
-    assert obs[0].id == 0
-
-    tracker.track(obs, id_counter)
-    assert len(tracker.objects) == 1
-    assert tracker.objects[0].id == 1
-
-    # 3.一个旧偏移目标, 一个新目标
-    obs = [
-        DetObject.new(0, 1, rect=Rect.new(0.1, 0.1, 1, 1)),
-        DetObject.new(0, 1, rect=Rect.new(0.5, 0.5, 1, 1)),
-    ]
-
+    # 3.一个旧偏移目标(重叠复用 id 1), 一个新目标(取 id 2)
+    obs = [Ob(Rect.new(0.1, 0.1, 1, 1)), Ob(Rect.new(0.5, 0.5, 1, 1))]
     tracker.track(obs, id_counter)
     assert len(tracker.objects) == 2
     assert tracker.objects[0].id == 1
+    assert tracker.objects[0].life == 2
     assert tracker.objects[1].id == 2

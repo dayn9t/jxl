@@ -12,10 +12,10 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
-
 from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import Size
+
 from jxl.det.d2d import D2dObject
 from jxl.vdt.types import Keypoints
 

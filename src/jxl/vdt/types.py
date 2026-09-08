@@ -18,9 +18,9 @@ from collections.abc import Iterator
 from typing import Literal, Protocol
 
 import numpy as np
+from jvi.geo.point2d import Point
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from jvi.geo.point2d import Point
 from jxl.det.d2d import D2dObject
 
 # ---------------------------------------------------------------------------

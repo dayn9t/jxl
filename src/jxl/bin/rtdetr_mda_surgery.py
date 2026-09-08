@@ -22,13 +22,12 @@ level_start_index 沿 producer 链解析为常量烘焙。
 
 from __future__ import annotations
 
+import cv2
 import numpy as np
 import onnx
 import onnxruntime as ort
-import cv2
 import typer
 from loguru import logger
-
 from onnx import TensorProto, helper, numpy_helper
 
 app = typer.Typer(help="RT-DETR MDA plugin 手术: nvidia 域节点 → GridSample 等价子图")
@@ -122,8 +121,11 @@ def build_mda_subgraph(
         nodes.append(helper.make_node(op, inputs, [out], name=out, **kw))
         return out
 
-    i64 = lambda a: pool.get(np.array(a, dtype=np.int64))
-    f32 = lambda a: pool.get(np.array(a, dtype=np.float32))
+    def i64(a):
+        return pool.get(np.array(a, dtype=np.int64))
+
+    def f32(a):
+        return pool.get(np.array(a, dtype=np.float32))
 
     shp_locs = add("Shape", [sampling_locations])
     shp_val = add("Shape", [value])
@@ -234,8 +236,8 @@ def surgery(in_path: str, out_path: str) -> None:
 def msda_reference(value: np.ndarray, locs: np.ndarray, weights: np.ndarray,
                    shapes: np.ndarray, starts: np.ndarray) -> np.ndarray:
     """手写双线性 MDA 参考 (独立于 GridSample): pixel = loc*W-0.5, 越界补零。value 4-D。"""
-    bs, lv, h, d = value.shape
-    q, lvls, p = locs.shape[1], locs.shape[3], locs.shape[4]
+    bs, _lv, h, d = value.shape
+    q, _lvls, p = locs.shape[1], locs.shape[3], locs.shape[4]
     v = value
     out = np.zeros((bs, q, h, d), dtype=np.float32)
     for b in range(bs):

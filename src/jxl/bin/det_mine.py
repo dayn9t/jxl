@@ -406,6 +406,16 @@ def run(
     if not target_model.is_file():
         typer.secho(f"target 模型不存在: {target_model}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
+    if "la" in vlist and la_dump.name and not (la_dump / "labels").is_dir():
+        # 缺失时 load_la_labels 全 stem 缺席 → 全帧"部分 backend 损坏"skip 且 exit 0,
+        # 产出全零报告 — 须入口期报错(No Silent Degradation)
+        typer.secho(
+            f"la dump labels 目录不存在: {la_dump / 'labels'}"
+            "（--la-dump 须指向含 labels/ 的 la_relabel 产物根目录）",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
     wmap = _parse_weights(weights)
     missing = set(vlist) - set(wmap)
     extra = set(wmap) - set(vlist)

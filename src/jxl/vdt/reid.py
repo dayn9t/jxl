@@ -1,7 +1,7 @@
 """vdt ReID 嵌入提取：``ReidEmbedder``（DINOv2 ViT-S/14 ONNX）。
 
 实现 spec §4 ReID 嵌入行 + §7。``Embedder`` 协议**单一数据源**在
-:mod:`jxl.vdt.reid_assoc`（纯函数核心定义窄接口）；本模块 import 并实现之
+:mod:`jxl.vdt.reid_assoc`（纯函数核心定义窄接口）；本模块实现之
 （``ReidEmbedder`` 满足 ``Embedder``）——ISP/可测，fake embedder 即可单测关联算法：
 
 - 构造时 lazy import ``onnxruntime``（重 ML 栈，避免 ``import jxl.vdt.reid`` 拉入）。
@@ -31,7 +31,6 @@ import numpy as np
 from jvi.geo.size2d import Size as _Size
 
 from jxl.vdt._ort import OrtSessionLike, build_ort_session
-from jxl.vdt.reid_assoc import Embedder  # 协议单一数据源（纯函数核心模块）
 from jxl.vdt.types import ModelLoadError, ReidError
 
 # ---------------------------------------------------------------------------

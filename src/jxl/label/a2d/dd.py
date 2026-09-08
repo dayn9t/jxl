@@ -243,7 +243,10 @@ class A2dImageLabel(BaseModel):
             assert color
             label = cat_cfg.name + (ob.prob_class.conf_str() if show_conf else "")
             for prop_id, v in ob.properties.items():
-                if "all" not in visible_props and prop_id not in visible_props:
+                if (
+                    "all" not in visible_props
+                    and cat_cfg.prop_name(prop_id) not in visible_props
+                ):
                     continue
                 p = cfg.prop_value_sign(ob.prob_class.value, prop_id, v.value)
                 match p:

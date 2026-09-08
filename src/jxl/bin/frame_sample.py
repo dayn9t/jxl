@@ -38,7 +38,7 @@ def parse_name(stem: str) -> tuple[str, int] | None:
 @app.command()
 def main(
     src_dir: Annotated[Path, typer.Argument(help="YOLO 数据集目录(images/+labels/)")],
-    stride: Annotated[int, typer.Option(help="采样步长(每 N 帧留 1)")],
+    stride: Annotated[int, typer.Option(min=1, help="采样步长(每 N 帧留 1); >=1, 防误删全量")],
     dry_run: Annotated[bool, typer.Option("--dry-run", help="只统计不删除")] = False,
 ) -> None:
     """按序列分组 stride 采样, 删除冗余相邻帧(images + 对应 labels)."""

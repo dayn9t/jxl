@@ -80,9 +80,8 @@ def should_pose(
         return True  # ② 周期关键帧（gap 越大即 staleness，单条覆盖，无需独立 K_max）
     if state.last_aspect >= 0 and abs(aspect - state.last_aspect) > _ASPECT_JUMP:
         return True  # ③ aspect 跳变
-    if state.hit_count > 0 and (frame_idx - state.last_seen_frame) > 1:
-        return True  # ④ 遮挡退出
-    return False
+    # ④ 遮挡退出
+    return state.hit_count > 0 and (frame_idx - state.last_seen_frame) > 1
 
 
 class PoseGate:

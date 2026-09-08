@@ -134,11 +134,11 @@ def render_video(
     ``frame_idx`` 与 ``Tracks`` 对齐（``OcvDecoder`` 同 fps 采样）。视频写出由共享层
     ``VideoWriter`` 完成（spec §3 单一数据源——编码逻辑仅此处一份）。
     """
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
 
-    from jxl.io.video import VideoIoError, VideoWriter  # noqa: PLC0415
-    from jxl.vdt.decoder import OcvDecoder  # noqa: PLC0415
-    from jxl.vdt.draw import TrailBuffer, render_demo_frame  # noqa: PLC0415
+    from jxl.io.video import VideoIoError, VideoWriter
+    from jxl.vdt.decoder import OcvDecoder
+    from jxl.vdt.draw import TrailBuffer, render_demo_frame
 
     # 从 Tracks（按 id 聚合）拆回逐帧：{frame_idx: (objects, kpts)}
     frame_map: dict[int, tuple[list[D2dObject], list[Keypoints | None]]] = {}
@@ -237,7 +237,7 @@ def run_cmd(
 
     cfg = load_config(config, tracker, no_pose)
 
-    from jxl.vdt.pipeline import run  # noqa: PLC0415（lazy import，避免 app import 拉 ML 栈）
+    from jxl.vdt.pipeline import run  # lazy import，避免 app import 拉 ML 栈
 
     logger.info("vdt run: {} | tracker={} | fps={}", video, cfg.tracker, cfg.decode.fps)
     tracks = run(str(video), cfg)
@@ -324,12 +324,11 @@ if __name__ == "__main__":
 from pathlib import Path as _Path  # noqa: E402
 
 import pytest  # noqa: E402
-from typer.testing import CliRunner  # noqa: E402
-
 from jvi.geo.point2d import Point  # noqa: E402
 from jvi.geo.rectangle import Rect  # noqa: E402
-from jxl.det.d2d import D2dObject as _D2dObject  # noqa: E402
+from typer.testing import CliRunner  # noqa: E402
 
+from jxl.det.d2d import D2dObject as _D2dObject  # noqa: E402
 
 _IOU_TOML = """\
 tracker = "iou"

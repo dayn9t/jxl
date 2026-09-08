@@ -225,3 +225,15 @@ def test_cli_smoke(tmp_path: Path) -> None:
     ])
     assert r2.exit_code == 1
     assert "冲突" in r2.output
+
+
+def test_merge_rerun_removed_layer_drops_stale_frames(tmp_path: Path) -> None:
+    """撤层重跑: all/ 全清重建, 被撤层帧不残留(否则统计与文件不符, 旧帧流入训练)."""
+    sources = _make_layers(tmp_path)
+    out = tmp_path / "ds"
+    merge(sources, out, ["person"], frozenset({"L0"}))
+    assert sorted(p.stem for p in (out / "all/labels").glob("*.txt")) == ["l0a", "x1", "y1"]
+    stats = merge([sources[0], sources[2]], out, ["person"], frozenset({"L0"}))  # 撤 yolo 层
+    assert sum(s.frames for s in stats) == 2
+    assert sorted(p.stem for p in (out / "all/labels").glob("*.txt")) == ["l0a", "x1"]
+    assert sorted(p.stem for p in (out / "all/images").glob("*.jpg")) == ["l0a", "x1"]

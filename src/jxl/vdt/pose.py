@@ -31,9 +31,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-
 from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
+
 from jxl.det.d2d import D2dObject
 from jxl.vdt._geom import pixel_box
 from jxl.vdt._ort import OrtSessionLike, build_ort_session
@@ -232,7 +232,7 @@ class RtmposeStep:
 # 自包含：合成 image/tracked + 脚本化门控 + 合成 simcc，零真实模型、零真实兄弟模块。
 # ---------------------------------------------------------------------------
 
-import sys
+import sys  # noqa: E402
 import types  # noqa: E402  (test 段，lazy 注册 fake 兄弟模块)
 from collections.abc import Callable  # noqa: E402
 
@@ -301,8 +301,8 @@ def _install_fake_rtmpose_proc(monkeypatch: pytest.MonkeyPatch) -> None:
                for i in range(k)]
         return Keypoints(pts=pts, conf=[1.0] * k)
 
-    setattr(mod, "preprocess_crop", preprocess_crop)
-    setattr(mod, "simcc_decode", simcc_decode)
+    mod.preprocess_crop = preprocess_crop
+    mod.simcc_decode = simcc_decode
     monkeypatch.setitem(sys.modules, "jxl.vdt.rtmpose_proc", mod)
 
 

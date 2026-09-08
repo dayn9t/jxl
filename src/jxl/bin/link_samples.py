@@ -37,6 +37,19 @@ def build_link_map(
     return out
 
 
+def _relink(dst: Path, src: Path) -> None:
+    """symlink src→dst(绝对路径)。
+
+    dst 处已有 symlink(含悬空——数据集迁移后重跑的陈旧链接)时 unlink 再链;
+    真实文件占用 dst 时跳过(非本工具产物,不覆盖)。
+    """
+    if dst.is_symlink():
+        dst.unlink()
+    elif dst.exists():
+        return
+    dst.symlink_to(src.resolve())
+
+
 @app.command()
 def main(
     config: Annotated[Path, typer.Argument(help="experiment .toml 配置")],
@@ -63,10 +76,8 @@ def main(
             continue
         dst_img = out_dir / "images" / f"{prefix}_{src_img.name}"
         dst_lbl = out_dir / "labels" / f"{prefix}_{src_img.stem}.txt"
-        if not dst_img.exists():
-            dst_img.symlink_to(src_img.resolve())
-        if not dst_lbl.exists():
-            dst_lbl.symlink_to(src_lbl.resolve())
+        _relink(dst_img, src_img)
+        _relink(dst_lbl, src_lbl)
         n_img += 1
     typer.secho(
         f"{cfg.get('name', '?')}: 链接 {n_img} 图 (跳过无标注 {n_skip}) → {out_dir}",

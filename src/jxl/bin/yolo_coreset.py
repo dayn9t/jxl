@@ -22,6 +22,9 @@ from sklearn.cluster import MiniBatchKMeans
 # typer CLI 惯用模式
 app = typer.Typer(help="YOLO 图级 core-set 减量(DINOv2 多样性采样)")
 
+IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
+"""图像扩展名白名单: 只有命中白名单且 stem 属于 embedding 集合的文件才进入删除范围."""
+
 
 @app.command()
 def main(
@@ -48,21 +51,37 @@ def main(
         if d < nearest_d[c]:
             nearest_d[c] = d
             nearest[c] = i
-    reps = {files[i].split(".")[0] for i in nearest if i is not None}
-    logger.info("代表 {} / {}", len(reps), len(files))
+    # stem 对齐 Path.stem(最后一个点之前): 含点文件名(如 frame.0001.jpg)不能用 split(".")[0]
+    rep_stems = {Path(files[i]).stem for i in nearest if i is not None}
+    emb_stems = {Path(f).stem for f in files}
+    logger.info("代表 {} / {}", len(rep_stems), len(files))
 
     images_dir = dataset_dir / "images"
     labels_dir = dataset_dir / "labels"
-    del_img = del_lbl = 0
+    del_img = del_lbl = not_in_emb = 0
     for f in images_dir.glob("*"):
-        if f.stem not in reps:
+        if f.suffix.lower() not in IMG_EXTS:
+            continue
+        if f.stem not in emb_stems:
+            not_in_emb += 1  # embedding 落后于数据集的新图: 保留不删
+            continue
+        if f.stem not in rep_stems:
             f.unlink()
             del_img += 1
     for f in labels_dir.glob("*"):
-        if f.stem not in reps:
+        if (
+            f.suffix.lower() == ".txt"
+            and f.stem in emb_stems
+            and f.stem not in rep_stems
+        ):
             f.unlink()
             del_lbl += 1
-    remain = len(list(images_dir.glob("*")))
+    if not_in_emb:
+        logger.warning(
+            "images/ 有 {} 张图不在 embedding 集合内, 已保留(重提 embedding 或核对目录)",
+            not_in_emb,
+        )
+    remain = sum(1 for f in images_dir.glob("*") if f.suffix.lower() in IMG_EXTS)
     logger.info(
         "删 {} 图 + {} label | 剩余 {} 图(-{:.0%})",
         del_img,

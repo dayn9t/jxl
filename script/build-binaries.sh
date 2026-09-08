@@ -116,14 +116,14 @@ failed=0
 
 # 构建每个程序
 # 使用 torch 的程序: jxl_label, jxl_prop, jxl_viewer, yolo_detect, d2d_label
-build_program "jxl_label" "true" && ((success++)) || ((failed++))
-build_program "jxl_label_clean" "false" && ((success++)) || ((failed++))
-build_program "jxl_prop" "true" && ((success++)) || ((failed++))
-build_program "jxl_split" "false" && ((success++)) || ((failed++))
-build_program "jxl_sample" "false" && ((success++)) || ((failed++))
-build_program "jxl_viewer" "true" && ((success++)) || ((failed++))
-build_program "yolo_detect" "true" && ((success++)) || ((failed++))
-build_program "d2d_label" "true" && ((success++)) || ((failed++))
+build_program "jxl_label" "true" && success=$((success+1)) || failed=$((failed+1))
+build_program "jxl_label_clean" "false" && success=$((success+1)) || failed=$((failed+1))
+build_program "jxl_prop" "true" && success=$((success+1)) || failed=$((failed+1))
+build_program "jxl_split" "false" && success=$((success+1)) || failed=$((failed+1))
+build_program "jxl_sample" "false" && success=$((success+1)) || failed=$((failed+1))
+build_program "jxl_viewer" "true" && success=$((success+1)) || failed=$((failed+1))
+build_program "yolo_detect" "true" && success=$((success+1)) || failed=$((failed+1))
+build_program "d2d_label" "true" && success=$((success+1)) || failed=$((failed+1))
 
 # 输出摘要
 echo ""

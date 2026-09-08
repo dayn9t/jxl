@@ -74,6 +74,32 @@ allow-direct-references = true
 addopts = [
     "--ignore=src/jxl/cls/test/classifier_tch_test.py",
 ]
+# 内联单测发现: 下列模块按 Functional Core 约定把 test_* 单测写在模块尾部（docstring
+# 声明 "pytest 自动发现"）。pytest 默认只收集 test_*.py / *_test.py，不含生产模块名，
+# 需按精确路径登记（模式含路径分隔符时按全路径匹配，不影响别处同名文件）。
+# 新增带内联单测的模块时必须同步在此登记，否则回归对 `uv run pytest` 不可见。
+# 不用目录通配（src/jxl/vdt/*.py）: 会连带收集 __init__.py 与无测试的 helper 模块。
+python_files = [
+    "test_*.py",
+    "*_test.py",
+    "src/jxl/common.py",
+    "src/jxl/io/video.py",
+    "src/jxl/track/iou_tracker.py",
+    "src/jxl/vdt/cli.py",
+    "src/jxl/vdt/decoder.py",
+    "src/jxl/vdt/detector.py",
+    "src/jxl/vdt/draw.py",
+    "src/jxl/vdt/pipeline.py",
+    "src/jxl/vdt/pose.py",
+    "src/jxl/vdt/pose_gate.py",
+    "src/jxl/vdt/reid.py",
+    "src/jxl/vdt/reid_assoc.py",
+    "src/jxl/vdt/reid_tracker.py",
+    "src/jxl/vdt/rtmpose_proc.py",
+    "src/jxl/vdt/tracker.py",
+    "src/jxl/vtag/cli.py",
+    "src/jxl/vtag/overlay.py",
+]
 
 # [tool.mypy] — 渐进式 strict 基线。
 # strict=true 是目标，但启用后全量暴露 >500 错误（多为 jcx/jvi 路径依赖与第三方 ML 库

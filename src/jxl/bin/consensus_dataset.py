@@ -26,6 +26,7 @@
         --xanylabel hardcase_labels:images --classes person
 """
 
+import shutil
 from collections.abc import Iterator, Sequence
 from enum import StrEnum
 from pathlib import Path
@@ -187,13 +188,11 @@ def iter_layer(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
 
 
 def _write_frame(all_dir: Path, stem: str, boxes: list[LabeledBox], img: Path) -> int:
-    """写单帧(label 文本 + 图 symlink), 返回框数; 已存在产物覆盖(重跑安全)."""
+    """写单帧(label 文本 + 图 symlink), 返回框数."""
     (all_dir / "labels" / f"{stem}.txt").write_text(
         labeled_to_text(boxes), encoding="utf-8"
     )
-    link = all_dir / "images" / img.name
-    link.unlink(missing_ok=True)
-    link.symlink_to(img.resolve())
+    (all_dir / "images" / img.name).symlink_to(img.resolve())
     return len(boxes)
 
 
@@ -222,7 +221,7 @@ def merge(
     """按序合并层 → <out>/all/ + classes.txt + data.yaml, 返回各层统计.
 
     冲突检测与写入同帧同步(先检后写, 失败即中止). 失败可留半写 all/,
-    同 out_dir 重跑安全(已存在产物覆盖)——冲突修复后重跑是标准恢复路径.
+    同 out_dir 重跑全清 all/ 重建——冲突修复后重跑是标准恢复路径.
     """
     if not sources:
         raise ValueError("零标注源")
@@ -234,8 +233,12 @@ def merge(
     seen: dict[str, LabelKind] = {}
     stats: list[LayerStats] = []
     all_dir = out_dir / "all"
-    (all_dir / "images").mkdir(parents=True, exist_ok=True)
-    (all_dir / "labels").mkdir(parents=True, exist_ok=True)
+    if all_dir.exists():
+        # 重跑全清: 撤层/缩量后陈旧帧不残留(否则统计与文件不符, 旧帧经 jxl_split
+        # 流入训练); train/val/test 为 jxl_split 产物, 由其 remake_dirs 自清
+        shutil.rmtree(all_dir)
+    (all_dir / "images").mkdir(parents=True)
+    (all_dir / "labels").mkdir(parents=True)
     for spec in sources:
         frames = boxes = 0
         for stem, bs, img in iter_layer(spec, levels):

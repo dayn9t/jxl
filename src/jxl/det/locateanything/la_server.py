@@ -12,6 +12,9 @@
 
 约束:
   - 单类单请求(官方多类 query 有 label corruption, issue #69)
+  - temperature=0 固定 greedy(官方语义): 官方默认 0.7 为随机采样, 同图+同 query
+    重复请求出框不同; 本服务作为标注管线入口(la_relabel/det_mine/la_eval),
+    检测框必须可复现
   - max_size 预缩放: RTX 4060 Ti 16GB 现实约束, 大图不缩会爆显存(模型生产上限 2.5K)
   - strict_attn: --attn la_flash 不可用时启动即失败, 不静默回退 SDPA;
     显式传 --attn sdpa 才降级(用户主动选择)
@@ -91,7 +94,9 @@ def detect(req: DetectRequest, request: Request) -> dict:
     wk: LocateAnythingWorker = request.app.state.worker
     img = _load_image(req, request.app.state.max_size)
     with _detect_lock:
-        result = wk.detect(img, [req.query], verbose=False)
+        # temperature=0 = greedy: 官方默认 0.7 走 Categorical.sample() 随机采样,
+        # 出框不可复现(见模块 docstring 约束)
+        result = wk.detect(img, [req.query], verbose=False, temperature=0)
         boxes = LocateAnythingWorker.parse_boxes(
             result["answer"], img.width, img.height
         )
