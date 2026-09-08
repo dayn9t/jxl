@@ -30,6 +30,7 @@ import asyncio
 import base64
 import os
 import re
+import shutil
 from pathlib import Path
 from typing import Annotated, NamedTuple
 
@@ -103,15 +104,19 @@ def parse_vlm_json(text: str, div_x: float, div_y: float) -> list[Box]:
     - MiniMax-M3: 输入图绝对像素(÷img_w/img_h)
     先剥 <think> 推理前缀; 正则提取全部 bbox_2d 数字组(容忍重复键/键名变体/
     畸形收尾). 坐标 clamp [0,1], 塌缩框丢弃.
-    解析失败抛 ValueError(调用方转弃权票, 不中断整体).
+    空检出门槛是显式 "[]"(空白容忍); 有数组无 bbox_2d 与非 JSON prose(200 拒答/
+    内容过滤/跑题)抛 ValueError —— 调用方转弃权票, 绝不当"无人"空票, 不中断整体.
     """
     if "</think>" in text:
         text = text.split("</think>", 1)[1]
     captures = _BBOX_RE.findall(text)
     if not captures:
-        if text.find("[") >= 0 and "[]" not in text.replace(" ", ""):
+        if "[]" in text.replace(" ", ""):
+            return []  # 空检出 [] (明确无人, 空白容忍)
+        if text.find("[") >= 0:
             raise ValueError(f"有数组无 bbox_2d: {text[:80]}")
-        return []  # 空检出 [] (明确无人)
+        # prose 无任何数组 → 不是投出的"无人"票, 转弃权
+        raise ValueError(f"无 bbox_2d 无数组(prose): {text[:80]}")
     boxes: list[Box] = []
     for cap in captures:
         nums = [float(v) for v in cap.split(",")]
@@ -253,7 +258,12 @@ def run(
     rows = load_manual_rows(manual_dir / "manifest.jsonl")
     if limit:
         rows = rows[:limit]
-    (out_dir / "confirmed" / "labels").mkdir(parents=True, exist_ok=True)
+    confirmed_dir = out_dir / "confirmed"
+    if confirmed_dir.exists():
+        # 重跑全清: 确认→人工的 stem 陈旧标签不残留(否则被 consensus_dataset
+        # --yolo 合入, 已剔除帧继续流入训练)
+        shutil.rmtree(confirmed_dir)
+    (confirmed_dir / "labels").mkdir(parents=True)
     (out_dir / "manual").mkdir(parents=True, exist_ok=True)
     from jxl.bin.det_mine import gather_images
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from jxl.bin.doubao_arbitrate import PICK_PRIORITY, app, arbitrate_image, pick_label_box
@@ -159,6 +160,15 @@ def test_parse_vlm_json_basic() -> None:
     # 空检出 [] → 空列表
     assert parse_vlm_json("[]", 1000, 1000) == []
     assert parse_vlm_json("<think>none</think>\n[]", 640, 640) == []
+    assert parse_vlm_json("[ ]", 1000, 1000) == []  # 空白容忍的显式空数组
+    # 非 JSON prose(200 拒答/内容过滤/跑题)→ ValueError 转弃权, 不当作空检出票
+    with pytest.raises(ValueError):
+        parse_vlm_json("I am sorry, I cannot analyze this image.", 1000, 1000)
+    with pytest.raises(ValueError):
+        parse_vlm_json("<think>thinking</think>\nNo people are visible here.", 640, 640)
+    # 有数组但无 bbox_2d 键 → ValueError
+    with pytest.raises(ValueError):
+        parse_vlm_json('[{"label": "person"}]', 1000, 1000)
 
 
 def test_ensemble_verdict_majority() -> None:
@@ -208,3 +218,69 @@ def test_ensemble_verdict_all_empty_confirm() -> None:
     # 有票非空 → 不确认
     ok3, _, _ = ensemble_verdict([], {"d": [], "q": [(0.1, 0.1, 0.2, 0.2, 1.0)], "m": []}, 0.4)
     assert not ok3
+
+
+def test_cli_rerun_cleans_stale_confirmed_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """重跑清陈旧: 上次确认标签与 _errors.jsonl 不残留(防旧确认流入下游合并)."""
+    import orjson
+    from PIL import Image
+
+    from jxl.bin import doubao_arbitrate as da
+    from jxl.bin.rmb_ground import Detection
+
+    images = tmp_path / "imgs"
+    images.mkdir()
+    for stem in ("f1", "f2"):
+        Image.new("RGB", (64, 64)).save(images / f"{stem}.jpg")
+    consensus = tmp_path / "consensus"
+    (consensus / "review").mkdir(parents=True)
+    box = [0.1, 0.1, 0.5, 0.5, 1.0]
+    rows = [
+        {
+            "image": f"{s}.jpg",
+            "score": 0.5,
+            "target_boxes": [],
+            "validators": {"rfdetr": [box], "yoloe": [box]},
+            "breakdown": {},
+        }
+        for s in ("f1", "f2")
+    ]
+    manifest = consensus / "review" / "manifest.jsonl"
+    manifest.write_text(
+        "\n".join(orjson.dumps(r).decode() for r in rows) + "\n", encoding="utf-8"
+    )
+    out = tmp_path / "out"
+    agree_det = [Detection(label="person", bbox=[0.1, 0.1, 0.5, 0.5], conf=1.0)]
+
+    async def ok_ground(paths, base_url, api_key, model, prompt, concurrency):
+        return [(p, agree_det, None) for p in paths]
+
+    async def err_ground(paths, base_url, api_key, model, prompt, concurrency):
+        return [(p, [], "ValueError: HTTP 500: boom") for p in paths]
+
+    monkeypatch.setattr(da, "load_backend", lambda *a: ("http://gw.test/v1/", "k-t", "m-t"))
+    args = [str(consensus), str(images), str(out), "--target", "person"]
+
+    monkeypatch.setattr(da, "ground_all", ok_ground)
+    r = CliRunner().invoke(app, args)
+    assert r.exit_code == 0, r.output
+    assert sorted(p.stem for p in (out / "confirmed" / "labels").glob("*.txt")) == ["f1", "f2"]
+    assert not (out / "_errors.jsonl").exists()
+
+    # 重跑: 清单缩为 f1 且 grounding 失败 → f1/f2 陈旧确认标签全清, _errors 重写
+    manifest.write_text(orjson.dumps(rows[0]).decode() + "\n", encoding="utf-8")
+    monkeypatch.setattr(da, "ground_all", err_ground)
+    r2 = CliRunner().invoke(app, args)
+    assert r2.exit_code == 0, r2.output
+    assert list((out / "confirmed" / "labels").iterdir()) == []
+    errs = (out / "_errors.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(errs) == 1 and "HTTP 500" in errs[0]
+
+    # 第三跑恢复无错 → _errors.jsonl 消失(错误清单不残留)
+    monkeypatch.setattr(da, "ground_all", ok_ground)
+    r3 = CliRunner().invoke(app, args)
+    assert r3.exit_code == 0, r3.output
+    assert [p.stem for p in (out / "confirmed" / "labels").glob("*.txt")] == ["f1"]
+    assert not (out / "_errors.jsonl").exists()
