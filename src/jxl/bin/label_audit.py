@@ -13,8 +13,8 @@ mixed 簇被它排除导致漏检; 见 docs/research/2026-09-08-共识分层阈�
 全一致 object 快判; person 判定必须走第三方模型支持漏斗.
 
 用法:
-    label_audit <labels_dir> <out_json> [--imgsz 640] [--eps 30] [--min-samples 20]
-        [--min-n 20] [--min-d 3]
+    label_audit cluster <labels_dir> <out_json> [--eps 30]  # 位置聚类审计
+    label_audit gate <validators.jsonl> <out.jsonl>         # 共识闸门校验
 """
 
 from pathlib import Path
@@ -26,7 +26,8 @@ from jcx.sys.fs import files_in
 from loguru import logger
 from sklearn.cluster import DBSCAN
 
-from jxl.det.hardmine import parse_yolo_label
+from jxl.det.box_utils import xyxy_iou
+from jxl.det.hardmine import Box, parse_yolo_label
 
 app = typer.Typer(add_completion=False, help="标注质量位置审计: 静态物毒标注签名发现")
 
@@ -102,7 +103,7 @@ def cluster_cam(rows: list[BoxRow], eps: float, min_samples: int) -> list[dict]:
 
 
 @app.command()
-def main(
+def cluster(
     labels_dir: Annotated[Path, typer.Argument(help="YOLO labels 目录(stem 约定 cam_ch_date_time_frame)")],
     out_json: Annotated[Path, typer.Argument(help="簇统计 JSON 输出")],
     imgsz: Annotated[int, typer.Option(help="标注坐标基准尺寸")] = 640,
@@ -119,6 +120,60 @@ def main(
     out_json.write_text(orjson.dumps(clusters, option=orjson.OPT_INDENT_2).decode())
     n_suspect = sum(c["n_boxes"] for c in clusters if c["suspect"])
     logger.info(f"clusters={len(clusters)} suspect_boxes={n_suspect} -> {out_json}")
+
+
+STRONG_VALIDATORS = ("yoloe", "rfdetr")
+"""强验证器(闭集 COCO 系, 误检玩具/静态物概率低); gdino/la 为开放词汇弱验证器."""
+
+
+def _supporters(box: Box, validators: dict[str, list], iou_thr: float) -> set[str]:
+    """给出框的支持验证器集合(IoU>=thr). box 为归一化 xyxy+conf( validators dump 口径)."""
+    found = set()
+    for name, boxes in validators.items():
+        if any(xyxy_iou(box[:4], tuple(vb)[:4]) >= iou_thr for vb in boxes):
+            found.add(name)
+    return found
+
+
+@app.command()
+def gate(
+    validators_jsonl: Annotated[Path, typer.Argument(help="det_mine --dump-validators 产物 jsonl")],
+    out_jsonl: Annotated[Path, typer.Argument(help="被挡框清单输出(jsonl, 一行一框)")],
+    level: Annotated[str, typer.Option(help="只校验该 level 的 target(如 L0); 空串=全部")] = "L0",
+    iou_thr: Annotated[float, typer.Option(help="支持判定 IoU 阈值")] = 0.5,
+    min_k: Annotated[int, typer.Option(help="闸门: 总支持验证器数下限")] = 2,
+    min_strong: Annotated[int, typer.Option(help="闸门: 强验证器支持数下限")] = 1,
+) -> None:
+    """共识闸门校验: target 框中不满足 k>=min_k ∧ strong>=min_strong 的输出为待审.
+
+    只校验共识直接采信层(level=L0)——L1/仲裁/人工层各有自己的产生机制, 不重复过闸.
+    n001 GT 反演(阈值报告 §3-4): 现行 k=2 闸门对毒框拦截率仅 0.4%; k>=2∧strong>=1
+    拦截 97.3%/误伤 3.1%; 任何共识闸门(含 4/4)残留非零 → 须配合 cluster 位置卫兵.
+    """
+    n_target = n_blocked = n_rows = 0
+    with out_jsonl.open("w") as f:
+        for line in validators_jsonl.open(encoding="utf-8"):
+            row = orjson.loads(line)
+            if level and row.get("level") != level:
+                continue
+            n_rows += 1
+            for t in [tuple(b) for b in row["target"]]:
+                n_target += 1
+                supp = _supporters(t, row["validators"], iou_thr)
+                n_strong = len(supp & set(STRONG_VALIDATORS))
+                if len(supp) < min_k or n_strong < min_strong:
+                    n_blocked += 1
+                    f.write(
+                        orjson.dumps(
+                            {"stem": row["stem"], "box": list(t), "supporters": sorted(supp),
+                             "n_strong": n_strong, "level": row.get("level")}
+                        ).decode()
+                        + "\n"
+                    )
+    logger.info(
+        f"rows={n_rows} target_boxes={n_target} blocked={n_blocked} "
+        f"({n_blocked / max(n_target, 1):.1%}) -> {out_jsonl}"
+    )
 
 
 if __name__ == "__main__":
