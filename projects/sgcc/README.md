@@ -11,7 +11,7 @@
 | v3.1 实验（微小框+负样本 finetune） | ✅ 增益微弱不采纳，v3 保持部署候选 |
 | 属性库 VLM 全量标注（21,744 框） | ✅ 99.97% 成功；uncertain 5,061 → doubao 二审中 |
 | 属性分类器族（yolo26l-cls） | ⏳ 等二审定稿 → VLabel 写入 → R5 导出 → sgcc0 训练 |
-| 部署（ONNX+symlink 切现网） | ⏸ 等用户拍板 |
+| 部署（ONNX+symlink 切现网） | ✅ 2026-09-09 13:34 上线（`2026-09-09_person_n.pt/.onnx` 实体 + symlink 切换；回滚：`ln -sfn 2026-07-09_person_n.* person.*`） |
 
 ## 文档地图
 
