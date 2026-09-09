@@ -34,3 +34,29 @@ def test_decide_ratio_caps_removal():
     emb = _emb(np.eye(5, dtype=np.float32).tolist())
     plan = decide(emb, confs=[0.9] * 5, ratio=0.3)
     assert plan.pool == ()
+
+
+def test_plan_command_writes_json(tmp_path, monkeypatch):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    imgs = tmp_path / "ds" / "images"
+    imgs.mkdir(parents=True)
+    for s in "abcd":
+        (imgs / f"{s}.jpg").write_bytes(b"x")
+    np.save(tmp_path / "emb.npy", _emb([[1, 0], [0.99, 0.14], [0, 1], [0.99, 0.12]]))
+    confs = tmp_path / "c.jsonl"
+    confs.write_text("".join(j.dumps({"stem": s, "confs": [0.9]}) + "\n" for s in "abcd"))
+    out = tmp_path / "plan.json"
+    r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
+                                 "--confs", str(confs), "--ratio", "0.25", "--out", str(out)])
+    assert r.exit_code == 0, r.output
+    plan = j.loads(out.read_text())
+    assert set(plan) == {"stems", "keep", "pool", "meta"}
+    assert len(plan["stems"]) == 4
+    # b/d 与 a 近重复且高置信 → ratio 0.25 → 恰删 1 个(近重复度更高者)
+    assert len(plan["pool"]) == 1
+    assert plan["stems"][plan["pool"][0]] in {"b", "d"}
