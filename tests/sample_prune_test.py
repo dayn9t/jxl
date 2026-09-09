@@ -60,3 +60,27 @@ def test_plan_command_writes_json(tmp_path, monkeypatch):
     # b/d 与 a 近重复且高置信 → ratio 0.25 → 恰删 1 个(近重复度更高者)
     assert len(plan["pool"]) == 1
     assert plan["stems"][plan["pool"][0]] in {"b", "d"}
+    # stems 侧车: 行序=嵌入行序=stems 排序
+    sidecar = tmp_path / "plan.json.stems.txt"
+    assert sidecar.read_text(encoding="utf-8").splitlines() == plan["stems"]
+
+
+def test_plan_rejects_emb_row_order_mismatch(tmp_path, monkeypatch):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    imgs = tmp_path / "ds" / "images"
+    imgs.mkdir(parents=True)
+    for s in "abcd":
+        (imgs / f"{s}.jpg").write_bytes(b"x")
+    # 嵌入行序故意错开(行序=b,a,d,c), 侧车如实记录 → 与 stems 排序不一致必须 FATAL
+    np.save(tmp_path / "emb.npy", np.arange(8, dtype=np.float32).reshape(4, 2))
+    (tmp_path / "emb.txt").write_text("\n".join(f"{s}.jpg" for s in "badc"), encoding="utf-8")
+    confs = tmp_path / "c.jsonl"
+    confs.write_text("".join(j.dumps({"stem": s, "confs": [0.9]}) + "\n" for s in "abcd"))
+    r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
+                                 "--confs", str(confs), "--out", str(tmp_path / "plan.json")])
+    assert r.exit_code != 0, r.output
