@@ -47,6 +47,6 @@ projects/shtm/
 ## 关联
 
 - jxl 通用工具：`src/jxl/bin/`；共识流程 skill：`~/.claude/skills/consensus-labeling/`
-- 多属性分类器体系（SHTM 属性分类的方法论模板）：`docs/2026-09-08-多属性分类器体系构想存档.md`
+- 多属性分类器体系（SHTM 属性分类的方法论模板）：`projects/sgcc/archive/2026-09-08-多属性分类器体系构想存档.md`
 - 训练机规则：训练一律 ssh sgcc0（memory: training-on-sgcc0）
 - 免费 VLM 资源：`docs/infra/`（spark + 182 qwen）

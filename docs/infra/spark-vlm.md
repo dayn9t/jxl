@@ -40,7 +40,7 @@
 
 - **spark = 192.168.18.182，同一台机**。"spark 与 182 并列/互补"的前提不成立——不存在两份 35B 服务
 - jxl 仓库引用：`src/jxl/bin/rmb_ground.py:45`、`src/jxl/bin/rmb_describe.py:33` 均指向 `http://192.168.18.182:8000/v1`
-- 实践参考：`docs/research/2026-09-08-VLM多属性标注实践.md`（qwen3.5-35b 批量推理/crop 标注/vLLM continuous batching 实录）——本档案是其基础设施侧补充
+- 实践参考：`projects/sgcc/research/2026-09-08-VLM多属性标注实践.md`（qwen3.5-35b 批量推理/crop 标注/vLLM continuous batching 实录）——本档案是其基础设施侧补充
 - 与商用 doubao 分工：本地 qwen 免费可批量（3.5 万 crop 蒸馏造集主力）；doubao 作高质量仲裁二审/终审刻度（0-1）
 
 ## 运维

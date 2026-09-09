@@ -23,7 +23,7 @@ person.pt 训练集（sgcc+MOT17/20+COCO）站立/行行为主，**非站立（�
 
 ## 4. det_mine 4 模型筛 CrowdHuman 难例
 
-det_mine（person.pt + YOLOE + GroundingDINO + RF-DETR，加权争议分 cascade，见 `docs/2026-07-07-det-mine多模型难例挖掘.md`）对 CrowdHuman 跑：
+det_mine（person.pt + YOLOE + GroundingDINO + RF-DETR，加权争议分 cascade，见 `projects/sgcc/archive/2026-07-07-det-mine多模型难例挖掘.md`）对 CrowdHuman 跑：
 
 | 集 | L0 drop | L1 自动 | review (27%) | 耗时 |
 |----|---------|---------|--------------|------|
@@ -57,8 +57,8 @@ review 27% 远高于监控 dates 的 12%——验证 CrowdHuman 密集+非站立
 - CrowdHuman 数据：`/home/jiang/ws/sgcc/person/CrowdHuman/`（train_yolo/val_yolo/review_all/train_detmine/val_detmine/train_images/val_images + odgt）
 - samples：`/home/jiang/ws/sgcc/person/samples/`（42843，images/+labels/）
 - 工具：`src/jxl/bin/crowdhuman_to_yolo.py`（odgt→YOLO）+ `src/jxl/bin/det_mine.py`（多模型 cascade）
-- det-mine 设计/存档：`docs/superpowers/specs/2026-07-07-det-mine-*.md` + `docs/2026-07-07-det-mine多模型难例挖掘.md`
-- person.pt 训练存档：`docs/2026-06-27-person模型训练部署.md`（640×640，mAP50=0.956，待用 42843 重训）
+- det-mine 设计/存档：`docs/superpowers/specs/2026-07-07-det-mine-*.md` + `projects/sgcc/archive/2026-07-07-det-mine多模型难例挖掘.md`
+- person.pt 训练存档：`projects/sgcc/archive/2026-06-27-person模型训练部署.md`（640×640，mAP50=0.956，待用 42843 重训）
 
 ## 8. 网络/下载经验
 

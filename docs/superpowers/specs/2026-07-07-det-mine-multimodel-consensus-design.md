@@ -163,5 +163,5 @@ det_mine <frames> <out> --target phone --target-model ./phone.pt --cls-id 0 \
 
 - 上版设计：`docs/superpowers/specs/2026-07-07-person-hard-sample-mining-design.md`（二元 consensus，本 spec 升级它）
 - 上版实现：`person_mine.py`（commit a429fe2）→ 本 spec rename `det_mine.py` + 升级
-- person.pt 训练存档：`docs/2026-06-27-person模型训练部署.md`
+- person.pt 训练存档：`projects/sgcc/archive/2026-06-27-person模型训练部署.md`
 - 数据源验证：`/home/jiang/ws/sgcc/person/dates/2025-07-07/`（5840 样本，本 spec 用 det_mine 重跑精炼）

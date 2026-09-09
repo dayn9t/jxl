@@ -42,4 +42,4 @@ sgcc（14284 监控）+ video-extract（5840 视频提取）当前 YOLOE 单模�
 - spec/plan: `docs/superpowers/{specs,plans}/2026-07-08-sgcc-relabel-*`
 - det_mine（4 模型 cascade）、rmb_ground（豆包 grounding 范本）—— 复用
 - det-mine 存档 §11 P2 → 本存档实现 P2 简版（sgcc review 复检）
-- datasets pool（`docs/2026-07-08-datasets-pool-design.md`）—— sgcc 是其中一集
+- datasets pool（`projects/sgcc/archive/2026-07-08-datasets-pool-design.md`）—— sgcc 是其中一集

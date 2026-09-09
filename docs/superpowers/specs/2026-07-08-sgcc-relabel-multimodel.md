@@ -83,5 +83,5 @@ video-extract(5840) ──合并──► sgcc(20124)
 
 - det_mine: `src/jxl/bin/det_mine.py`（多模型 cascade）
 - rmb_ground: `src/jxl/bin/rmb_ground.py`（豆包 grounding 范本）
-- det-mine 存档: `docs/2026-07-07-det-mine多模型难例挖掘.md`（§11 P2）
+- det-mine 存档: `projects/sgcc/archive/2026-07-07-det-mine多模型难例挖掘.md`（§11 P2）
 - datasets pool: `docs/superpowers/specs/2026-07-08-datasets-pool-design.md`

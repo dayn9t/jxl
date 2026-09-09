@@ -4,7 +4,7 @@
 
 ## 1. 背景与目标
 
-部署中的 person 检测器 `/opt/howell/iap/current/ias/model/person.pt`（YOLO26n，单类 person，sgcc+MOT17/MOT20+COCO 混合训练，test mAP50=0.9545，**Recall=0.8892**）在监控场景存在系统弱点：小目标/遮挡/密集场景约 11% 漏检（详见 `docs/2026-06-27-person模型训练部署.md`）。
+部署中的 person 检测器 `/opt/howell/iap/current/ias/model/person.pt`（YOLO26n，单类 person，sgcc+MOT17/MOT20+COCO 混合训练，test mAP50=0.9545，**Recall=0.8892**）在监控场景存在系统弱点：小目标/遮挡/密集场景约 11% 漏检（详见 `projects/sgcc/archive/2026-06-27-person模型训练部署.md`）。
 
 本 pipeline 从真实监控录像自动发现该模型检测不可靠的样本（难例），自动标注后并入训练集，迭代提升召回。
 

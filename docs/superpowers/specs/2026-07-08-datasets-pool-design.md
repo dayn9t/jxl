@@ -116,5 +116,5 @@ def link_samples(config: Path, out_dir: Path) -> None:
 
 - 现有转换工具：`coco_to_yolo` / `mot_to_yolo` / `crowdhuman_to_yolo`（src/jxl/bin/）
 - 划分工具：`jxl_split`
-- 样本集存档：`docs/2026-07-08-CrowdHuman样本集存档.md`、`docs/2026-07-07-det-mine多模型难例挖掘.md`
-- person.pt 训练：`docs/2026-06-27-person模型训练部署.md`（待用 datasets/ + experiment 重训）
+- 样本集存档：`projects/sgcc/archive/2026-07-08-CrowdHuman样本集存档.md`、`projects/sgcc/archive/2026-07-07-det-mine多模型难例挖掘.md`
+- person.pt 训练：`projects/sgcc/archive/2026-06-27-person模型训练部署.md`（待用 datasets/ + experiment 重训）

@@ -561,7 +561,7 @@ git commit -m "feat(bin): review_pack — per-model colored grids + manifest for
 
 **Files:**
 - Create: `script/n001-pipeline.sh`
-- Create: `docs/2026-08-30-n001-phaseA-结果.md`（执行后写）
+- Create: `projects/sgcc/archive/2026-08-30-n001-phaseA-结果.md`（执行后写）
 
 **Interfaces:**
 - Produces: 一键 Phase A/B 入口：`script/n001-pipeline.sh phaseA|phaseB|stage1|stage2|stage3|merge|report`
@@ -641,12 +641,12 @@ bash script/n001-pipeline.sh phaseA
 
 - [ ] **Step 4: 外推全量 + 写结果文档 + 用户确认**
 
-计算：帧数 ×806/8、双机标注时长（Phase A 单机时长/2）、review 量。写入 `docs/2026-08-30-n001-phaseA-结果.md`，**停下等用户确认 Phase B**。
+计算：帧数 ×806/8、双机标注时长（Phase A 单机时长/2）、review 量。写入 `projects/sgcc/archive/2026-08-30-n001-phaseA-结果.md`，**停下等用户确认 Phase B**。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add script/n001-pipeline.sh docs/2026-08-30-n001-phaseA-结果.md
+git add script/n001-pipeline.sh projects/sgcc/archive/2026-08-30-n001-phaseA-结果.md
 git commit -m "feat(script): n001 pipeline orchestration + phase A results"
 ```
 
@@ -655,7 +655,7 @@ git commit -m "feat(script): n001 pipeline orchestration + phase A results"
 ### Task 7: Phase B 全量执行（用户确认后）
 
 **Files:**
-- Create: `docs/2026-08-30-n001-phaseB-结果.md`
+- Create: `projects/sgcc/archive/2026-08-30-n001-phaseB-结果.md`
 
 - [ ] **Step 1: 本机全量 stage1/2**
 
@@ -685,7 +685,7 @@ rsync -a --files-from=/tmp/even.list "$ROOT/frames_dedup/" s4:"$ROOT/frames_dedu
 
 - [ ] **Step 4: 最终报告 + 存档文档 + 提交**
 
-写 `docs/2026-08-30-n001-phaseB-结果.md`（全量统计 + 模型矩阵结论 + review 规模 → 供用户定豆包/入池决策）。提交。
+写 `projects/sgcc/archive/2026-08-30-n001-phaseB-结果.md`（全量统计 + 模型矩阵结论 + review 规模 → 供用户定豆包/入池决策）。提交。
 
 ---
 
