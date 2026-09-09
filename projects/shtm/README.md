@@ -44,6 +44,10 @@ projects/shtm/
 | 安全 | ⚠️ dates/README.md 含 howell 平台明文密码（admin/***），纳入项目前须脱敏 |
 | m31.json 隐患 | illegal 与 side 属性 id 同为 4（schema bug 待修） |
 
+## 域知识
+
+- **垃圾桶形态词典**：`垃圾桶形态词典.md`（方桶/圆桶/套袋/筐状 + 难例归集原则 + 提示词反哺机制）——重标 prompt/仲裁词典/难例判据的单一数据源
+
 ## 关联
 
 - jxl 通用工具：`src/jxl/bin/`；共识流程 skill：`~/.claude/skills/consensus-labeling/`
