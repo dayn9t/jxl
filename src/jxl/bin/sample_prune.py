@@ -2,6 +2,7 @@
 """sample_prune CLI: 训练样本簇内削减(近重复优先)+隔离池. spec 见 docs/2026-09-09-训练样本量控制机制设计.md."""
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -12,6 +13,12 @@ from jcx.sys.fs import files_in
 from jxl.sample_prune import decide
 
 app = typer.Typer(help="样本簇内削减+隔离池(plan/apply/pool-review)")
+
+# spec §2.3: conf 下降超过该值判回流; removed_round 达该值熔断(永不再回流, 只数回流周期)
+_BACKFLOW_CONF_DROP = 0.2
+_FUSE_ROUND = 2
+_POOL_META_KEYS = ("stem", "conf", "removed_round", "reviews")
+_PLAN_KEYS = ("stems", "keep", "pool", "meta")
 
 # confs 对数据集 stems 的命中率低于该值判口径不一致(缺 stem 默认 0.0 会静默全保, 产出假 plan)
 MIN_CONF_HIT_RATIO = 0.5
@@ -68,6 +75,13 @@ def plan(
     typer.echo(f"plan: {len(stems)} 帧 -> keep {len(p.keep)} / pool {len(p.pool)} -> {out}")
 
 
+def _write_jsonl_atomic(path: Path, rows: list[dict]) -> None:
+    """tmp + os.replace 原子写, 防中途死留半文件(尤其承接历史的 pool_meta)."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def _link_frame(ds_dir: Path, dst_root: Path, stem: str) -> None:
     """单帧 images+labels symlink 到 dst_root; 源缺失或目标已存在均 FATAL."""
     for sub, ext in (("images", ".jpg"), ("labels", ".txt")):
@@ -89,30 +103,51 @@ def apply(
     pool_dir: Annotated[Path, typer.Option(help="隔离池目录(symlink + pool_meta.jsonl)")],
 ) -> None:
     doc = json.loads(plan.read_text(encoding="utf-8"))
-    stems: list[str] = doc["stems"]
+    if not isinstance(doc, dict) or not all(k in doc for k in _PLAN_KEYS):
+        raise SystemExit(f"FATAL: plan.json 结构非法: 需字段 {_PLAN_KEYS}")
+    stems = doc["stems"]
+    if (not isinstance(stems, list) or not all(isinstance(s, str) for s in stems)
+            or not isinstance(doc["keep"], list) or not isinstance(doc["pool"], list)
+            or not isinstance(doc["meta"], list)):
+        raise SystemExit(f"FATAL: plan.json 结构非法: {_PLAN_KEYS} 需为列表(stems 元素为 str)")
+    bad_meta = [m for m in doc["meta"] if not isinstance(m, dict)
+                or not isinstance(m.get("idx"), int) or not 0 <= m["idx"] < len(stems)]
+    if bad_meta:
+        raise SystemExit(f"FATAL: plan.json 结构非法: {len(bad_meta)} 条 meta 的 idx 非法/越界")
     # 防 plan 与数据集错配 (同数错序/删帧后复用旧 plan)
     ds_stems = [f.stem for f in files_in(ds_dir / "images", ".jpg")]
     if ds_stems != stems:
         raise SystemExit(f"FATAL: plan.stems 与数据集不一致 (plan {len(stems)} / 数据集 {len(ds_stems)} 帧)")
-    for d in (out_dir, pool_dir):
-        if d.exists() or d.is_symlink():
-            raise SystemExit(f"FATAL: 输出目录已存在: {d}")
+    if out_dir.exists() or out_dir.is_symlink():
+        raise SystemExit(f"FATAL: 输出目录已存在: {out_dir}")
+    # 跨周期承接: 回流后再删场景, pool_dir 已有上一周期 pool_meta → 按 stem 承接熔断计数与评测史
+    old_by_stem: dict[str, dict] = {}
+    if pool_dir.exists() or pool_dir.is_symlink():
+        old_meta_path = pool_dir / "pool_meta.jsonl"
+        if not old_meta_path.is_file():
+            raise SystemExit(f"FATAL: pool_dir 已存在但缺 pool_meta.jsonl: {pool_dir}")
+        for line in old_meta_path.open(encoding="utf-8"):
+            row = json.loads(line)
+            if not isinstance(row, dict) or not all(k in row for k in _POOL_META_KEYS):
+                raise SystemExit(f"FATAL: 旧 pool_meta.jsonl 结构非法(缺 {_POOL_META_KEYS})")
+            old_by_stem[row["stem"]] = row
     for i in doc["keep"]:
         _link_frame(ds_dir, out_dir, stems[i])
     meta_rows = []
+    n_carry = 0
     for m in doc["meta"]:
         stem = stems[m["idx"]]
         _link_frame(ds_dir, pool_dir, stem)
-        meta_rows.append({**m, "stem": stem, "reviews": []})
-    (pool_dir / "pool_meta.jsonl").write_text(
-        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in meta_rows), encoding="utf-8")
-    typer.echo(f"apply: keep {len(doc['keep'])} -> {out_dir} / pool {len(meta_rows)} -> {pool_dir}")
-
-
-# spec §2.3: conf 下降超过该值判回流; removed_round 达该值熔断(永不再回流)
-_BACKFLOW_CONF_DROP = 0.2
-_FUSE_ROUND = 2
-_POOL_META_KEYS = ("stem", "conf", "removed_round", "reviews")
+        old = old_by_stem.get(stem)
+        if old is None:
+            meta_rows.append({**m, "stem": stem, "reviews": []})
+        else:  # 新一轮删除: 熔断计数 +1, 评测史保留
+            n_carry += 1
+            meta_rows.append({**m, "stem": stem, "removed_round": old["removed_round"] + 1,
+                              "reviews": list(old["reviews"])})
+    _write_jsonl_atomic(pool_dir / "pool_meta.jsonl", meta_rows)
+    typer.echo(f"apply: keep {len(doc['keep'])} -> {out_dir} / pool {len(meta_rows)}"
+               f"(承接 {n_carry} 帧历史) -> {pool_dir}")
 
 
 def _infer_confs(model: str, img_dir: Path) -> dict[str, float]:
@@ -169,7 +204,7 @@ def pool_review(
         row["reviews"].append(rec)
         records.append(rec)
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records), encoding="utf-8")
-    meta_path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    _write_jsonl_atomic(meta_path, rows)
     fused = sum(1 for r in records if r["reason"] == "fused")
     typer.echo(f"pool-review: {len(rows)} 帧 -> 回流 {sum(1 for r in records if r['backflow'])} / "
                f"熔断 {fused} -> {out}")

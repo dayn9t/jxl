@@ -113,6 +113,69 @@ def test_apply_command_splits_dataset(tmp_path):
     meta = [j.loads(line) for line in (tmp_path / "pool/pool_meta.jsonl").open()]
     assert [m["stem"] for m in meta] == ["b", "d"]
     assert meta[0]["reviews"] == []
+    # symlink 不变量: dst 是 symlink 且 resolve 指回数据集源文件
+    for stem in ("a", "c"):
+        assert (tmp_path / "pruned/images" / f"{stem}.jpg").is_symlink()
+        assert (tmp_path / "pruned/images" / f"{stem}.jpg").resolve() == \
+            (tmp_path / "ds/images" / f"{stem}.jpg").resolve()
+        assert (tmp_path / "pruned/labels" / f"{stem}.txt").is_symlink()
+        assert (tmp_path / "pruned/labels" / f"{stem}.txt").resolve() == \
+            (tmp_path / "ds/labels" / f"{stem}.txt").resolve()
+    for stem in ("b", "d"):
+        assert (tmp_path / "pool/images" / f"{stem}.jpg").is_symlink()
+        assert (tmp_path / "pool/labels" / f"{stem}.txt").is_symlink()
+
+
+def test_apply_carries_over_previous_pool_meta(tmp_path):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    for sub in ("images", "labels"):
+        (tmp_path / "ds" / sub).mkdir(parents=True)
+    for s in "abcd":
+        (tmp_path / "ds/images" / f"{s}.jpg").write_bytes(b"x")
+        (tmp_path / "ds/labels" / f"{s}.txt").write_text("")
+    # 旧周期 pool_meta: b 曾删+回流评测过 1 轮(reviews 非空); zz 是已不在新池的陈旧行
+    (tmp_path / "pool/images").mkdir(parents=True)
+    (tmp_path / "pool/pool_meta.jsonl").write_text(
+        j.dumps({"stem": "b", "idx": 1, "cluster_id": 0, "nn_sim": 0.99, "conf": 0.9,
+                 "removed_round": 1, "reviews": [{"backflow": True, "reason": "conf_drop"}]}) + "\n"
+        + j.dumps({"stem": "zz", "idx": 9, "cluster_id": 0, "nn_sim": 0.9, "conf": 0.8,
+                   "removed_round": 1, "reviews": []}) + "\n")
+    plan = {"stems": ["a", "b", "c", "d"], "keep": [0, 2], "pool": [1, 3],
+            "meta": [{"idx": 1, "cluster_id": 0, "nn_sim": 0.99, "conf": 0.9, "removed_round": 0},
+                     {"idx": 3, "cluster_id": 0, "nn_sim": 0.98, "conf": 0.9, "removed_round": 0}]}
+    pj = tmp_path / "plan.json"
+    pj.write_text(j.dumps(plan))
+    r = CliRunner().invoke(app, ["apply", str(tmp_path / "ds"), str(pj),
+                                 "--out-dir", str(tmp_path / "pruned"), "--pool-dir", str(tmp_path / "pool")])
+    assert r.exit_code == 0, r.output
+    meta = {m["stem"]: m for m in (j.loads(line) for line in (tmp_path / "pool/pool_meta.jsonl").open())}
+    assert list(meta) == ["b", "d"]          # 陈旧行 zz 不承接
+    assert meta["b"]["removed_round"] == 2   # 旧 1 + 新一轮删除 → 熔断计数跨周期累计
+    assert meta["b"]["reviews"] == [{"backflow": True, "reason": "conf_drop"}]  # reviews 保留
+    assert meta["d"]["removed_round"] == 0   # 新入池帧从 0 起
+    assert meta["d"]["reviews"] == []
+
+
+def test_apply_rejects_malformed_plan(tmp_path):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    (tmp_path / "ds/images").mkdir(parents=True)
+    (tmp_path / "ds/images/a.jpg").write_bytes(b"x")
+    pj = tmp_path / "plan.json"
+    pj.write_text(j.dumps({"stems": ["a"], "keep": [0]}))  # 缺 pool/meta
+    r = CliRunner().invoke(app, ["apply", str(tmp_path / "ds"), str(pj),
+                                 "--out-dir", str(tmp_path / "pruned"), "--pool-dir", str(tmp_path / "pool")])
+    assert r.exit_code != 0, r.output
+    assert "结构非法" in r.output
 
 
 def test_plan_rejects_emb_row_order_mismatch(tmp_path, monkeypatch):
@@ -165,6 +228,37 @@ def test_pool_review_backflow_and_fuse(tmp_path, monkeypatch):
     assert meta["f"]["removed_round"] == 2  # 熔断不增轮
     assert meta["b"]["removed_round"] == 1
     assert meta["d"]["removed_round"] == 0  # 稳定不回流不增轮(增轮只数回流周期)
+    # 评测结果追加进 reviews
+    assert len(meta["b"]["reviews"]) == 1 and meta["b"]["reviews"][0]["backflow"] is True
+    assert meta["d"]["reviews"][0]["reason"] == "stable"
+    assert meta["f"]["reviews"][0]["reason"] == "fused"
+
+
+def test_pool_review_meta_write_is_atomic(tmp_path, monkeypatch):
+    import json as j
+    import os
+
+    from typer.testing import CliRunner
+
+    from jxl.bin import sample_prune as sp
+
+    (tmp_path / "pool/images").mkdir(parents=True)
+    (tmp_path / "pool/images/b.jpg").write_bytes(b"x")
+    meta_before = {"stem": "b", "idx": 0, "cluster_id": 0, "nn_sim": 0.99, "conf": 0.9,
+                   "removed_round": 0, "reviews": []}
+    meta_path = tmp_path / "pool/pool_meta.jsonl"
+    meta_path.write_text(j.dumps(meta_before) + "\n")
+
+    def boom(src: object, dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(os, "replace", boom)
+    monkeypatch.setattr(sp, "_infer_confs", lambda m, d: {"b": 0.5})
+    r = CliRunner().invoke(sp.app, ["pool-review", str(tmp_path / "pool"),
+                                    "--model", "x.pt", "--out", str(tmp_path / "bf.jsonl")])
+    assert r.exit_code != 0, r.output
+    # 原子写: replace 失败 → 原 pool_meta.jsonl 完好, 未被半写覆盖
+    assert [j.loads(line) for line in meta_path.open()] == [meta_before]
 
 
 def _plan_env(tmp_path, conf_stems: str):
