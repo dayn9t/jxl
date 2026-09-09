@@ -165,3 +165,43 @@ def test_pool_review_backflow_and_fuse(tmp_path, monkeypatch):
     assert meta["f"]["removed_round"] == 2  # 熔断不增轮
     assert meta["b"]["removed_round"] == 1
     assert meta["d"]["removed_round"] == 0  # 稳定不回流不增轮(增轮只数回流周期)
+
+
+def _plan_env(tmp_path, conf_stems: str):
+    """4 帧 a-d 数据集 + 对齐嵌入 + 有效侧车; confs 只含 conf_stems 中的 stem."""
+    import json as j
+
+    imgs = tmp_path / "ds" / "images"
+    imgs.mkdir(parents=True)
+    for s in "abcd":
+        (imgs / f"{s}.jpg").write_bytes(b"x")
+    np.save(tmp_path / "emb.npy", _emb([[1, 0], [0.99, 0.14], [0, 1], [0.99, 0.12]]))
+    (tmp_path / "emb.txt").write_text("\n".join(f"{s}.jpg" for s in "abcd"), encoding="utf-8")
+    confs = tmp_path / "c.jsonl"
+    confs.write_text("".join(j.dumps({"stem": s, "confs": [0.9]}) + "\n" for s in conf_stems))
+    return confs
+
+
+def test_plan_rejects_confs_stem_zero_hit(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    confs = _plan_env(tmp_path, "")
+    # confs stem 与数据集零交集 → 必须 FATAL, 不得静默全体 0.0 全保(pool=0 出假 plan)
+    r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
+                                 "--confs", str(confs), "--out", str(tmp_path / "plan.json")])
+    assert r.exit_code != 0, r.output
+    assert "命中" in r.output
+
+
+def test_plan_rejects_confs_low_hit_ratio(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    confs = _plan_env(tmp_path, "a")  # 1/4 = 25% < 50% → FATAL
+    r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
+                                 "--confs", str(confs), "--out", str(tmp_path / "plan.json")])
+    assert r.exit_code != 0, r.output
+    assert "命中" in r.output

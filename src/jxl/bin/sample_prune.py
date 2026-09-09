@@ -13,6 +13,9 @@ from jxl.sample_prune import decide
 
 app = typer.Typer(help="样本簇内削减+隔离池(plan/apply/pool-review)")
 
+# confs 对数据集 stems 的命中率低于该值判口径不一致(缺 stem 默认 0.0 会静默全保, 产出假 plan)
+MIN_CONF_HIT_RATIO = 0.5
+
 
 @app.callback()
 def main() -> None:
@@ -50,11 +53,17 @@ def plan(
     for line in confs.open(encoding="utf-8"):
         r = json.loads(line)
         conf_by_stem[r["stem"]] = max(r.get("confs") or [0.0])
+    hit = sum(1 for s in stems if s in conf_by_stem)
+    if hit < len(stems) * MIN_CONF_HIT_RATIO:  # 乘式比较, len(stems)=0 时不除零
+        raise SystemExit(
+            f"FATAL: confs 仅命中 {hit}/{len(stems)} stems——疑似 stem 口径不一致 "
+            f"(阈值 {MIN_CONF_HIT_RATIO:.0%})"
+        )
     confs_sorted = [conf_by_stem.get(s, 0.0) for s in stems]
     p = decide(emb, confs_sorted, ratio)
     plan_doc = {"stems": stems, "keep": list(p.keep), "pool": list(p.pool), "meta": list(p.meta)}
     out.write_text(json.dumps(plan_doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    # stems 侧车: 行序=嵌入行序, 供 apply 阶段回核行-茎对齐
+    # stems 侧车: plan.json stems 的纯文本镜像(行序=嵌入行序), 供与 <emb>.txt diff 回核行序
     out.with_name(out.name + ".stems.txt").write_text("\n".join(stems), encoding="utf-8")
     typer.echo(f"plan: {len(stems)} 帧 -> keep {len(p.keep)} / pool {len(p.pool)} -> {out}")
 
