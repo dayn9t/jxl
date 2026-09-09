@@ -100,5 +100,70 @@ def apply(
     typer.echo(f"apply: keep {len(doc['keep'])} -> {out_dir} / pool {len(meta_rows)} -> {pool_dir}")
 
 
+# spec §2.3: conf 下降超过该值判回流; removed_round 达该值熔断(永不再回流)
+_BACKFLOW_CONF_DROP = 0.2
+_FUSE_ROUND = 2
+_POOL_META_KEYS = ("stem", "conf", "removed_round", "reviews")
+
+
+def _infer_confs(model: str, img_dir: Path) -> dict[str, float]:
+    """ultralytics 批量推理 -> {stem: 帧内最大 conf}. imgsz 640 / conf 0.25 (spec §2.3)."""
+    # 延迟导入: plan/apply 与 --help 不付 ultralytics 导入成本
+    from ultralytics import YOLO
+
+    weights = Path(model)
+    if not weights.is_file():
+        raise SystemExit(f"FATAL: 模型权重不存在: {weights}")
+    out: dict[str, float] = {}
+    for res in YOLO(str(weights)).predict([str(p) for p in files_in(img_dir, ".jpg")],
+                                          imgsz=640, conf=0.25, verbose=False, stream=True):
+        boxes = res.boxes
+        out[Path(res.path).stem] = float(boxes.conf.max()) if boxes is not None and len(boxes) else 0.0
+    return out
+
+
+@app.command()
+def pool_review(
+    pool_dir: Annotated[Path, typer.Argument(help="隔离池目录(apply 产物)")],
+    model: Annotated[str, typer.Option(help="YOLO .pt 权重路径")],
+    out: Annotated[Path, typer.Option(help="backflow.jsonl 输出")] = Path("backflow.jsonl"),
+) -> None:
+    meta_path = pool_dir / "pool_meta.jsonl"
+    if not meta_path.is_file():
+        raise SystemExit(f"FATAL: 隔离池元数据缺失: {meta_path}")
+    rows = [json.loads(line) for line in meta_path.open(encoding="utf-8")]
+    bad = [str(r.get("stem", f"行{i}")) for i, r in enumerate(rows)
+           if not all(k in r for k in _POOL_META_KEYS)]
+    if bad:
+        raise SystemExit(f"FATAL: pool_meta.jsonl 缺字段 {_POOL_META_KEYS}: {bad[:5]}")
+    new_confs = _infer_confs(model, pool_dir / "images")
+    missing = [r["stem"] for r in rows if r["stem"] not in new_confs]
+    if missing:
+        raise SystemExit(f"FATAL: 推理结果缺失 {len(missing)} 帧: {missing[:5]}")
+    records = []
+    for row in rows:
+        prev, new = float(row["conf"]), new_confs[row["stem"]]
+        if row["removed_round"] >= _FUSE_ROUND:  # 熔断: 永不再回流, 不增轮
+            rec = {"stem": row["stem"], "prev_conf": prev, "new_conf": new,
+                   "backflow": False, "reason": "fused"}
+        else:
+            if new == 0.0:  # 检出丢失
+                backflow, reason = True, "lost"
+            elif prev - new > _BACKFLOW_CONF_DROP:
+                backflow, reason = True, "conf_drop"
+            else:
+                backflow, reason = False, "stable"
+            row["removed_round"] += 1
+            rec = {"stem": row["stem"], "prev_conf": prev, "new_conf": new,
+                   "backflow": backflow, "reason": reason}
+        row["reviews"].append(rec)
+        records.append(rec)
+    out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records), encoding="utf-8")
+    meta_path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    fused = sum(1 for r in records if r["reason"] == "fused")
+    typer.echo(f"pool-review: {len(rows)} 帧 -> 回流 {sum(1 for r in records if r['backflow'])} / "
+               f"熔断 {fused} -> {out}")
+
+
 if __name__ == "__main__":
     app()

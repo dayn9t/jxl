@@ -134,3 +134,33 @@ def test_plan_rejects_emb_row_order_mismatch(tmp_path, monkeypatch):
     r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
                                  "--confs", str(confs), "--out", str(tmp_path / "plan.json")])
     assert r.exit_code != 0, r.output
+    assert "行序" in r.output
+
+
+def test_pool_review_backflow_and_fuse(tmp_path, monkeypatch):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin import sample_prune as sp
+
+    for s in ("b", "d", "e", "f"):
+        (tmp_path / "pool/images").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "pool/images" / f"{s}.jpg").write_bytes(b"x")
+    meta_rows = [
+        {"stem": s, "idx": i, "cluster_id": 0, "nn_sim": 0.99, "conf": 0.9,
+         "removed_round": 2 if s == "f" else 0, "reviews": []}
+        for i, s in enumerate("bdef")]
+    (tmp_path / "pool/pool_meta.jsonl").write_text("".join(j.dumps(m) + "\n" for m in meta_rows))
+    monkeypatch.setattr(sp, "_infer_confs", lambda m, d: {"b": 0.5, "d": 0.9, "e": 0.0, "f": 0.4})
+    r = CliRunner().invoke(sp.app, ["pool-review", str(tmp_path / "pool"),
+                                    "--model", "x.pt", "--out", str(tmp_path / "bf.jsonl")])
+    assert r.exit_code == 0, r.output
+    bf = {j.loads(line)["stem"]: j.loads(line) for line in (tmp_path / "bf.jsonl").open()}
+    assert bf["b"]["backflow"] is True      # 0.9 -> 0.5, 降 0.4 > 0.2
+    assert bf["d"]["backflow"] is False     # 持平
+    assert bf["e"]["backflow"] is True      # 检出丢失
+    assert bf["f"]["reason"] == "fused"     # 熔断, removed_round=2
+    meta = {j.loads(line)["stem"]: j.loads(line) for line in (tmp_path / "pool/pool_meta.jsonl").open()}
+    assert meta["f"]["removed_round"] == 2  # 熔断不增轮
+    assert meta["b"]["removed_round"] == 1
