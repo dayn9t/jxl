@@ -34,17 +34,18 @@ def plan(
         raise SystemExit(f"FATAL: embeddings {len(emb)} != 帧数 {len(stems)} (行序=stems 排序)")
     # 行序交叉校验: embed_dino 产物 <emb>.txt 与数据集排序逐一比对, 防同数错序静默错绑
     sidecar = embeddings.with_suffix(".txt")
-    if sidecar.is_file():
-        emb_stems = [Path(line).stem
-                     for line in sidecar.read_text(encoding="utf-8").splitlines() if line.strip()]
-        # strict=False: 长度不等本身即不一致, 由下方 len 比对单独报出
-        diffs = [f"行{i}: 数据集 {s} / 侧车 {e}"
-                 for i, (s, e) in enumerate(zip(stems, emb_stems, strict=False)) if s != e][:3]
-        if diffs or len(emb_stems) != len(stems):
-            raise SystemExit(
-                f"FATAL: {sidecar.name} 行序与数据集 stems 排序不一致 "
-                f"(侧车 {len(emb_stems)} 行 / 数据集 {len(stems)} 帧): {'; '.join(diffs)}"
-            )
+    if not sidecar.is_file():
+        raise SystemExit(f"FATAL: embed 侧车缺失({sidecar.name}), 无法对齐行序 — 请补齐侧车后重试")
+    emb_stems = [Path(line).stem
+                 for line in sidecar.read_text(encoding="utf-8").splitlines() if line.strip()]
+    # strict=False: 长度不等本身即不一致, 由下方 len 比对单独报出
+    diffs = [f"行{i}: 数据集 {s} / 侧车 {e}"
+             for i, (s, e) in enumerate(zip(stems, emb_stems, strict=False)) if s != e][:3]
+    if diffs or len(emb_stems) != len(stems):
+        raise SystemExit(
+            f"FATAL: {sidecar.name} 行序与数据集 stems 排序不一致 "
+            f"(侧车 {len(emb_stems)} 行 / 数据集 {len(stems)} 帧): {'; '.join(diffs)}"
+        )
     conf_by_stem: dict[str, float] = {}
     for line in confs.open(encoding="utf-8"):
         r = json.loads(line)
@@ -56,6 +57,47 @@ def plan(
     # stems 侧车: 行序=嵌入行序, 供 apply 阶段回核行-茎对齐
     out.with_name(out.name + ".stems.txt").write_text("\n".join(stems), encoding="utf-8")
     typer.echo(f"plan: {len(stems)} 帧 -> keep {len(p.keep)} / pool {len(p.pool)} -> {out}")
+
+
+def _link_frame(ds_dir: Path, dst_root: Path, stem: str) -> None:
+    """单帧 images+labels symlink 到 dst_root; 源缺失或目标已存在均 FATAL."""
+    for sub, ext in (("images", ".jpg"), ("labels", ".txt")):
+        src = ds_dir / sub / f"{stem}{ext}"
+        if not src.is_file():
+            raise SystemExit(f"FATAL: 源文件缺失: {src}")
+        dst = dst_root / sub / src.name
+        if dst.exists() or dst.is_symlink():
+            raise SystemExit(f"FATAL: 目标已存在: {dst}")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.symlink_to(src.resolve())
+
+
+@app.command()
+def apply(
+    ds_dir: Annotated[Path, typer.Argument(help="数据集目录(images/+labels/)")],
+    plan: Annotated[Path, typer.Argument(help="plan.json (plan 命令产物)")],
+    out_dir: Annotated[Path, typer.Option(help="削减后训练集目录(symlink)")],
+    pool_dir: Annotated[Path, typer.Option(help="隔离池目录(symlink + pool_meta.jsonl)")],
+) -> None:
+    doc = json.loads(plan.read_text(encoding="utf-8"))
+    stems: list[str] = doc["stems"]
+    # 防 plan 与数据集错配 (同数错序/删帧后复用旧 plan)
+    ds_stems = [f.stem for f in files_in(ds_dir / "images", ".jpg")]
+    if ds_stems != stems:
+        raise SystemExit(f"FATAL: plan.stems 与数据集不一致 (plan {len(stems)} / 数据集 {len(ds_stems)} 帧)")
+    for d in (out_dir, pool_dir):
+        if d.exists() or d.is_symlink():
+            raise SystemExit(f"FATAL: 输出目录已存在: {d}")
+    for i in doc["keep"]:
+        _link_frame(ds_dir, out_dir, stems[i])
+    meta_rows = []
+    for m in doc["meta"]:
+        stem = stems[m["idx"]]
+        _link_frame(ds_dir, pool_dir, stem)
+        meta_rows.append({**m, "stem": stem, "reviews": []})
+    (pool_dir / "pool_meta.jsonl").write_text(
+        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in meta_rows), encoding="utf-8")
+    typer.echo(f"apply: keep {len(doc['keep'])} -> {out_dir} / pool {len(meta_rows)} -> {pool_dir}")
 
 
 if __name__ == "__main__":

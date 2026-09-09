@@ -48,6 +48,8 @@ def test_plan_command_writes_json(tmp_path, monkeypatch):
     for s in "abcd":
         (imgs / f"{s}.jpg").write_bytes(b"x")
     np.save(tmp_path / "emb.npy", _emb([[1, 0], [0.99, 0.14], [0, 1], [0.99, 0.12]]))
+    # embed 侧车: 缺失即 FATAL(No Silent Degradation), 此处按 stems 排序如实记录
+    (tmp_path / "emb.txt").write_text("\n".join(f"{s}.jpg" for s in "abcd"), encoding="utf-8")
     confs = tmp_path / "c.jsonl"
     confs.write_text("".join(j.dumps({"stem": s, "confs": [0.9]}) + "\n" for s in "abcd"))
     out = tmp_path / "plan.json"
@@ -63,6 +65,54 @@ def test_plan_command_writes_json(tmp_path, monkeypatch):
     # stems 侧车: 行序=嵌入行序=stems 排序
     sidecar = tmp_path / "plan.json.stems.txt"
     assert sidecar.read_text(encoding="utf-8").splitlines() == plan["stems"]
+
+
+def test_plan_requires_embed_sidecar(tmp_path, monkeypatch):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    imgs = tmp_path / "ds" / "images"
+    imgs.mkdir(parents=True)
+    for s in "abcd":
+        (imgs / f"{s}.jpg").write_bytes(b"x")
+    np.save(tmp_path / "emb.npy", _emb([[1, 0], [0.99, 0.14], [0, 1], [0.99, 0.12]]))
+    confs = tmp_path / "c.jsonl"
+    confs.write_text("".join(j.dumps({"stem": s, "confs": [0.9]}) + "\n" for s in "abcd"))
+    # 无 emb.txt 侧车 → 无法对齐行序, 必须 FATAL 而非静默跳过
+    r = CliRunner().invoke(app, ["plan", str(tmp_path / "ds"), "--embeddings", str(tmp_path / "emb.npy"),
+                                 "--confs", str(confs), "--out", str(tmp_path / "plan.json")])
+    assert r.exit_code != 0, r.output
+    assert "侧车缺失" in r.output
+
+
+def test_apply_command_splits_dataset(tmp_path):
+    import json as j
+
+    from typer.testing import CliRunner
+
+    from jxl.bin.sample_prune import app
+
+    for sub in ("images", "labels"):
+        (tmp_path / "ds" / sub).mkdir(parents=True)
+    for s in "abcd":
+        (tmp_path / "ds/images" / f"{s}.jpg").write_bytes(b"x")
+        (tmp_path / "ds/labels" / f"{s}.txt").write_text("")
+    plan = {"stems": ["a", "b", "c", "d"], "keep": [0, 2], "pool": [1, 3],
+            "meta": [{"idx": 1, "cluster_id": 0, "nn_sim": 0.99, "conf": 0.9, "removed_round": 0},
+                     {"idx": 3, "cluster_id": 0, "nn_sim": 0.98, "conf": 0.9, "removed_round": 0}]}
+    pj = tmp_path / "plan.json"
+    pj.write_text(j.dumps(plan))
+    r = CliRunner().invoke(app, ["apply", str(tmp_path / "ds"), str(pj),
+                                 "--out-dir", str(tmp_path / "pruned"), "--pool-dir", str(tmp_path / "pool")])
+    assert r.exit_code == 0, r.output
+    assert sorted(p.stem for p in (tmp_path / "pruned/images").glob("*.jpg")) == ["a", "c"]
+    assert sorted(p.stem for p in (tmp_path / "pool/images").glob("*.jpg")) == ["b", "d"]
+    meta = [j.loads(line) for line in (tmp_path / "pool/pool_meta.jsonl").open()]
+    assert [m["stem"] for m in meta] == ["b", "d"]
+    assert meta[0]["reviews"] == []
 
 
 def test_plan_rejects_emb_row_order_mismatch(tmp_path, monkeypatch):
