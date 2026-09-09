@@ -6,7 +6,10 @@
 
 | 文档 | 内容 |
 |---|---|
-| `infra/spark-vlm.md` | 局域网 VLM（spark=192.168.18.182，qwen3.5-35b）接入档案 |
+| `2026-09-09-训练样本量控制机制设计.md` | 样本簇内削减+隔离池回流机制 spec（sample_prune 工具；§4 证据表 T5 消融回填） |
+| `research/2026-09-09-训练样本量控制调研.md` | 外部经验调研（SemDeDup/VPS/SAM3 数据引擎对照） |
+| `superpowers/plans/2026-09-09-sample-prune.md` | sample_prune 实施计划（SDD 执行记录见 .superpowers/sdd/ ledger） |
+| `infra/spark-vlm.md` | 局域网 VLM（spark=192.168.18.182，qwen3.5-35b）接入档案 + ★VLM 三选一与夜间通道 |
 | `2026-08-29-LocateAnything-3B-*.md` | LocateAnything 3B 调研与接入（det/locateanything 通用检测器） |
 | `2026-06-27-rmb检测器训练部署.md` | rmb 检测器（独立主题） |
 
