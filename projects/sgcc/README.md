@@ -12,6 +12,7 @@
 | 属性库 VLM 全量标注（21,744 框） | ✅ 99.97% 成功；uncertain 5,061 → doubao 二审中 |
 | 属性库回写 VLabel 基准 | ✅ 2026-09-09：gt 17,435 全中（匈牙利 IoU≥0.999），56 手术框无属性；verify-roundtrip PASS——`research/2026-09-09-属性库回写VLabel基准.md` |
 | 属性分类器族（yolo26l-cls） | ✅ V1 双训完成（2026-09-09）：**upper test 0.974 达标入循环**；coarse 复测 test 0.817/val 0.825（原记 0.826+16pp 落差系 val 误植，实为伪标签天花板）——错误分析与 V2 方案见 `research/2026-09-09-coarse错误分析与V2方案.md` |
+| age 补样（COCO val2017 + spark 伪标） | ✅ 2026-09-09：child 448 / teen 93（conf>0.8；teen 属源上限，134 例悬在 conf(0.6,0.8]）入 `attr_bank/age_supplement/`；四档 `cls_age_psq`（child 452/teen 116/adult 12,798/senior 2,805）建成待训——`data/age_supplement_report.md` |
 | 部署（ONNX+symlink 切现网） | ✅ 2026-09-09 13:34 上线（`2026-09-09_person_n.pt/.onnx` 实体 + symlink 切换；回滚：`ln -sfn 2026-07-09_person_n.* person.*`） |
 
 ## 文档地图
