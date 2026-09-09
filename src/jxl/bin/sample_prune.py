@@ -153,7 +153,8 @@ def pool_review(
                 backflow, reason = True, "conf_drop"
             else:
                 backflow, reason = False, "stable"
-            row["removed_round"] += 1
+            if backflow:
+                row["removed_round"] += 1  # 增轮只数回流周期; 稳定帧不累积, 不受熔断误伤
             rec = {"stem": row["stem"], "prev_conf": prev, "new_conf": new,
                    "backflow": backflow, "reason": reason}
         row["reviews"].append(rec)

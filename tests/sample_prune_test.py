@@ -164,3 +164,4 @@ def test_pool_review_backflow_and_fuse(tmp_path, monkeypatch):
     meta = {j.loads(line)["stem"]: j.loads(line) for line in (tmp_path / "pool/pool_meta.jsonl").open()}
     assert meta["f"]["removed_round"] == 2  # 熔断不增轮
     assert meta["b"]["removed_round"] == 1
+    assert meta["d"]["removed_round"] == 0  # 稳定不回流不增轮(增轮只数回流周期)
