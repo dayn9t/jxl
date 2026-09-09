@@ -45,6 +45,8 @@
   uncertain→doubao 二审
 - 属性词典 = m31 绑定关系（opening→sort+amount+illegal、lid→sort+side）进 prompt
 - 产物落 VLabel 项目（m31 同源 schema）
+- **必产出：难例人工审核集合**（2026-09-09 补：pending/分歧/否决冲突/弱类/特殊形态 →
+  VLabel 审核项目，人审后才可入训练——S1 首跑漏此层，已补救 s1_hardcase_review）
 
 ## 6. 执行序与优先级（缺省建议，未获用户明确裁决项）
 
