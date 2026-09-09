@@ -4,6 +4,15 @@
 > 而是既有 QWEN35 backend（`rmb_ground.py` / `rmb_describe.py` 的 DEFAULT_URL）所在的那台 DGX Spark。
 > 模型 qwen3.5-35b-a3b-fp8 **实测具备视觉能力（确为 VLM）**，OpenAI 兼容 API，局域网可直连。
 
+
+## ★ VLM 选型三分与夜间通道（2026-09-10 用户裁决，醒目）
+
+VLM 任务三个选择：① 在线 doubao（商用付费）② 本地 spark（本档案，免费批量主力）
+③ **GLM 5.3 Flash——当前驱动编程会话的大模型本身，支持视觉**（图片理解/分类可直接由它做，无需任何 API）。
+
+**夜间通道**：任务时间在深夜~凌晨 → **优先 ③ GLM 5.3 Flash 直接处理**。
+完整选型表见 memory `lan-vlm-resources`（每次会话自动加载）。
+
 ## 主机与 GPU 规格
 
 | 项 | 值 |
