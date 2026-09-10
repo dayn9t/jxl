@@ -14,7 +14,7 @@
 | 属性分类器族（yolo26l-cls） | ✅ V1 双训（2026-09-09）；**2026-09-10 用户裁决：upper_body V1（test 0.974）为主力分类器；coarse V1（test 0.817）与 age V1 均冻结**——coarse V2 doubao 重标与 age V1 训练取消（省商用费用与队列），未来业务需要时再解冻（数据集 cls_coarse_psq / cls_age_psq 已备存档，含 COCO 补样的 child/teen 452/116）。错误分析存档 `research/2026-09-09-coarse错误分析与V2方案.md` |
 | age 补样（COCO val2017 + spark 伪标） | ✅ 2026-09-09：child 448 / teen 93（conf>0.8；teen 属源上限，134 例悬在 conf(0.6,0.8]）入 `attr_bank/age_supplement/`；四档 `cls_age_psq`（child 452/teen 116/adult 12,798/senior 2,805）建成待训——`data/age_supplement_report.md` |
 | 部署（ONNX+symlink 切现网） | ✅ 2026-09-09 13:34 上线（`2026-09-09_person_n.pt/.onnx` 实体 + symlink 切换；回滚：`ln -sfn 2026-07-09_person_n.* person.*`） |
-| **upper_body 分类器部署** | ✅ 2026-09-10 同目录上线（用户裁决主力分类器）：`2026-09-10_person_upper_s.pt/.onnx`（s-cls 6.6M，规模扫描实测膝点档）+ `person_upper.pt/.onnx` symlink。**加载须显式 `task="classify"`**（ultralytics 对分类 ONNX 不自动识别 task；.pt 可自动）|
+| **upper_body 分类器部署** | ✅ 2026-09-10 同目录上线（用户裁决主力分类器）；**终版=n-cls 2.5M**（n/s/m/l 四档全扫描 0.9782/0.9794/0.9800/0.9774——噪声带内，膝点实测在 n，等精度取最小）：`2026-09-10_person_upper_n.pt/.onnx` + `person_upper.pt/.onnx` symlink。**加载须显式 `task="classify"`**（分类 ONNX 不自动识别 task；.pt 可自动）|
 
 ## 文档地图
 
