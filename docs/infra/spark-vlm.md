@@ -73,3 +73,11 @@ VLM 任务三个选择：① 在线 doubao（商用付费）② 本地 spark（�
 - `enable_thinking=false` 抑制思考、function calling、图像分辨率上限均未实测
 - Qwen3.6-27B 已在缓存但未部署，用途与规格不明——动它前先问清来源
 - 探查基于 2026-09-08 快照；容器 up 3 个月未重启，长期稳定性尚可但无监控告警
+
+## Prompt 长度红线（2026-09-11 实证，SHTM hardcase_prune）
+
+- **长规则 prompt（~700 字全判据）会把 qwen3.5-35b-A3B（3B 激活 MoE）压向「none」塌缩**：
+  SHTM 难例削减 pilot 中 bucket_conflict 15→26，26 例肉眼核对 spark 几乎全错
+- 紧凑 prompt（~340 字，判歧规则压成一行）即恢复正常；同 pilot 自动率 28%→48%
+- 批量判定任务给 A3B 模型的规则 ≤ 一屏；细则靠「双模型一致闸门」兜，不靠加长 prompt
+- 对照：doubao-seed-2.0-lite 同长 prompt 无此劣化（50B 级激活？未考据，但实测稳健）
