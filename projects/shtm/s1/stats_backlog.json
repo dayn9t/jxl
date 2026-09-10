@@ -1,0 +1,23 @@
+{
+ "empty_candidates": 3819,
+ "empty_vlm_fp": 2068,
+ "empty_frames_with_bucket": 364,
+ "empty_vlm_error": 223,
+ "empty_vlm_real": 1528,
+ "frames": 669,
+ "vlm_cls": {
+  "empty:none": 2068,
+  "empty:crop_error": 223,
+  "empty:can": 712,
+  "empty:lid": 307,
+  "empty:opening": 498,
+  "empty:dump": 11
+ },
+ "vlm_form": {
+  "empty:none": 2291,
+  "empty:standard": 918,
+  "empty:round": 97,
+  "empty:bagged": 491,
+  "empty:basket": 22
+ }
+}
