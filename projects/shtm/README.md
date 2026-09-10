@@ -47,6 +47,7 @@ projects/shtm/
 ## 域知识
 
 - **垃圾桶形态词典**：`垃圾桶形态词典.md`（方桶/圆桶/套袋/筐状 + 难例归集原则 + 提示词反哺机制）——重标 prompt/仲裁词典/难例判据的单一数据源
+- **★ 标注 schema 备份**：`meta/meta.json5`（用户 2026-09-10 指定备份，源=`~/ws/trash/s1_hardcase_review/meta.json5`）——垃圾桶检测标注的权威 schema：5 类（opening/lid/dump/person/can）+属性绑定（opening→sort+amount+illegal，lid→sort+side，can→direction）+5 属性字典全枚举（sort 四分类 D/W/R/H、amount 四档、direction、illegal、side）+特殊值（-1 pending/-2 exclude/-3 error）。已修复 m31.json 的 illegal/side id 冲突（此文件 illegal=4、side=5 分立）。**一切标注工具、VLM 词典、重标流程以本 schema 为准**
 
 ## 关联
 

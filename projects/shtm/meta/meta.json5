@@ -1,0 +1,363 @@
+{
+  id: 1032,
+  name: "shtm-s1-hardcase-review",
+  description: "SHTM S1 难例人工兜底: C1 pending/极低conf属性, C2 amount分歧带, C3 VLM否决框, C4 空帧误检框(抽300), C5 dump全量, C6 特殊形态; vlabels 预填当前判定, 人工改后即终稿(拷回 s1_relabel_v1)",
+  shape: {
+    title_style: 1,
+    thickness: 2,
+    auto_save: true,
+    vertex_radius: 10,
+  },
+  roi: {
+    color: "#800080",
+  },
+  categories: [
+    {
+      id: 0,
+      names: {
+        en: "opening",
+        zh: "垃圾桶开口",
+      },
+      description: "垃圾桶开口",
+      hotkey: "1",
+      color: "#FF0000",
+      properties: [
+        {
+          id: 1,
+          names: {
+            en: "sort",
+            zh: "垃圾分类",
+          },
+          type: "sort",
+        },
+        {
+          id: 2,
+          names: {
+            en: "amount",
+            zh: "垃圾量",
+          },
+          type: "amount",
+        },
+        {
+          id: 4,
+          names: {
+            en: "illegal",
+            zh: "违规投放",
+          },
+          type: "illegal",
+        },
+      ],
+    },
+    {
+      id: 1,
+      names: {
+        en: "lid",
+        zh: "垃圾桶盖",
+      },
+      description: "垃圾桶盖",
+      hotkey: "2",
+      color: "#FFA500",
+      properties: [
+        {
+          id: 1,
+          names: {
+            en: "sort",
+            zh: "垃圾分类",
+          },
+          type: "sort",
+        },
+        {
+          id: 5,
+          names: {
+            en: "side",
+            zh: "正反面",
+          },
+          type: "side",
+        },
+      ],
+    },
+    {
+      id: 2,
+      names: {
+        en: "dump",
+        zh: "垃圾堆",
+      },
+      description: "垃圾堆",
+      hotkey: "3",
+      color: "#FFFF00",
+      properties: [],
+    },
+    {
+      id: 3,
+      names: {
+        en: "person",
+        zh: "人员",
+      },
+      description: "人员",
+      hotkey: "4",
+      color: "#00FF00",
+      properties: [],
+    },
+    {
+      id: 4,
+      names: {
+        en: "can",
+        zh: "整个垃圾桶",
+      },
+      description: "整个垃圾桶",
+      hotkey: "5",
+      color: "#0000FF",
+      properties: [
+        {
+          id: 3,
+          names: {
+            en: "direction",
+            zh: "朝向",
+          },
+          type: "direction",
+        },
+      ],
+    },
+  ],
+  property_types: [
+    {
+      id: 1,
+      names: {
+        en: "sort",
+        zh: "垃圾分类",
+      },
+      description: "垃圾桶/盖类型",
+      values: [
+        {
+          id: 0,
+          names: {
+            en: "residuil",
+            zh: "干垃圾",
+          },
+          description: "干/其他垃圾/黑/黄",
+          hotkey: "1",
+          color: "#201080",
+          sign: "D",
+        },
+        {
+          id: 1,
+          names: {
+            en: "food",
+            zh: "湿垃圾",
+          },
+          description: "湿/厨余/棕/绿",
+          hotkey: "2",
+          color: "#A52A2A",
+          sign: "W",
+        },
+        {
+          id: 2,
+          names: {
+            en: "recyclable",
+            zh: "可回收",
+          },
+          description: "蓝/可回收",
+          hotkey: "3",
+          color: "#0000FF",
+          sign: "R",
+        },
+        {
+          id: 3,
+          names: {
+            en: "hazardous",
+            zh: "有害",
+          },
+          description: "红/有害",
+          hotkey: "4",
+          color: "#FFA500",
+          sign: "H",
+        },
+      ],
+    },
+    {
+      id: 2,
+      names: {
+        en: "amount",
+        zh: "垃圾量",
+      },
+      description: "垃圾桶内垃圾量",
+      values: [
+        {
+          id: 0,
+          names: {
+            en: "0/4",
+            zh: "空桶",
+          },
+          description: "空桶",
+          hotkey: "1",
+          color: "#FF0000",
+          sign: "0",
+        },
+        {
+          id: 1,
+          names: {
+            en: "not_full",
+            zh: "不满",
+          },
+          description: "不满",
+          hotkey: "2",
+          color: "#FFA500",
+          sign: "1",
+        },
+        {
+          id: 2,
+          names: {
+            en: "soon_full",
+            zh: "将满",
+          },
+          description: "将满",
+          hotkey: "3",
+          color: "#FFFF00",
+          sign: "2",
+        },
+        {
+          id: 3,
+          names: {
+            en: "full",
+            zh: "已满",
+          },
+          description: "已满",
+          hotkey: "4",
+          color: "#00FF00",
+          sign: "3",
+        },
+      ],
+    },
+    {
+      id: 3,
+      names: {
+        en: "direction",
+        zh: "朝向",
+      },
+      description: "垃圾桶朝向",
+      values: [
+        {
+          id: 0,
+          names: {
+            en: "front",
+            zh: "正面",
+          },
+          description: "正面",
+          hotkey: "1",
+          color: "#FF0000",
+          sign: "FR",
+        },
+        {
+          id: 1,
+          names: {
+            en: "non_front",
+            zh: "非正面",
+          },
+          description: "非正面",
+          hotkey: "2",
+          color: "#FFA500",
+          sign: "NF",
+        },
+      ],
+    },
+    {
+      id: 4,
+      names: {
+        en: "illegal",
+        zh: "违规投放",
+      },
+      description: "是否存在违规投放垃圾",
+      values: [
+        {
+          id: 0,
+          names: {
+            en: "no",
+            zh: "无违规",
+          },
+          description: "无违规投放垃圾",
+          hotkey: "1",
+          color: "#FF0000",
+          sign: "n",
+        },
+        {
+          id: 1,
+          names: {
+            en: "yes",
+            zh: "有违规",
+          },
+          description: "有违规投放垃圾",
+          hotkey: "2",
+          color: "#FF0000",
+          sign: "y",
+        },
+      ],
+    },
+    {
+      id: 5,
+      names: {
+        en: "side",
+        zh: "正反面",
+      },
+      description: "垃圾箱的正/反面分类",
+      values: [
+        {
+          id: 0,
+          names: {
+            en: "front",
+            zh: "正面",
+          },
+          description: "垃圾桶盖正面",
+          hotkey: "1",
+          color: "#00FF00",
+          sign: "F",
+        },
+        {
+          id: 1,
+          names: {
+            en: "back",
+            zh: "反面",
+          },
+          description: "垃圾桶盖反面",
+          hotkey: "2",
+          color: "#FF0000",
+          sign: "B",
+        },
+      ],
+    },
+  ],
+  property_special_values: [
+    {
+      id: -3,
+      names: {
+        en: "error",
+        zh: "检测器错误",
+      },
+      description: "检测器错误",
+      hotkey: "r",
+      color: "#FFC0CB",
+      sign: "E",
+    },
+    {
+      id: -2,
+      names: {
+        en: "exclude",
+        zh: "排除争议",
+      },
+      description: "排除争议样本",
+      hotkey: "e",
+      color: "#800080",
+      sign: "X",
+    },
+    {
+      id: -1,
+      names: {
+        en: "pending",
+        zh: "待定",
+      },
+      description: "待定",
+      hotkey: "q",
+      color: "#FFFFFF",
+      sign: "P",
+    },
+  ],
+}
