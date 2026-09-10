@@ -1,0 +1,29 @@
+{
+ "gate": {
+  "HUMAN": 2126,
+  "AUTO_CONFIRM": 363,
+  "AUTO_DELETE": 377,
+  "AUTO_RECLASS": 465,
+  "AUTO_REJECT": 154
+ },
+ "why": {
+  "HUMAN:bucket_conflict": 758,
+  "AUTO_CONFIRM:agree": 363,
+  "AUTO_DELETE:both_fp": 377,
+  "HUMAN:cls_conflict": 741,
+  "HUMAN:attrs_unresolved": 627,
+  "AUTO_RECLASS:agree": 465,
+  "AUTO_REJECT:both_fp": 154
+ },
+ "quarantine": {
+  "hc_frames_auto": 472,
+  "bl_boxes_accept": 87,
+  "bl_frames_auto": 55,
+  "bl_frames_neg": 9,
+  "bl_boxes_reject": 17
+ },
+ "residual_frames": {
+  "hardcase": 937,
+  "backlog": 309
+ }
+}
