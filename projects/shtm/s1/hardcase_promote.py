@@ -58,27 +58,32 @@ def restore_object(stem: str, idx: int) -> dict:
 
 
 def apply_vetoes(veto: dict[str, dict]) -> tuple[set[str], set[str]]:
-    """否决对象恢复回 review vlabels；返回（被否决的 hardcase 帧, backlog 帧）。"""
+    """hardcase 否决对象从备份恢复回 review vlabels；backlog 帧无备份，
+    交由 extend_r2 以追加对象路径处理。返回（被否决 hardcase 帧, backlog 帧）。"""
+    ledger = [json.loads(l) for l in open(S1 / "hardcase_auto.jsonl")]
+    by_key = {f"{r['rel']}|{r['idx']}": r for r in ledger}
     hc_frames: set[str] = set()
     bl_frames: set[str] = set()
-    by_frame: dict[str, list[int]] = {}
-    for key in veto:
-        rel, idx = key.rsplit("|", 1)
-        by_frame.setdefault(rel, []).append(int(idx))
-    for rel, idxs in by_frame.items():
+    by_frame: dict[str, list[dict]] = {}
+    for key, v in veto.items():
+        row = by_key.get(key)
+        if row is None:
+            raise SystemExit(f"veto key 不在账本: {key}")
+        by_frame.setdefault(row["rel"], []).append(row)
+        if row["kind"] == "backlog":
+            bl_frames.add(row["rel"])
+        else:
+            hc_frames.add(row["rel"])
+    for rel, rows in by_frame.items():
+        if rel in bl_frames:
+            continue
         stem = rel.replace("/", "_")
         p = REVIEW / "vlabels" / f"{stem}.json5"
         lab = json.load(open(p))
-        for idx in idxs:
-            obj = restore_object(stem, idx)
+        for row in rows:
+            obj = restore_object(stem, row["idx"])  # 备份=预填态
             obj["id"] = len(lab["objects"])
             lab["objects"].append(obj)
-            row = next((json.loads(l) for l in open(S1 / "hardcase_auto.jsonl")
-                        if f'"{rel}"' in l and f'"idx": {idx},' in l), None)
-            if row is not None and row["kind"] == "backlog":
-                bl_frames.add(rel)
-            else:
-                hc_frames.add(rel)
         lab["objects"] = [{**o, "id": i} for i, o in enumerate(lab["objects"])]
         p.write_text(json.dumps(lab, ensure_ascii=False, indent=1) + "\n")
     return hc_frames, bl_frames
@@ -108,18 +113,33 @@ def promote(quarantine_frames: set[str], hc_veto: set[str], bl_veto: set[str]) -
     return st
 
 
-def extend_r2(hc_veto: set[str], bl_veto: set[str], stem2rel: dict[str, str]) -> None:
-    """被否决帧并入 r2（vlabel 已含恢复对象；backlog 帧需从零构建含接受框上下文）。"""
+def extend_r2(hc_veto: set[str], bl_veto: set[str], veto: dict[str, dict]) -> None:
+    """被否决帧并入 r2：hardcase 帧 vlabel 已含恢复对象直接拷；backlog 帧拷
+    隔离池 vlabel 后把被否决框以预填类+pending 属性追加（人工定夺）。"""
     ledger = [json.loads(l) for l in open(S1 / "hardcase_auto.jsonl")]
-    per_bl: dict[str, list[dict]] = {}
-    for row in ledger:
+    by_key = {f"{r['rel']}|{r['idx']}": r for r in ledger}
+    bl_veto_rows: dict[str, list[dict]] = {}
+    for key, v in veto.items():
+        row = by_key[key]
         if row["kind"] == "backlog":
-            per_bl.setdefault(row["rel"], []).append(row)
+            bl_veto_rows.setdefault(row["rel"], []).append(row)
     for rel in sorted(bl_veto):
         stem = rel.replace("/", "_")
         lab_src = AUTO / "vlabels" / f"{stem}.json5"
         if lab_src.exists():
             shutil.copy(lab_src, R2 / "vlabels" / f"{stem}.json5")
+        lab = json.load(open(R2 / "vlabels" / f"{stem}.json5"))
+        for row in bl_veto_rows.get(rel, []):
+            cid = svm.CLS2ID[row["prefill"]]
+            lab["objects"].append({
+                "id": len(lab["objects"]), "category": cid,
+                "confidence": svm.rd(row.get("conf", 0.5)),
+                "polygon": [{"x": svm.rd(q[0]), "y": svm.rd(q[1])} for q in row["poly"]],
+                "properties": [{"id": svm.PROP_ID[k], "value": svm.PENDING,
+                                "confidence": 1.0}
+                               for k in svm.ATTRS_BY_CLASS.get(cid, [])]})
+        (R2 / "vlabels" / f"{stem}.json5").write_text(
+            json.dumps(lab, ensure_ascii=False, indent=1) + "\n")
         if not (R2 / "images" / f"{stem}.jpg").exists():
             os.symlink(SNAP / f"{rel}.jpg", R2 / "images" / f"{stem}.jpg")
     for rel in sorted(hc_veto):
@@ -128,7 +148,7 @@ def extend_r2(hc_veto: set[str], bl_veto: set[str], stem2rel: dict[str, str]) ->
         if not (R2 / "images" / f"{stem}.jpg").exists():
             os.symlink(SNAP / f"{rel}.jpg", R2 / "images" / f"{stem}.jpg")
     print(f"r2 扩充: hardcase {len(hc_veto)} + backlog {len(bl_veto)} 帧"
-          f"（backlog 帧内被否决框需人工补行动，见 hardcase_veto.jsonl）")
+          f"（backlog 被否决框已按预填类+pending 追加，见 hardcase_veto.jsonl）")
 
 
 def main() -> None:
@@ -144,7 +164,7 @@ def main() -> None:
         d = json.loads(l)
         stem2rel[d["rel"].replace("/", "_")] = d["rel"]
     st = promote(set(stem2rel), hc_veto, bl_veto)
-    extend_r2(hc_veto, bl_veto, stem2rel)
+    extend_r2(hc_veto, bl_veto, veto)
     MARK.write_text(json.dumps({"promoted_at": datetime.now().astimezone().isoformat(),
                                 "veto_count": len(veto)}, ensure_ascii=False) + "\n")
     print("promote:", dict(st))
