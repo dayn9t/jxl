@@ -15,9 +15,14 @@ from jxl.bin.consensus_dataset import (
     app,
     labeled_boxes_from_xanylabel,
     merge,
+    near_dup_pairs,
 )
 
 _BOX_YOLO = "0 0.3 0.3 0.4 0.4\n"
+# 两框 (0.1,0.1,0.5,0.5) 与 (0.105,...) → IoU≈0.9515 ≥ NEAR_DUP_IOU(0.95), 触发守卫
+_NEAR_YOLO = _BOX_YOLO + "0 0.305 0.305 0.4 0.4\n"
+# 错位 0.01 → IoU≈0.906 < 0.95, 守卫放行
+_FAR_YOLO = _BOX_YOLO + "0 0.31 0.31 0.4 0.4\n"
 
 
 def test_source_spec_from_str() -> None:
@@ -127,6 +132,84 @@ def test_merge_three_layers(tmp_path: Path) -> None:
     data = (out / "data.yaml").read_text(encoding="utf-8")
     assert data.startswith(f"path: {out.resolve()}")
     assert "train: train/images" in data and "  0: person" in data
+
+
+def test_near_dup_pairs_pure() -> None:
+    """近重复对纯函数: 同类高 IoU 命中; 异类/低于阈值不命中; 阈值可调."""
+    box = (0.1, 0.1, 0.5, 0.5, 1.0)
+    dup = (0.105, 0.105, 0.505, 0.505, 1.0)  # IoU≈0.9515
+    far = (0.11, 0.11, 0.51, 0.51, 1.0)  # IoU≈0.906
+    other_cls = (0.1, 0.1, 0.5, 0.5, 1.0)
+    boxes: list[tuple[tuple[float, float, float, float, float], int]] = [
+        (box, 0),
+        (dup, 0),
+        (far, 0),
+        (other_cls, 1),
+    ]
+    pairs = near_dup_pairs(boxes)
+    assert [(i, j) for i, j, _ in pairs] == [(0, 1), (1, 2)]
+    assert pairs[0][2] >= 0.95
+    # 同几何异类: 不判定(cls 不同)
+    assert near_dup_pairs([(box, 0), (other_cls, 1)]) == []
+    # 阈值下调: far 对也被捕获
+    assert (0, 2) in [(i, j) for i, j, _ in near_dup_pairs(boxes, 0.9)]
+
+
+def test_merge_rejects_intra_frame_near_dup(tmp_path: Path) -> None:
+    """帧内近重复守卫: IoU≥0.95 → ValueError(报 stem+框对), 违规帧不落盘; 放行阀有效."""
+    imgs = tmp_path / "images"
+    imgs.mkdir()
+    Image.new("RGB", (64, 64)).save(imgs / "a_ok.jpg")
+    Image.new("RGB", (64, 64), (7, 7, 7)).save(imgs / "b_near.jpg")
+    Image.new("RGB", (64, 64), (3, 3, 3)).save(imgs / "c_far.jpg")
+    labels = tmp_path / "labels"
+    labels.mkdir()
+    (labels / "a_ok.txt").write_text(_BOX_YOLO, encoding="utf-8")
+    (labels / "b_near.txt").write_text(_NEAR_YOLO, encoding="utf-8")
+    (labels / "c_far.txt").write_text(_FAR_YOLO, encoding="utf-8")  # 阈值下, 不触发
+    sources = [SourceSpec(LabelKind.YOLO, labels, imgs)]
+    out = tmp_path / "ds"
+    try:
+        merge(sources, out, ["person"], frozenset())
+        raise AssertionError("帧内近重复应抛 ValueError")
+    except ValueError as e:
+        assert "b_near" in str(e) and "近重复" in str(e) and "IoU" in str(e)
+    assert (out / "all/labels/a_ok.txt").exists()  # 违规帧之前的帧已落盘
+    assert not (out / "all/labels/b_near.txt").exists()  # 先检后写: 违规帧不落盘
+    assert not (out / "all/labels/c_far.txt").exists()  # 中止于违规帧
+    # 逃生阀: allow_near_dup=True 放行, 两框均写出
+    out2 = tmp_path / "ds_allow"
+    stats = merge(sources, out2, ["person"], frozenset(), allow_near_dup=True)
+    assert sum(s.boxes for s in stats) == 5
+    near_lines = (out2 / "all/labels/b_near.txt").read_text(encoding="utf-8").strip()
+    assert len(near_lines.splitlines()) == 2
+    # 阈值下帧(IoU≈0.906)默认放行
+    labels_far = tmp_path / "labels_far"
+    labels_far.mkdir()
+    Image.new("RGB", (64, 64), (5, 5, 5)).save(imgs / "c.jpg")
+    (labels_far / "c.txt").write_text(_FAR_YOLO, encoding="utf-8")
+    out3 = tmp_path / "ds_far"
+    stats_far = merge(
+        [SourceSpec(LabelKind.YOLO, labels_far, imgs)], out3, ["person"], frozenset()
+    )
+    assert stats_far[0].boxes == 2
+
+
+def test_cli_allow_near_dup_flag(tmp_path: Path) -> None:
+    """CLI 逃生阀: 默认拒绝(exit 1 + 近重复消息), --allow-near-dup 放行(exit 0)."""
+    imgs = tmp_path / "images"
+    imgs.mkdir()
+    Image.new("RGB", (64, 64)).save(imgs / "a.jpg")
+    labels = tmp_path / "labels"
+    labels.mkdir()
+    (labels / "a.txt").write_text(_NEAR_YOLO, encoding="utf-8")
+    base = [str(tmp_path / "ds"), "--yolo", f"{labels}:{imgs}", "--classes", "person"]
+    r = CliRunner().invoke(app, base)
+    assert r.exit_code == 1
+    assert "近重复" in r.output and "a" in r.output
+    r2 = CliRunner().invoke(app, [*base, "--allow-near-dup"])
+    assert r2.exit_code == 0, r2.output
+    assert "合计 1 帧" in r2.output
 
 
 def test_merge_rejects_conflict_and_empty(tmp_path: Path) -> None:

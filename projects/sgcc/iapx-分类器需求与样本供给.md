@@ -81,6 +81,17 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 
 ## 5. 检测器章节：无需补样本 + 一个登记缺陷
 
+> **【已裁决 2026-09-12】** 归因=训练集近重复 GT 教坏 one-to-one 头（非导出/非推理
+> 封装/非 NMS——YOLO26 无 NMS）。证据：3 证据帧 PT/ONNX 复现一致；dataset_v3 train
+> 含 73 对 IoU≥0.99 + 264 对 0.95-0.99（集中于 cam1 2026-06-22 亚像素对，共识融合层
+> 缺帧内近重复守卫）。处置：iapx 消费端防御维持；person 下次重训前以
+> `jxl.bin.dedup_gt_boxes` 清洗 GT，重训后用本节 52 exact + 194 near 清单回归预期清零；
+> `consensus_dataset` 补帧内近重复守卫防再发。全文：
+> `research/2026-09-12-检测器重复框归因.md`
+> **附带发现（同日 VLM 审计）**：空场景帧存在检测 FP（如 src1 08-00-02 台面边沿
+> conf 0.727，GT 15 窗未覆盖的时段）——iapx 会话守卫建议对 ub=false 且低置信框叠加
+> 时域持续性过滤；分类层 not_person 选项见词典 §4。
+
 **主结论：person 检测器在 n001 窗口域无样本不足类问题**，证据：
 
 | 证据 | 数字 |

@@ -36,11 +36,18 @@ import orjson
 import typer
 import yaml
 
+from jxl.det.box_utils import xyxy_iou
 from jxl.det.hardmine import Box
 
 app = typer.Typer(add_completion=False, help="共识管线产物层 → 平铺集 + data.yaml")
 
 _IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
+
+NEAR_DUP_IOU: float = 0.95
+"""帧内近重复 GT 判定阈值(同帧同类框 IoU ≥ 此值即拒绝).
+
+起因: dataset_v3 因无帧内查重带入 73 对 IoU≥0.99 框(归因报告 §3), 此守卫防再发.
+"""
 
 
 class LabelKind(StrEnum):
@@ -187,6 +194,47 @@ def iter_layer(spec: SourceSpec, levels: frozenset[str]) -> Iterator[StemBoxes]:
             yield from iter_xanylabel(spec)
 
 
+def near_dup_pairs(
+    boxes: Sequence[LabeledBox], iou_thr: float = NEAR_DUP_IOU
+) -> list[tuple[int, int, float]]:
+    """帧内近重复对(纯函数): 同类框 IoU ≥ iou_thr → [(i, j, iou)] (i < j)."""
+    out: list[tuple[int, int, float]] = []
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            if boxes[i][1] != boxes[j][1]:
+                continue
+            iou = xyxy_iou(boxes[i][0][:4], boxes[j][0][:4])
+            if iou >= iou_thr:
+                out.append((i, j, iou))
+    return out
+
+
+def _fmt_xyxy(box: Box) -> str:
+    """框 → 紧凑 xyxy 文本(守卫消息用)."""
+    return f"({box[0]:.4f},{box[1]:.4f},{box[2]:.4f},{box[3]:.4f})"
+
+
+def assert_no_near_dup(
+    stem: str, boxes: Sequence[LabeledBox], iou_thr: float = NEAR_DUP_IOU
+) -> None:
+    """帧内近重复 GT 守卫(归因报告 §3): 同帧同类框 IoU ≥ iou_thr 即 ValueError.
+
+    报 stem + 全部违规框对(修标注源, 或 --allow-near-dup 显式放行);
+    在 _write_frame 之前调用, 违规帧不落盘.
+    """
+    pairs = near_dup_pairs(boxes, iou_thr)
+    if not pairs:
+        return
+    detail = "; ".join(
+        f"[{i}]{_fmt_xyxy(boxes[i][0])} × [{j}]{_fmt_xyxy(boxes[j][0])} IoU={v:.4f}"
+        for i, j, v in pairs
+    )
+    raise ValueError(
+        f"帧内近重复 GT: {stem} 同类框 IoU≥{iou_thr:.2f} 共 {len(pairs)} 对: {detail}"
+        "(修标注源, 或 --allow-near-dup 放行)"
+    )
+
+
 def _write_frame(all_dir: Path, stem: str, boxes: list[LabeledBox], img: Path) -> int:
     """写单帧(label 文本 + 图 symlink), 返回框数."""
     (all_dir / "labels" / f"{stem}.txt").write_text(
@@ -217,11 +265,13 @@ def merge(
     out_dir: Path,
     classes: Sequence[str],
     levels: frozenset[str],
+    allow_near_dup: bool = False,
 ) -> list[LayerStats]:
     """按序合并层 → <out>/all/ + classes.txt + data.yaml, 返回各层统计.
 
-    冲突检测与写入同帧同步(先检后写, 失败即中止). 失败可留半写 all/,
-    同 out_dir 重跑全清 all/ 重建——冲突修复后重跑是标准恢复路径.
+    冲突检测与写入同帧同步(先检后写, 失败即中止); 帧内近重复 GT 同帧校验
+    (同类框 IoU ≥ NEAR_DUP_IOU 即 ValueError, allow_near_dup=True 显式放行).
+    失败可留半写 all/, 同 out_dir 重跑全清 all/ 重建——冲突修复后重跑是标准恢复路径.
     """
     if not sources:
         raise ValueError("零标注源")
@@ -243,6 +293,8 @@ def merge(
         frames = boxes = 0
         for stem, bs, img in iter_layer(spec, levels):
             register_stem(seen, stem, spec.kind)
+            if not allow_near_dup:  # 先检后写: 违规帧不落盘
+                assert_no_near_dup(stem, bs)
             boxes += _write_frame(all_dir, stem, bs, img)
             frames += 1
         stats.append(LayerStats(spec.kind, frames, boxes))
@@ -281,6 +333,13 @@ def main(
     classes: Annotated[
         list[str], typer.Option("--classes", help="类名表(按 cls id 序)")
     ] = ["person"],
+    allow_near_dup: Annotated[
+        bool,
+        typer.Option(
+            "--allow-near-dup",
+            help="放行帧内近重复 GT(同帧同类框 IoU≥0.95 默认拒绝; 逃生阀, 慎用)",
+        ),
+    ] = False,
 ) -> None:
     """合并分层标注 → 平铺集 + classes.txt + data.yaml(配合 jxl_split + yolo_train)."""
     specs = [
@@ -292,7 +351,7 @@ def main(
         typer.secho("至少指定一个层(--dump/--yolo/--xanylabel)", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
     try:
-        stats = merge(specs, out_dir, classes, frozenset(dump_level))
+        stats = merge(specs, out_dir, classes, frozenset(dump_level), allow_near_dup)
     except (ValueError, orjson.JSONDecodeError, yaml.YAMLError) as e:
         typer.secho(f"合并失败: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from e
