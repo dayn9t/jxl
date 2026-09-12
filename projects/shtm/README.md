@@ -37,6 +37,8 @@ projects/shtm/
 
 ## 状态（2026-09-11 增补）
 
+> ⏸ **待办已存档**：插入其他任务，挂起项见 `projects/shtm/TODO.md`（2026-09-12 快照）
+
 | 项 | 状态 |
 |---|---|
 | S1 难例自动削减 | ✅ 2026-09-11：双 VLM（spark+doubao）一致闸门，3,485 对象自动判定 39%；隔离池 `~/ws/trash/s1_hardcase_auto/`（527 帧，未晋升不入正式集）+ 残留人工集 `~/ws/trash/s1_hardcase_review_r2/`（1,246 帧）。**待用户**：① 过目删框拼图（research/2026-09-10-SHTM自动删框拼图-*.jpg）批准晋升 ② 审核 r2。详见 `research/2026-09-11-S1难例自动削减.md` |
