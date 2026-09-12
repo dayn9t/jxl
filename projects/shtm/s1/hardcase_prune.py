@@ -433,8 +433,9 @@ def build_r2(items: list[dict], gated: list[dict], idmap: dict[str, dict[int, in
         os.symlink(img, R2 / "images" / f"{p.stem}.jpg")
 
 
-def write_ledger(items: list[dict], gated: list[dict]) -> None:
-    with LEDGER.open("w") as f:
+def write_ledger(items: list[dict], gated: list[dict], pilot: bool = False) -> None:
+    path = LEDGER.with_name("hardcase_auto_pilot.jsonl") if pilot else LEDGER
+    with path.open("w") as f:
         for it, g in zip(items, gated):
             f.write(json.dumps({**it, "gate": g,
                                 "spark": _CACHE.get(f"hp{PV}|spark|{it['rel']}|{it['idx']}"),
@@ -496,7 +497,7 @@ def main() -> None:
     why = Counter(f"{g['disp']}:{g['why'].split(':')[0]}" for g in gated)
     print("gate:", dict(st))
     print("why:", dict(why))
-    write_ledger(items, gated)
+    write_ledger(items, gated, pilot=bool(args.pilot))
     if args.pilot:
         for it, g in zip(items, gated):
             if g["disp"] == "HUMAN" and "conflict" in g["why"]:
