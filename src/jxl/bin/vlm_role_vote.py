@@ -43,6 +43,10 @@ def load_crops(pool: str) -> list[dict]:
         unc = [v for v in unc if "头顶" in v.get("reason", "") or "头部" in v.get("reason", "")]
     elif pool == "p1":
         unc = [v for v in unc if str(v.get("obs", "")).startswith("p1")]
+    elif pool == "p1_cust":
+        # p1e/p1d 旧 4 类 prompt 判 customer 的 crop——七分类重投挖制服（teller/manager/security）
+        unc = [v for v in verd
+               if str(v.get("obs", "")).startswith("p1") and v["verdict"] == "customer"]
     idx: dict[str, Path] = {}
     for p in (R2 / "seed_crops").glob("*/*.jpg"):
         idx.setdefault(p.stem, p)
