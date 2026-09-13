@@ -19,9 +19,20 @@ from pathlib import Path
 
 import orjson
 import typer
+from PIL import Image
 from ultralytics import YOLO
 
 from jxl.bin.vlm_pool import iou
+
+
+def _crop_image(path: Path, rect: tuple[float, float, float, float]) -> Path:
+    """裁出部署 ROI（缓存于同目录 .crop.jpg，幂等复用）。"""
+    out = path.with_suffix(".crop.jpg")
+    if not out.exists():
+        rx, ry, rw, rh = rect
+        Image.open(path).convert("RGB").crop(
+            (int(rx), int(ry), int(rx + rw), int(ry + rh))).save(out, quality=90)
+    return out
 
 app = typer.Typer(help="共识 GT vs 检测器：召回/疑似误检对照")
 
@@ -34,27 +45,48 @@ def run(
     conf: float = typer.Option(0.5, help="检测置信阈（对齐部署）"),
     iou_th: float = typer.Option(0.5, help="GT 命中 IoU 阈"),
     limit: int = typer.Option(0, help=">0 只评前 N 帧"),
+    crop_rect: str = typer.Option("", help="部署 ROI 'x,y,w,h'（全图坐标）；提供=部署口径：GT 滤进 rect、帧裁 rect 推理"),
 ) -> None:
     """逐帧双模型对照：GT 召回 / 疑似 FP / 框数变化。"""
     rows = [orjson.loads(l) for l in gt_jsonl.open() if l.strip()]
     if limit > 0:
         rows = rows[:limit]
+    rect: tuple[float, float, float, float] | None = None
+    if crop_rect:
+        rx, ry, rw, rh = (float(v) for v in crop_rect.split(","))
+        rect = (rx, ry, rw, rh)
     models = {str(p): YOLO(str(p)) for p in det}
     report: dict[str, dict] = {str(p): {"tp": 0, "n_gt": 0, "n_det": 0, "fps": []}
                                for p in det}
     for r in rows:
         W, H = float(r["row"]["width"]), float(r["row"]["height"])
-        gt = [tuple(b["box_norm"]) for b in r["consensus"]]
-        gt_px = [(b[0] * W, b[1] * H, b[2] * W, b[3] * H) for b in gt]
         img = r["row"]["image"]
+        if rect is not None:
+            rx, ry, rw, rh = rect
+            keep = []
+            for b in r["consensus"]:
+                n = b["box_norm"]
+                cx, cy = (n[0] + n[2]) / 2 * W, (n[1] + n[3]) / 2 * H
+                if rx <= cx < rx + rw and ry <= cy < ry + rh:  # 框中心在 rect 内才计入
+                    keep.append({"box_norm": [round((n[0] * W - rx) / rw, 4),
+                                              round((n[1] * H - ry) / rh, 4),
+                                              round((n[2] * W - rx) / rw, 4),
+                                              round((n[3] * H - ry) / rh, 4)]})
+            gt = [tuple(b["box_norm"]) for b in keep]
+            pred_img: str | Path = _crop_image(Path(img), rect)
+        else:
+            gt = [tuple(b["box_norm"]) for b in r["consensus"]]
+            pred_img = img
         for p, model in models.items():
-            res = model.predict(img, conf=conf, imgsz=640, device="cpu", verbose=False)[0]
+            res = model.predict(pred_img, conf=conf, imgsz=640, device="cpu", verbose=False)[0]
             dets = [tuple(float(v) for v in b) for b in res.boxes.xyxy]
+            if rect is not None:  # 检出（rect 局部像素）→ 归一化与 GT 同域
+                dets = [(d[0] / rw, d[1] / rh, d[2] / rw, d[3] / rh) for d in dets]
             rep = report[p]
-            rep["n_gt"] += len(gt_px)
+            rep["n_gt"] += len(gt)
             rep["n_det"] += len(dets)
             used: set[int] = set()
-            for g in gt_px:
+            for g in gt:
                 hit = next((i for i, d in enumerate(dets)
                             if i not in used and iou(d, g) >= iou_th), None)
                 if hit is not None:
