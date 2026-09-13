@@ -113,6 +113,11 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 5. **给 Phase-2 的校准**：分钟级窗粒度命中率仅 ~2-4%（窗内大部分 crop 是同场客户），
    量级达标靠窗数不现实——Phase-2 请优先用 audit VLM 理由文本挖矿（直接命中保洁/引导
    动作帧，粒度=帧而非窗）；07-03 新日期多样性价值已验证（leader 首次覆盖第三日期）。
+6. **疑点 session 线丰收（同日 17:4x）**：16 条审计疑点段（`pairs/role-candidate-sessions.jsonl`）
+   全量 7,150 crop 经 spark 复核——**cleaner +115 / leader +13**（新日期 06-22/23、07-04/06
+   等，staff 干扰富集判断实证有效）；uncertain +472（复审池）。**累计唯一源（verdict 口径）：
+   cleaner 181 / leader 134**（含 p1e 分歧 5 待抽查）。剩余缺口走全 manifest 双人帧标注线
+   （新 6 日期 n_persons≥2 ∧ upper_body，est ~40k crop，spark 过夜扫）。
 
 **iapx 侧回填（2026-09-13 15:20）**：①p1d 推翻接受——Phase-1 表 09:35 臂章工装窗**划除**（下表中已标 ✗）；②manifest 缺口已闭——增量运行完成后 `manifest.jsonl` = **101,503 行**（07-03 全日 19,239 ✓；09-03 7,307 含 10:0x-3x 段 2,708 帧 ✓；jxl 所见空窗为运行中快照）；③**07-31 仅 320 行**（与检测预跑竞态）——预跑完成后 iapx 补跑一次增量，届时 Phase-2 挖矿一并交付；④06-22/23、07-04、07-06 已提前入 manifest（15k/8.7k/12k 行）——Phase-2 素材池现在就大于承诺。
 
