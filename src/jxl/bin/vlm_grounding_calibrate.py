@@ -78,74 +78,16 @@ PROMPT = (
     'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
 )
 
-_NUM_GROUP = re.compile(r"-?\d+(?:\.\d+)?")
-
-
-def _data_url(path: Path) -> str:
-    im = Image.open(path).convert("RGB")
-    if max(im.size) > MAX_SIDE:
-        s = MAX_SIDE / max(im.size)
-        im = im.resize((round(im.width * s), round(im.height * s)))
-    buf = io.BytesIO()
-    im.save(buf, format="JPEG", quality=88)
-    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-def parse_boxes(text: str, protocol: str) -> list[list[float]]:
-    """按厂商协议解析全部数字组（qwen 键名抖动/重复键挤框 → 正则提数字组, KB 教训 6）。"""
-    t = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
-    if "</think>" in t:
-        t = t.split("</think>", 1)[1]
-    if protocol == "doubao":  # <bbox> 标签优先；新模型（seed-1-6-vision）实测无视官方约束直接吐 JSON → 落到通用提取
-        tagged = [[float(v) for v in _NUM_GROUP.findall(m)]
-                  for m in re.findall(r"<bbox>(.*?)</bbox>", t, re.DOTALL)]
-        if tagged:
-            return tagged
-    if protocol == "glm":  # <|begin_of_box|>[x1,y1,x2,y2]<|end_of_box|> 或退化 JSON
-        t = re.sub(r"<\|begin_of_box\|>|<\|end_of_box\|>", "", t)
-    boxes = []
-    for m in re.finditer(r"\[[^\[\]]{4,200}\]", t):
-        vals = [float(v) for v in _NUM_GROUP.findall(m.group(0))]
-        if len(vals) == 4:
-            boxes.append(vals)
-    return boxes
-
-
-def infer_divisor(boxes: list[list[float]], declared: float) -> tuple[float, float]:
-    """返回坐标 max 反推除数（7 步清单第 3 步）：max≤1.1 → 0-1 浮点；≤1.1*declared → 声明刻度。"""
-    flat = [v for b in boxes for v in b]
-    if not flat:
-        return declared, 0.0
-    mx = max(flat)
-    if mx <= 1.1:
-        return 1.0, mx
-    return declared, mx
-
-
-def greedy_iou_match(pred: list[list[float]], gt: list[list[float]],
-                     ) -> tuple[int, int, int, list[float]]:
-    """一对一贪心匹配，返回 (tp, n_pred, n_gt, matched_ious)。"""
-    pairs = sorted(
-        ((i, j, _iou(p, g)) for i, p in enumerate(pred) for j, g in enumerate(gt)),
-        key=lambda x: -x[2])
-    used_p: set[int] = set()
-    used_g: set[int] = set()
-    ious: list[float] = []
-    for i, j, v in pairs:
-        if v < CONF_THRESHOLD or i in used_p or j in used_g:
-            continue
-        used_p.add(i)
-        used_g.add(j)
-        ious.append(v)
-    return len(used_p), len(pred), len(gt), ious
-
-
-def _iou(a: list[float], b: list[float]) -> float:
-    ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
-    iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
-    inter = ix * iy
-    ua = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-    return inter / ua if ua > 0 else 0.0
+# 共享协议/解析/匹配层：单一数据源 = vlm_pool.py（docstring 契约，勿在此复制）
+from jxl.bin.vlm_pool import (  # noqa: E402
+    MAX_SIDE,
+    MATCH_IOU as CONF_THRESHOLD,
+    greedy_iou_match,
+    image_data_url as _data_url,
+    infer_divisor,
+    iou as _iou,
+    parse_boxes,
+)
 
 
 async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,

@@ -21,6 +21,7 @@ import io
 import json
 import os
 import re
+import statistics
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -194,6 +195,23 @@ def iou(a: tuple[float, float, float, float], b: tuple[float, float, float, floa
     return inter / ua if ua > 0 else 0.0
 
 
+def greedy_iou_match(pred: list[list[float]], gt: list[list[float]], iou_th: float = MATCH_IOU,
+                     ) -> tuple[int, int, int, list[float]]:
+    """一对一贪心匹配（按 IoU 降序占位），返回 (tp, n_pred, n_gt, matched_ious)。"""
+    pairs = sorted(((i, j, iou(p, g)) for i, p in enumerate(pred) for j, g in enumerate(gt)),
+                   key=lambda x: -x[2])
+    used_p: set[int] = set()
+    used_g: set[int] = set()
+    ious: list[float] = []
+    for i, j, v in pairs:
+        if v < iou_th or i in used_p or j in used_g:
+            continue
+        used_p.add(i)
+        used_g.add(j)
+        ious.append(v)
+    return len(used_p), len(pred), len(gt), ious
+
+
 async def call_person(client: httpx.AsyncClient, alias: str, image_url: str) -> Vote:
     """单模型 person grounding；失败=弃权票（ok=False，KB 教训 9：失败不当空票）。"""
     spec = CANDIDATES[alias]
@@ -263,7 +281,7 @@ def consensus_boxes(votes: list[Vote], strong_k: int = 2,
         s_votes = len({a for a in aliases if a in strong_names})
         a_votes = len({a for a in aliases if a in arbiter_names})
         boxes = [pts[i][1] for i in idx]
-        med = tuple(sorted(coords)[len(coords) // 2] for coords in zip(*boxes))
+        med = tuple(statistics.median(coords) for coords in zip(*boxes))
         status = ("trusted" if s_votes >= strong_k
                   else "arbited" if s_votes == 1 and a_votes >= 1 else "low_agreement")
         out.append(ConsensusBox(med, s_votes, a_votes, len(set(aliases)), status,
