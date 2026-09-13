@@ -41,6 +41,8 @@ def load_crops(pool: str) -> list[dict]:
         unc = [v for v in unc if v.get("upper_body")]
     elif pool == "head":
         unc = [v for v in unc if "头顶" in v.get("reason", "") or "头部" in v.get("reason", "")]
+    elif pool == "p1":
+        unc = [v for v in unc if str(v.get("obs", "")).startswith("p1")]
     idx: dict[str, Path] = {}
     for p in (R2 / "seed_crops").glob("*/*.jpg"):
         idx.setdefault(p.stem, p)

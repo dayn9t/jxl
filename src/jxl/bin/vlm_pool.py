@@ -63,15 +63,19 @@ PERSON_PROMPT = (
     'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
 )
 
-ROLE_VALID = {"leader", "cleaner", "customer", "not_person", "uncertain"}
-ROLE_PROMPT = """你是收费窗口监控标注员。判断 crop 中人物的身份类别：
-leader=男性引领员：站姿引导/指座/陪同的工作人员（非坐窗内）
-cleaner=女性保洁员：做保洁的人员（拖把/抹布/扫帚/工装围裙等保洁特征）
-customer=默认客户：其余一切人员（办事/等待/路过）
+ROLE_VALID = {"leader", "cleaner", "teller", "manager", "security",
+              "customer", "not_person", "uncertain"}
+ROLE_PROMPT = """你是收费窗口监控标注员。判断 crop 中人物身份（按制服与动作）：
+cleaner=女性保洁员：保洁动作/工具（拖把抹布扫帚）/围裙工装
+leader=男性引领员：站姿引导/指座/陪同客户
+teller=柜员：黑马甲+白衬衫制服，柜台办公动线
+manager=大堂经理：灰马甲+西服，徽章工牌，大堂站姿
+security=安保：深色制服+头盔（透明面罩）+警徽肩章
+customer=客户：便装办事/等待/路过（制服人员不归此类）
 not_person=框内非人
 uncertain=是人但证据不足无法定类
-判类优先级：有保洁动作或保洁工具→cleaner；有明确引导指座动作且像工作人员→leader；其余→customer。
-仅输出JSON：{"verdict":"leader|cleaner|customer|not_person|uncertain","reason":"15字内"}"""
+判类优先级：保洁→cleaner；引导动作→leader；黑马甲白衬衫→teller；灰马甲西服→manager；制服头盔→security；其余→customer。
+仅输出JSON：{"verdict":"...","reason":"15字内"}（verdict 取上述之一）"""
 
 
 def parse_verdict(text: str) -> tuple[str, str]:
