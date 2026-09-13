@@ -249,3 +249,13 @@ iapx 对接时直接指向；**names 契约（字母序权威）**：0=cleaner, 
 3=not_person——注意 customer 在 leader 之前）。词典线 0.80 未达（leader 差 8pt），
 路径=uncertain 5,541 人工复审捞底 + 新日期增量 → v3。分类用途为主目标软选择（降权），
 v2 已显著优于 v1，建议 iapx 先行接入。
+
+**jxl 侧 role v3 交付（2026-09-14 03:2x，七分类）**：词典 §6 扩类后重训（uncertain 池
+5,541 零人工复审——四模型投票 5,000 张 + GLM 视觉仲裁 285 张 split 残量）。test top1
+**0.8926**（v2 0.8414）。分类别 recall：**cleaner 0.879（+19.3pt 首次达 0.80 线）**、
+**teller 0.875（新类首训达线）**、leader 0.775（差 2.5pt）、customer 0.967、not_person
+0.991；manager/security 素材不足（n=3/1）仅供参考继续采集。**部署候选已 stage：
+`2026-09-14_person_role_n_v3.pt/.onnx`（七类 names 字母序：cleaner/customer/leader/
+manager/not_person/security/teller）**。建议 iapx 直接对接 v3（跳过 v2——v2 的 customer
+类被制服人员污染 ~90% 已由七分类纠正）。leader 最后 2.5pt 缺口路径：security/manager
+采集窗顺带挖引导动作帧 + uncertain 头顶层放弃池不再捞。
