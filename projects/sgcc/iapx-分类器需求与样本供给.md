@@ -106,6 +106,13 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
    **被复核推翻**——200 帧全判 customer/not_person，无引导动作证据，不入 leader 正类
    （臂章工装若属第三工种，按词典 residual 扩展规则处理，素材留 uncertain 池）。
 3. 净效果：cleaner 唯一源 44→52；leader 仍 104（押在 07-03 两窗与 Phase-2）。
+4. **补窗复核（同日 15:4x，manifest 闭合后）**：p1b/p1c（07-03 leader 两窗，1,025 crop）
+   净增 **leader +14 / cleaner +12**（verdict 口径）；p1e（staff 在座 1,482 crop）绝大
+   多数 customer/uncertain，符合词典边界预期（其中 verdict=leader 3/cleaner 2 系 spark
+   与词典分歧，v2 build 前人工抽查后定）。**累计唯一源：cleaner 64 / leader 118**。
+5. **给 Phase-2 的校准**：分钟级窗粒度命中率仅 ~2-4%（窗内大部分 crop 是同场客户），
+   量级达标靠窗数不现实——Phase-2 请优先用 audit VLM 理由文本挖矿（直接命中保洁/引导
+   动作帧，粒度=帧而非窗）；07-03 新日期多样性价值已验证（leader 首次覆盖第三日期）。
 
 **iapx 侧回填（2026-09-13 15:20）**：①p1d 推翻接受——Phase-1 表 09:35 臂章工装窗**划除**（下表中已标 ✗）；②manifest 缺口已闭——增量运行完成后 `manifest.jsonl` = **101,503 行**（07-03 全日 19,239 ✓；09-03 7,307 含 10:0x-3x 段 2,708 帧 ✓；jxl 所见空窗为运行中快照）；③**07-31 仅 320 行**（与检测预跑竞态）——预跑完成后 iapx 补跑一次增量，届时 Phase-2 挖矿一并交付；④06-22/23、07-04、07-06 已提前入 manifest（15k/8.7k/12k 行）——Phase-2 素材池现在就大于承诺。
 - **流程**：照 jxl 既有（标注 → VLM 审核 → 训练）；素材 = §2 全集重标注（单人双人帧都要）
