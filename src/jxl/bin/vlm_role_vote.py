@@ -89,11 +89,24 @@ def run(
 
     async def _all() -> list[dict]:
         async with httpx.AsyncClient() as client:
+            done: set[str] = set()
+            if out.exists():  # 断点重入：已投 uid 跳过（挂死重跑不从头再来）
+                for l in out.open():
+                    if l.strip():
+                        done.add(json.loads(l)["uid"])
+            todo = [r for r in crops if r["uid"] not in done]
+            typer.echo(f"todo={len(todo)} done={len(done)}", err=True)
             res = []
-            for i in range(0, len(crops), concurrency):
-                batch = crops[i:i + concurrency]
-                res.extend(await asyncio.gather(*[one(client, r) for r in batch]))
-                typer.echo(f"{min(i + concurrency, len(crops))}/{len(crops)}", err=True)
+            out_f = out.open("a")
+            for i in range(0, len(todo), concurrency):
+                batch = todo[i:i + concurrency]
+                batch_res = await asyncio.gather(*[one(client, r) for r in batch])
+                for br in batch_res:
+                    out_f.write(json.dumps(br, ensure_ascii=False) + "\n")
+                out_f.flush()
+                res.extend(batch_res)
+                typer.echo(f"{min(i + concurrency, len(todo))}/{len(todo)}", err=True)
+            out_f.close()
             return res
 
     results = asyncio.run(_all())
