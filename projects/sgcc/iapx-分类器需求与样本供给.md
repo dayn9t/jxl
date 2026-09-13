@@ -118,6 +118,11 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
    等，staff 干扰富集判断实证有效）；uncertain +472（复审池）。**累计唯一源（verdict 口径）：
    cleaner 181 / leader 134**（含 p1e 分歧 5 待抽查）。剩余缺口走全 manifest 双人帧标注线
    （新 6 日期 n_persons≥2 ∧ upper_body，est ~40k crop，spark 过夜扫）。
+7. **全 manifest 标注线完成（同日 21:4x）**：55,011 crop（新 7 日期双人帧∧upper_body）全部
+   spark 复核——净增 **cleaner +142 / leader +111**。**全局累计（68,093 verdict 行）：
+   cleaner 295（≈达标 300）/ leader 183（缺口 117）**；uncertain 池 5,541（人工复审富矿，
+   可再捞稀有类）。v2 决策：cleaner 已达标；leader 183 较 v1(104) +76%，先训 v2 实证
+   recall 提升幅度再定是否继续扩窗（假设-实证循环）。
 
 **iapx 侧回填（2026-09-13 15:20）**：①p1d 推翻接受——Phase-1 表 09:35 臂章工装窗**划除**（下表中已标 ✗）；②manifest 缺口已闭——增量运行完成后 `manifest.jsonl` = **101,503 行**（07-03 全日 19,239 ✓；09-03 7,307 含 10:0x-3x 段 2,708 帧 ✓；jxl 所见空窗为运行中快照）；③**07-31 仅 320 行**（与检测预跑竞态）——预跑完成后 iapx 补跑一次增量，届时 Phase-2 挖矿一并交付；④06-22/23、07-04、07-06 已提前入 manifest（15k/8.7k/12k 行）——Phase-2 素材池现在就大于承诺。
 
