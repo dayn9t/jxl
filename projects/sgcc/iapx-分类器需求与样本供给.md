@@ -122,5 +122,58 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 
 - 部署线照旧：训练 → `embed_contract` → ONNX + symlink 切现网（回滚 symlink 还原）
 - iapx 侧验收：GT（15 窗）+ benchmark（版本化用户裁决）双口径回归；OSNet 强 embedding
-  接入后 ReID 阈值会重定标（2026-09-12 裁决，进行中）
+  接入后 ReID 阈值会重定标（见 §7，2026-09-13 裁决 B）
 - 对接人：iapx 会话代理（Claude Code，dayn9t 的会话）；样本/证据增量随时可请求
+
+## 7. 需求 C：OSNet 域微调（ReID 治本，2026-09-13 用户裁决 B）
+
+> 背景：通用 MSMT17 权重在 n001 窗口域定标门**七格全败**（2 权重 × 3 测量法，最优
+> gap −0.016；same/diff 余弦在 0.54-0.75 带重叠不可逾越）——通用权重判别上限不足，
+> 治本 = 域微调。证据全套：`/mnt/data/jiang/ws/iapx/n001/gt/osnet-calibration*.md`
+> （4 份）+ `osnet-evidence-run{,2}.md`。期间生产/金丝雀继续 handcrafted HSV@0.8 基线
+> （GT F1 0.9677）作过渡。
+
+### 7.1 基座契约（勿选错变体）
+
+- **基座权重**：`osnet_x0_75_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip_jitter.pth`
+  （`/mnt/data/jiang/ws/sgcc/person/osnet_weights/`）
+- **架构 = BN 版 OSNet x0_75，非 AIN**（实测钦定权重无 InstanceNorm 键，AIN 定义
+  strict load 440 missing；BN 定义 0/0 直载）。参考实现：`~/cc/py/iapx/src/iapx/vendor/osnet.py`（MIT vendored BN 定义）
+- 推理契约（微调后不变）：输入 `N×3×256×128`、ImageNet mean/std 归一、无 TTA、
+  512-d 未归一化输出（运行时 L2 归一化）；ONNX 导出脚本 `iap-s2/script/export_osnet_onnx.py`
+  （剥 fc 头、动态 batch、自检）——Rust 侧现存 AIN x1_0 ONNX 与本基座非同模型，回移须重导
+
+### 7.2 训练数据构造（iapx 供 pair list，jxl 侧切图）
+
+**crop 来源 = §2 samples/ 全帧 + manifest bbox**（`box_norm` 直接换算），无需另行截图。
+iapx 侧产 **pair list**（jsonl：两侧 `{source_id, date, stem, det_idx}` + `label` + `origin`）：
+
+| 集合 | 构造规则 | 规模（现语料） | 用途 |
+|---|---|---|---|
+| **正对（same）** | 同 session 内取首/中/尾检测对；**仅 L0 审计采信的 session**（VLM same=true 且 conf≥0.95 且不与归档裁决矛盾）——剔除模式 C 残余标签噪声 | ~70 session × 3 对 ≈ 200+ 对 | 训练 |
+| **负对（diff）** | **跨 session 且时间间隔 >1h 或跨日**——严禁相邻 session 对（benchmark 6 个合并组 = 同人被切成相邻 session，相邻负对必错标）；从 GT 换人 6 处 + audit same=false 真疑点 4 处补充边界硬负对 | 数百对起 | 训练 |
+| **裁决对（held-out）** | v2c 定标的 106 对（qwen3.5-35b 异源 VLM 交叉核验清洗后；缓存 `gt/calibrate-v2-checks/` 115 键） | 106 对 | **验收专用，不进训练**（防评估污染） |
+
+随 T8/T9 全量跑完，session 数 75→800+，正对规模免费扩大一个量级（pair list 增量重产）。
+
+### 7.3 训练建议（jxl 域，仅供参考）
+
+- 微调起点 = §7.1 基座（非 from-scratch——域数据量级撑不起）；triplet/circle loss +
+  小学习率（基座名内 amsgrad/labelsmooth/flip/jitter 即原配方线索）
+- **类别 = person identity（每 session 一 id）**，不是二分类——ReID 要的是度量空间
+- 防过拟合：裁决对 held-out（见上）+ 早停看 held-out same_p5/diff_p95 间隔
+
+### 7.4 验收门（两段，iapx 侧执行）
+
+1. **定标门（硬）**：v2c 非对称端点测量法复测（旧端 = 窗内≤5帧主 det 均值 L2 gallery、
+   新端 = 单帧；工具 `iapx/gt/calibrate.py`）——**same_p5 > diff_p95**（分布完全分离；
+   七格全败时最优 gap −0.016，微调目标把它翻正）
+2. **管道门**：GT 15 窗 F1 ≥ 0.9677 且换人 0、过切 ≤2；benchmark 六合并组 4/6 → 5-6/6
+   （G3 黄昏区应拆开）；v3 审计 4 真疑点逐窗验证
+
+### 7.5 交付与回流
+
+- 交付物：微调后 `.pth` + ONNX（§7.1 导出脚本）+ 训练指纹（数据日期集/LR/epoch）
+- iapx 侧：`reembed_cache` 全量换嵌入（分量校验通道，~20min）→ 重定标 → 验收门 →
+  cfg 轴 tag 建议命名 `osnet-x0_75-ft-v{n}`
+- 时序：不阻塞金丝雀/全量（A 过渡先行）；微调权重到达后作为独立飞轮圈次验收
