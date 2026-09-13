@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""VLM-Ensemble: 人工队列争议帧的三 VLM 多数仲裁(豆包已票 + Qwen + MiniMax).
+"""[已弃用→共识新链路 vlm_pool/vlm_consensus_gt/vlm_role_vote（2026-09-14）：口径不同（IoU0.4 一对一 vs IoU0.5 聚类；模型池不同）产出数字不可比；保留因 doubao_arbitrate 测试仍引用。qwen 刻度契约以 pool 为准（0-1000 归一化，非像素）。
+
+VLM-Ensemble: 人工队列争议帧的三 VLM 多数仲裁(豆包已票 + Qwen + MiniMax).
 
 输入 doubao_arbitrate 的 manual/manifest.jsonl(431 帧, 含 doubao_boxes 与原模型框),
 对每帧再调 Qwen-VL / MiniMax-VL grounding 各得一票 → 三 VLM 多数判定:
