@@ -254,7 +254,7 @@ v2 已显著优于 v1，建议 iapx 先行接入。
 5,541 零人工复审——四模型投票 5,000 张 + GLM 视觉仲裁 285 张 split 残量）。test top1
 **0.8926**（v2 0.8414）。分类别 recall：**cleaner 0.879（+19.3pt 首次达 0.80 线）**、
 **teller 0.875（新类首训达线）**、leader 0.775（差 2.5pt）、customer 0.967、not_person
-0.991；manager/security 素材不足（n=3/1）仅供参考继续采集。**部署候选已 stage：
+0.991；manager/security 素材不足（test n=3/1；train 唯一源 ~10/~7 扩采中）仅供参考。**部署候选已 stage：
 `2026-09-14_person_role_n_v3.pt/.onnx`（七类 names 字母序：cleaner/customer/leader/
 manager/not_person/security/teller）**。建议 iapx 直接对接 v3（跳过 v2——v2 的 customer
 类被制服人员污染 ~90% 已由七分类纠正）。leader 最后 2.5pt 缺口路径：security/manager
