@@ -25,22 +25,27 @@ from loguru import logger
 from PIL import Image
 from torchvision import transforms
 
-# 自动 git clone torchreid 源码(不 pip build)
+# torchreid 源码惰性准备（audit 2026-09-14：clone 副作用移出 import——
+# 模块级网络 IO 违反可测试性原则 #10，且无网环境直接 ImportError）
 TORCHREID_SRC = Path("/tmp/torchreid_src")
-if not TORCHREID_SRC.exists():
-    subprocess.run(
-        [
-            "git",
-            "clone",
-            "--depth",
-            "1",
-            "https://github.com/KaiyangZhou/deep-person-reid.git",
-            str(TORCHREID_SRC),
-        ],
-        check=True,
-    )
-if str(TORCHREID_SRC) not in sys.path:
-    sys.path.insert(0, str(TORCHREID_SRC))
+
+
+def _ensure_torchreid() -> None:
+    """首次调用时 clone+注入 sys.path；已存在则跳过."""
+    if not TORCHREID_SRC.exists():
+        subprocess.run(
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/KaiyangZhou/deep-person-reid.git",
+                str(TORCHREID_SRC),
+            ],
+            check=True,
+        )
+    if str(TORCHREID_SRC) not in sys.path:
+        sys.path.insert(0, str(TORCHREID_SRC))
 
 # typer CLI 惯用模式
 
@@ -70,6 +75,7 @@ def main(
     device: Annotated[str, typer.Option(help="设备 cuda/cpu")] = "cuda",
 ) -> None:
     """提 person crop 的 OSNet Re-ID embedding(512d 身份特征, L2 归一化)."""
+    _ensure_torchreid()
     from torchreid import models
 
     if device == "cuda" and not torch.cuda.is_available():

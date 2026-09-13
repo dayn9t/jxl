@@ -187,12 +187,7 @@ def infer_divisor(boxes: list[list[float]], declared: float) -> tuple[float, flo
     return (1.0, mx) if mx <= 1.1 else (declared, mx)
 
 
-def iou(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> float:
-    ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
-    iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
-    inter = ix * iy
-    ua = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-    return inter / ua if ua > 0 else 0.0
+from jxl.det.box_utils import xyxy_iou as iou  # 单一数据源：规范 IoU 实现（原则 8）
 
 
 def greedy_iou_match(pred: list[list[float]], gt: list[list[float]], iou_th: float = MATCH_IOU,

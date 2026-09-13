@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from jxl.det.box_utils import xyxy_iou
+
 import typer
 
 NEAR_DUP_IOU = 0.95
@@ -54,14 +56,8 @@ def boxes_to_text(boxes: list[YoloBox]) -> str:
 
 
 def iou(a: YoloBox, b: YoloBox) -> float:
-    ax1, ay1, ax2, ay2 = a.xyxy
-    bx1, by1, bx2, by2 = b.xyxy
-    ix = max(0.0, min(ax2, bx2) - max(ax1, bx1))
-    iy = max(0.0, min(ay2, by2) - max(ay1, by1))
-    inter = ix * iy
-    union = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - inter
-    return inter / union if union > 0 else 0.0
-
+    """YoloBox IoU——委托规范实现 jxl.det.box_utils.xyxy_iou."""
+    return xyxy_iou(a.xyxy, b.xyxy)
 
 def find_dup_pairs(boxes: list[YoloBox], threshold: float = NEAR_DUP_IOU
                    ) -> list[tuple[int, int]]:
