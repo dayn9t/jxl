@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import os
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -60,6 +62,73 @@ PERSON_PROMPT = (
     "top-left origin, format [x1,y1,x2,y2]. "
     'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
 )
+
+ROLE_VALID = {"leader", "cleaner", "customer", "not_person", "uncertain"}
+ROLE_PROMPT = """你是收费窗口监控标注员。判断 crop 中人物的身份类别：
+leader=男性引领员：站姿引导/指座/陪同的工作人员（非坐窗内）
+cleaner=女性保洁员：做保洁的人员（拖把/抹布/扫帚/工装围裙等保洁特征）
+customer=默认客户：其余一切人员（办事/等待/路过）
+not_person=框内非人
+uncertain=是人但证据不足无法定类
+判类优先级：有保洁动作或保洁工具→cleaner；有明确引导指座动作且像工作人员→leader；其余→customer。
+仅输出JSON：{"verdict":"leader|cleaner|customer|not_person|uncertain","reason":"15字内"}"""
+
+
+def parse_verdict(text: str) -> tuple[str, str]:
+    """role 分类响应解析 → (verdict, reason)；非法 verdict 归 parse_error。"""
+    t = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    if "</think>" in t:
+        t = t.split("</think>", 1)[1]
+    m = re.search(r"\{.*\}", t, re.DOTALL)
+    if not m:
+        return "parse_error", ""
+    try:
+        d = json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return "parse_error", ""
+    v = str(d.get("verdict", ""))
+    return (v if v in ROLE_VALID else "parse_error"), str(d.get("reason", ""))[:30]
+
+
+async def call_role_vote(client: httpx.AsyncClient, alias: str,
+                         image_url: str) -> tuple[str, str, str]:
+    """返回 (alias, verdict, reason)；调用失败 verdict=api_error（弃权语义）。"""
+    spec = CANDIDATES[alias]
+    key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+    payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 120,
+               "messages": [{"role": "user", "content": [
+                   {"type": "image_url", "image_url": {"url": image_url}},
+                   {"type": "text", "text": ROLE_PROMPT}]}]}
+    try:
+        r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
+        r.raise_for_status()
+        return alias, *parse_verdict(r.json()["choices"][0]["message"]["content"])
+    except Exception as e:  # noqa: BLE001 - 失败=弃权票
+        return alias, "api_error", f"{type(e).__name__}"[:60]
+
+
+def role_consensus(votes: dict[str, str]) -> tuple[str, str]:
+    """分类共识纯函数：votes={alias: verdict}（弃权票已剔除）。
+
+    返回 (status, verdict)：
+      trusted   强票 ≥2 且全票一致（或 ≥3/4 全体一致）
+      arbited   2 票一致且含仲裁票（第四意见救回弱共识）
+      split     其余（真分歧 → 人工）
+    """
+    strong = {a for a, s in CANDIDATES.items() if s["strength"] == "strong"}
+    arbiter = {a for a, s in CANDIDATES.items() if s["strength"] == "arbiter"}
+    cnt = Counter(votes.values())
+    if not cnt:
+        return "split", ""
+    verdict, n = cnt.most_common(1)[0]
+    strong_same = sum(1 for a, v in votes.items() if v == verdict and a in strong)
+    all_same = n == len(votes)
+    if (strong_same >= 2 and n >= 2 and all_same) or n >= 3:
+        return "trusted", verdict
+    if n == 2 and any(a in arbiter for a, v in votes.items() if v == verdict):
+        return "arbited", verdict
+    return "split", verdict
 
 _NUM_GROUP = re.compile(r"-?\d+(?:\.\d+)?")
 
