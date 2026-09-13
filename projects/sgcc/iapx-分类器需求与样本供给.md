@@ -227,3 +227,10 @@ person-change 换人硬负对 7）+ `eval.jsonl` **106 对 held-out**（same 77 
 - iapx 侧：`reembed_cache` 全量换嵌入（分量校验通道，~20min）→ 重定标 → 验收门 →
   cfg 轴 tag 建议命名 `osnet-x0_75-ft-v{n}`
 - 时序：不阻塞金丝雀/全量（A 过渡先行）；微调权重到达后作为独立飞轮圈次验收
+
+**jxl 侧 OSNet v1 结论（2026-09-13 19:0x）**：`osnet_ft.py` v1 已训（332 对/59 ids/
+150 crops，circle loss，早停 patience=10）——**best_gap = −0.565 vs 未调基线 −0.4995
+（恶化）**，早停正确兜底。实证结论：pair list 现量级撑不起度量学习（§7.3 风险预判
+命中）。**v2 触发条件 = iapx 用 T9 全量 322 sessions 增量重产 pair list**（正对 204→
+~966 量级）后重训；脚本/管线已验证可复用（build→train→eval 全通，远端路径契约
+crops.jsonl 需带路径替换——已修）。期间生产维持 HSV@0.8 过渡基线（§7 原决议不变）。
