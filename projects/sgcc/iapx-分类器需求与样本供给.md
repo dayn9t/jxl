@@ -146,7 +146,12 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 ### 7.2 训练数据构造（iapx 供 pair list，jxl 侧切图）
 
 **crop 来源 = §2 samples/ 全帧 + manifest bbox**（`box_norm` 直接换算），无需另行截图。
-iapx 侧产 **pair list**（jsonl：两侧 `{source_id, date, stem, det_idx}` + `label` + `origin`）：
+**✅ pair list 已交付（2026-09-13 11:41，iapx `540b26e`）**：`/mnt/data/jiang/ws/iapx/n001/samples/pairs/`
+——`train.jsonl` 418 对（session-anchor 正对 204 / session-distant 远距负对 207 /
+person-change 换人硬负对 7）+ `eval.jsonl` **106 对 held-out**（same 77 / diff 29，v2c
+交叉核验清洗后逐对一致）+ README；行 schema `{label, origin, a, b}`，a/b =
+`{mkv, time, stem, det_index}`，join manifest（键 mkv+wallclock）取 `detections[det_index].box_norm`
+——40 行抽验 join 零缺失。L0 采信 69/76 session（37+32）。构造规则（契约化）：
 
 | 集合 | 构造规则 | 规模（现语料） | 用途 |
 |---|---|---|---|
