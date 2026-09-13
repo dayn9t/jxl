@@ -239,3 +239,13 @@ person-change 换人硬负对 7）+ `eval.jsonl` **106 对 held-out**（same 77 
 命中）。**v2 触发条件 = iapx 用 T9 全量 322 sessions 增量重产 pair list**（正对 204→
 ~966 量级）后重训；脚本/管线已验证可复用（build→train→eval 全通，远端路径契约
 crops.jsonl 需带路径替换——已修）。期间生产维持 HSV@0.8 过渡基线（§7 原决议不变）。
+
+**jxl 侧 role v2 交付（2026-09-13 23:5x）**：素材扩至唯一源 cleaner 295 / leader 183 后重训
+（train 1,792/2,120/1,602/2,384，过采样对齐 customer 量级）。test（含副本口径）top1 0.8414，
+分类别 recall 对比 v1——**leader 0.496→0.719（+22pt）**、cleaner 0.667→0.686、customer
+0.942→0.971、not_person 1.000→0.997。主混淆=稀有类→customer（residual 吸走，素材多样性
+不足）。**部署候选已 stage：`2026-09-13_person_role_n.pt/.onnx`**（新族无旧 symlink，
+iapx 对接时直接指向；**names 契约（字母序权威）**：0=cleaner, 1=customer, 2=leader,
+3=not_person——注意 customer 在 leader 之前）。词典线 0.80 未达（leader 差 8pt），
+路径=uncertain 5,541 人工复审捞底 + 新日期增量 → v3。分类用途为主目标软选择（降权），
+v2 已显著优于 v1，建议 iapx 先行接入。
