@@ -95,6 +95,17 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 **Phase-2（今晚 T9 全量后补满）**：06-22/23、07-04、07-06、07-31 五日 ~600 新 session 的 audit VLM 理由同法挖矿 → 目标凑齐 cleaner ≥8 窗 / leader ≥8 窗、日期 ≥5（仅差 1 日即达标）。
 **manifest 已扩**：`export_samples` 增量已跑（07-03/07-05/09-03 金丝雀日帧并入 samples/，含上表所有窗的快照图与 bbox）。
 **注意**：§3.3 v1 锚点窗之外，上表 07-03/09-03 全部为新日期新现场多样性；staff 在座/业务员窗按词典边界判例归 uncertain/不入正类，由 jxl 侧裁决。
+
+**jxl 侧消费注记（2026-09-13 15:1x，spark 复核后）**：
+1. **manifest 缺口**：上表声称「07-03 已并入」——实测 `manifest.jsonl` 无 07-03 行（jpg 已在
+   `samples/1/2026-07-03/`，缺 manifest 行即无 bbox 可 join）；09-03 的 300 帧仅覆盖
+   09:20-09:27 与 11:30-11:34（金丝雀段），**staff 在座窗 10:01-10:34 零帧**。请 iapx 侧重跑
+   `export_samples` 增量补 07-03 全日 + 09-03 10:01-10:34 段。
+2. **Phase-1 已提 2/5 窗**（84+200 crop），spark 复核（`iapx_role_seed_review.py`，verdicts
+   已并入 `seed_verdicts.jsonl`）：p1a 净增 **cleaner +8**；p1d（leader? 工装臂章窗）
+   **被复核推翻**——200 帧全判 customer/not_person，无引导动作证据，不入 leader 正类
+   （臂章工装若属第三工种，按词典 residual 扩展规则处理，素材留 uncertain 池）。
+3. 净效果：cleaner 唯一源 44→52；leader 仍 104（押在 07-03 两窗与 Phase-2）。
 - **流程**：照 jxl 既有（标注 → VLM 审核 → 训练）；素材 = §2 全集重标注（单人双人帧都要）
 
 ## 5. 检测器章节：无需补样本 + 一个登记缺陷
