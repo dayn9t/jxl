@@ -11,7 +11,7 @@ iapx 是 n001 收费窗口的**会话切分原型**（检测 → 上半身分类
 
 | 模型 | 部署物 | iapx 侧角色 |
 |---|---|---|
-| person 检测器 | `2026-09-09_person_n.pt/.onnx`（v3） | crop640 域 person 检测 |
+| person 检测器 | `2026-09-13_person_n.pt/.onnx`（v4，09-13 23:19 上线） | crop640 域 person 检测；重复框 1,267→7，消费端 IoU≥0.95 防御仍建议保留 |
 | upper_body 分类器 | `2026-09-10_person_upper_n.pt/.onnx`（主力） | 行走下半身过滤（0.5 阈） |
 
 iapx 产出根：`/mnt/data/jiang/ws/iapx/n001/`；源视频（只读）：
@@ -78,7 +78,7 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
   - 引领员：src2 2026-07-01 10-32（指座位引导客户）、15-24（开场即 staff）
   - staff 在座（非办理）：src2 2026-07-01 14-13、15-06
 
-### 4.1 供给答复（2026-09-13 14:40，对应 `docs/2026-09-13-jxl-role-classifier-sample-supply.md` §3.1）
+### 4.1 供给答复（2026-09-13 14:40，对应 `~/cc/next/iap-s2/docs/2026-09-13-jxl-role-classifier-sample-supply.md` §3.1）
 
 **Phase-1 窗表（立即可用，4 日期；来源 = audit VLM 理由挖矿 + 当日用户 L1 人工确认）**：
 
@@ -120,11 +120,11 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
    （新 6 日期 n_persons≥2 ∧ upper_body，est ~40k crop，spark 过夜扫）。
 7. **全 manifest 标注线完成（同日 21:4x）**：55,011 crop（新 7 日期双人帧∧upper_body）全部
    spark 复核——净增 **cleaner +142 / leader +111**。**全局累计（68,093 verdict 行）：
-   cleaner 295（≈达标 300）/ leader 183（缺口 117）**；uncertain 池 5,541（人工复审富矿，
+   cleaner 295（≈达标 300）/ leader 183（缺口 117；两线 crop 有重叠，全局累计为去重后值）**；uncertain 池 5,541（人工复审富矿，
    可再捞稀有类）。v2 决策：cleaner 已达标；leader 183 较 v1(104) +76%，先训 v2 实证
    recall 提升幅度再定是否继续扩窗（假设-实证循环）。
 
-**iapx 侧回填（2026-09-13 15:20）**：①p1d 推翻接受——Phase-1 表 09:35 臂章工装窗**划除**（下表中已标 ✗）；②manifest 缺口已闭——增量运行完成后 `manifest.jsonl` = **101,503 行**（07-03 全日 19,239 ✓；09-03 7,307 含 10:0x-3x 段 2,708 帧 ✓；jxl 所见空窗为运行中快照）；③**07-31 仅 320 行**（与检测预跑竞态）——预跑完成后 iapx 补跑一次增量，届时 Phase-2 挖矿一并交付；④06-22/23、07-04、07-06 已提前入 manifest（15k/8.7k/12k 行）——Phase-2 素材池现在就大于承诺。
+**iapx 侧回填（2026-09-13 15:20）**：①p1d 推翻接受——Phase-1 表 09:35 臂章工装窗**划除**（下表中已标 ✗）；②manifest 缺口已闭——增量运行完成后 `manifest.jsonl` = **101,503 行**（07-03 全日 19,239 ✓；09-03 7,307 含 10:0x 段（staff 窗现值 1,569 帧 ✓；2,708 为 mid-run 快照口径）；jxl 所见空窗为运行中快照）；③**07-31 仅 320 行**（与检测预跑竞态）——预跑完成后 iapx 补跑一次增量，届时 Phase-2 挖矿一并交付；④06-22/23、07-04、07-06 已提前入 manifest（15k/8.7k/12k 行）——Phase-2 素材池现在就大于承诺。
 
 **Phase-2 终报（2026-09-13 17:10，T9 全量后）**：①新日（06-22/23、07-04、07-06、07-31）audit 理由**零直接 role 命中**——首尾帧采样对动作类角色天然低概率，窗口挖矿到此为数据上限；②**替代供给 = 全量 10 日 manifest**（top-up 后 ~130k 帧行，07-31 补满）+ **新日 30 条审计疑点 session 名单**（same=false 27 + null 3，staff/干扰富集段——jxl 侧优先对这些 session 的 crop 跑 VLM 标注，命中率远高于全扫）；③T9 分段 322 sessions 全 10 日就绪、GT F1 0.9677 逐位复现——session 边界数据可直接用于时段定位。结论：≥300 唯一源的正路 = jxl 全 manifest 标注线 + 新日期多样性，窗口表已完成历史使命。
 - **流程**：照 jxl 既有（标注 → VLM 审核 → 训练）；素材 = §2 全集重标注（单人双人帧都要）
@@ -135,7 +135,7 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 > 封装/非 NMS——YOLO26 无 NMS）。证据：3 证据帧 PT/ONNX 复现一致；dataset_v3 train
 > 含 73 对 IoU≥0.99 + 264 对 0.95-0.99（集中于 cam1 2026-06-22 亚像素对，共识融合层
 > 缺帧内近重复守卫）。处置：iapx 消费端防御维持；person 下次重训前以
-> `jxl.bin.dedup_gt_boxes` 清洗 GT，重训后用本节 52 exact + 194 near 清单回归预期清零；
+> `jxl.bin.dedup_gt_boxes` 清洗 GT，重训后用重复对清单回归预期清零（09-13 已按全量重扫清单 1,267 帧执行，见归因报告 §6）；
 > `consensus_dataset` 补帧内近重复守卫防再发。全文：
 > `research/2026-09-12-检测器重复框归因.md`
 > **附带发现（同日 VLM 审计）**：空场景帧存在检测 FP（如 src1 08-00-02 台面边沿
