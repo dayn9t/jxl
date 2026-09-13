@@ -3,6 +3,13 @@
 > 数据根：`/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/`（本机数据盘）
 > 训练机：sgcc0（对等路径 `~/ws/sgcc/...`，见 memory training-on-sgcc0）
 
+## 项目状态（2026-09-13 增补：iapx 三件套 + v4 重训）
+
+| 里程碑 | 状态 |
+|---|---|
+| iapx 三件套（A 重训/B 身份分类器/C 重复框归因） | ✅ 全部落地——**先读 `research/2026-09-12-iapx三件套执行报告.md`**；A 部署物已stage（`2026-09-12_person_upper_n_v2.*`，symlink 未切待协同）；B v1 可行性（词典 `身份分类器词典.md`，v2 等稀有类素材）；C 工具+守卫落地 |
+| person v4 重训（重复 GT 清洗版） | 🔄 数据集建成（834 框清洗，0 残留），rsync 上 sgcc0 被打断——**续跑手册见执行报告 §6** |
+
 ## 项目状态（2026-09-09）
 
 | 里程碑 | 状态 |
