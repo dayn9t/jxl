@@ -78,28 +78,28 @@ def _votes(**kw: str) -> dict[str, str]:
 
 def test_role_consensus_trusted_all_agree() -> None:
     """四票全一致 → trusted（含仲裁票在内的全员一致）."""
-    v = _votes(**{"qwen38-local": "cleaner", "qwen-flash": "cleaner",
+    v = _votes(**{"qwen35b-local": "cleaner", "qwen-flash": "cleaner",
                   "doubao-vl": "cleaner", "glm-flash": "cleaner"})
     assert role_consensus(v) == ("trusted", "cleaner")
 
 
 def test_role_consensus_trusted_three() -> None:
     """≥3 票一致 → trusted（无论构成）."""
-    v = _votes(**{"qwen38-local": "teller", "qwen-flash": "teller",
+    v = _votes(**{"qwen35b-local": "teller", "qwen-flash": "teller",
                   "doubao-vl": "teller", "glm-flash": "customer"})
     assert role_consensus(v) == ("trusted", "teller")
 
 
 def test_role_consensus_arbited() -> None:
     """2 强票分歧 + 仲裁票救回 → arbited."""
-    v = _votes(**{"qwen38-local": "customer", "qwen-flash": "teller",
+    v = _votes(**{"qwen35b-local": "customer", "qwen-flash": "teller",
                   "doubao-vl": "customer", "glm-flash": "customer"})
     assert role_consensus(v) == ("trusted", "customer")  # customer 3 票含 1 强票 + 仲裁票 → n>=3
 
 
 def test_role_consensus_split() -> None:
     """2 票一致但无仲裁票参与 → split."""
-    v = _votes(**{"qwen38-local": "customer", "qwen-flash": "customer",
+    v = _votes(**{"qwen35b-local": "customer", "qwen-flash": "customer",
                   "doubao-vl": "teller", "glm-flash": "leader"})
     status, verdict = role_consensus(v)
     assert status == "split" and verdict == "customer"
@@ -114,7 +114,7 @@ def _vote(alias: str, *boxes: tuple[float, float, float, float]) -> Vote:
 
 def test_consensus_boxes_cluster_and_trusted() -> None:
     """两强票同框 → trusted；簇框=成员中位数."""
-    a = _vote("qwen38-local", (0.1, 0.1, 0.2, 0.2))
+    a = _vote("qwen35b-local", (0.1, 0.1, 0.2, 0.2))
     b = _vote("qwen-flash", (0.1, 0.1, 0.21, 0.2))
     d = _vote("doubao-vl", (0.5, 0.5, 0.6, 0.6))
     out = consensus_boxes([a, b, d])
@@ -126,7 +126,7 @@ def test_consensus_boxes_cluster_and_trusted() -> None:
 
 def test_consensus_boxes_arbited_by_glm() -> None:
     """强票 1 + 仲裁票 1 → arbited."""
-    a = _vote("qwen38-local", (0.3, 0.3, 0.4, 0.4))
+    a = _vote("qwen35b-local", (0.3, 0.3, 0.4, 0.4))
     g = _vote("glm-flash", (0.3, 0.3, 0.4, 0.4))
     out = consensus_boxes([a, g])
     assert len(out) == 1 and out[0].status == "arbited"
@@ -140,7 +140,7 @@ def test_consensus_boxes_abstain_not_empty_vote() -> None:
 
 def test_consensus_boxes_low_agreement() -> None:
     """单强票孤框（无仲裁）→ low_agreement."""
-    out = consensus_boxes([_vote("qwen38-local", (0.7, 0.7, 0.8, 0.8))])
+    out = consensus_boxes([_vote("qwen35b-local", (0.7, 0.7, 0.8, 0.8))])
     assert out[0].status == "low_agreement"
 
 

@@ -54,7 +54,7 @@ def frames_from_manifest(manifest: Path, date: str, top_minutes: int) -> list[di
 def run(
     frames_jsonl: Path = typer.Argument(..., help="帧清单 jsonl 或 --from-manifest 的 manifest 路径"),
     out_dir: Path = typer.Option(..., "--out-dir", help="输出目录（gt_trusted/low_agreement/report）"),
-    models: str = typer.Option("qwen38-local,qwen-flash,doubao-vl,glm-flash",
+    models: str = typer.Option("qwen35b-local,qwen-flash,doubao-vl,glm-flash",
                                help="投票池别名（默认=2026-09-13 标定池）"),
     concurrency: int = typer.Option(6, help="跨帧并发（帧内四模型并行）"),
     limit: int = typer.Option(0, help=">0 只跑前 N 帧（冒烟）"),

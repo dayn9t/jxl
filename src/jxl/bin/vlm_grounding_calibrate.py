@@ -18,11 +18,12 @@
   qwen-flash   qwen3-vl-flash-2026-01-22   dashscope   S4_QWEN_API_KEY   JSON bbox_2d 0-1000
   doubao-vl    doubao-seed-1-6-vision-250815 方舟      S4_DOUBAO_API_KEY <bbox> 标签（官方 0-1000，封装曾实测 0-1 → 自动反推）
   glm-flash    glm-5.3-flash               bigmodel 网关 ANTHROPIC_AUTH_TOKEN vision 可达性待本工具实测
-  qwen38-local qwen3.8-flash-next          本地 182 vllm  无需 key          同 qwen 协议（本地版刻度需实测）
+  qwen35b-local qwen3.5-35b-a3b-fp8        本地 182 vllm  无需 key  同 qwen 协议（2026-09-14 实测服务端模型已由
+              qwen3.8-flash-next 换为 3.5-35b——服务端模型漂移，接入前先 /v1/models 核对）
 
 用法：
   uv run --project . python -m jxl.bin.vlm_grounding_calibrate \
-      GT_JSONL --models qwen-flash,doubao-vl,glm-flash,qwen38-local --out report.json
+      GT_JSONL --models qwen-flash,doubao-vl,glm-flash,qwen35b-local --out report.json
 """
 
 from __future__ import annotations
@@ -42,44 +43,9 @@ from PIL import Image
 
 app = typer.Typer(help="多 VLM grounding 刻度标定（KB 7 步清单第 3 步的固化实现）")
 
-MAX_SIDE = 1024  # 过大图等比缩小（与部署 crop 域量级一致）
-CONF_THRESHOLD = 0.5  # 贪心匹配的 IoU 阈（同时用于 F1 统计）
-
-LOCAL_QWEN38 = "http://192.168.18.182:8000/v1/chat/completions"
-
-# 预设别名 → (端点, env 变量名, 模型名, 协议, 默认除数)
-# 除数仅是初始假设；报告里的 coord_max 用于反推真实刻度（7 步清单第 3 步）
-CANDIDATES: dict[str, dict] = {
-    "qwen-flash": {
-        "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-        "key_env": "S4_QWEN_API_KEY", "model": "qwen3-vl-flash-2026-01-22",
-        "protocol": "qwen", "divisor": 1000.0,
-    },
-    "doubao-vl": {
-        "endpoint": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        "key_env": "S4_DOUBAO_API_KEY", "model": "doubao-seed-1-6-vision-250815",
-        "protocol": "doubao", "divisor": 1000.0,
-    },
-    "glm-flash": {
-        "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "key_env": "ANTHROPIC_AUTH_TOKEN", "model": "glm-5.3-flash",
-        "protocol": "glm", "divisor": 1000.0,
-    },
-    "qwen38-local": {
-        "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.8-flash-next",
-        "protocol": "qwen", "divisor": 1000.0,
-    },
-}
-
-PROMPT = (
-    "Detect all persons in the image. For each person output its bounding box. "
-    "Coordinates are normalized to 0-1000 relative to image width and height, "
-    "top-left origin, format [x1,y1,x2,y2]. "
-    'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
-)
-
-# 共享协议/解析/匹配层：单一数据源 = vlm_pool.py（docstring 契约，勿在此复制）
+# 共享协议/解析/匹配/候选层：单一数据源 = vlm_pool.py（勿在此复制）
 from jxl.bin.vlm_pool import (  # noqa: E402
+    CANDIDATES,
     MAX_SIDE,
     MATCH_IOU as CONF_THRESHOLD,
     greedy_iou_match,
@@ -89,6 +55,13 @@ from jxl.bin.vlm_pool import (  # noqa: E402
     parse_boxes,
 )
 
+PROMPT = (
+    "Detect all persons in the image. For each person output its bounding box. "
+    "Coordinates are normalized to 0-1000 relative to image width and height, "
+    "top-left origin, format [x1,y1,x2,y2]. "
+    'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
+)
+
 
 async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,
                      image_url: str) -> tuple[str, str]:
@@ -96,6 +69,7 @@ async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 1500,
+               **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
                    {"type": "text", "text": PROMPT}]}]}
@@ -110,7 +84,7 @@ async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,
 @app.command()
 def run(
     gt_jsonl: Path = typer.Argument(..., help="标定集 jsonl：{image,width,height,boxes}"),
-    models: str = typer.Option("qwen-flash,doubao-vl,glm-flash,qwen38-local",
+    models: str = typer.Option("qwen-flash,doubao-vl,glm-flash,qwen35b-local",
                                help="逗号分隔候选别名（见模块 docstring）"),
     out: Path = typer.Option(Path("gt_calib_report.json"), help="报告输出路径"),
     limit: int = typer.Option(0, help=">0 只跑前 N 张（冒烟）"),

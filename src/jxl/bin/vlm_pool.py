@@ -9,7 +9,9 @@
 - 同目录 20260710-vlm-grounding-coordinate-protocols.md（协议对照 + 7 步清单）
 
 标定结论（2026-09-13，20 图 30 框，F1@IoU0.5）：
-  qwen38-local 0.9508 / qwen-flash 0.9492 / doubao-vl 0.9355（三强，主力票）
+  qwen35b-local 0.9355（182 本地；2026-09-14 服务端换 3.5-35b 后重测，关思考口径——
+  思考模型：extra_payload 关闭 enable_thinking，开思考吃光 max_tokens 致 content=null）
+  qwen-flash 0.9492 / doubao-vl 0.9355（三强，主力票）
   glm-flash 0.7458（第四意见+分歧仲裁）
 池规模按实测数据削减/扩充（用户裁决：小而可靠，拿不准先多上再削）。
 """
@@ -51,9 +53,11 @@ CANDIDATES: dict[str, dict] = {
         "key_env": "ANTHROPIC_AUTH_TOKEN", "model": "glm-5.3-flash",
         "protocol": "glm", "divisor": 1000.0, "strength": "arbiter",
     },
-    "qwen38-local": {
-        "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.8-flash-next",
+    "qwen35b-local": {
+        "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.5-35b-a3b-fp8",
         "protocol": "qwen", "divisor": 1000.0, "strength": "strong",
+        # qwen3.5 思考模型：不关思考时小 max_tokens 被吃光 → content=null
+        "extra_payload": {"chat_template_kwargs": {"enable_thinking": False}},
     },
 }
 
@@ -102,6 +106,7 @@ async def call_role_vote(client: httpx.AsyncClient, alias: str,
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 120,
+               **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
                    {"type": "text", "text": ROLE_PROMPT}]}]}
@@ -213,6 +218,7 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str) -> 
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 1500,
+               **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
                    {"type": "text", "text": PERSON_PROMPT}]}]}

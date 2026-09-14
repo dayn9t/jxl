@@ -61,7 +61,7 @@ def load_crops(pool: str) -> list[dict]:
 @app.command()
 def run(
     pool: str = typer.Option("ub_true", help="ub_true=仅上半身疑难层 / head=仅头顶层 / all=全部"),
-    models: str = typer.Option("qwen38-local,qwen-flash,doubao-vl,glm-flash"),
+    models: str = typer.Option("qwen35b-local,qwen-flash,doubao-vl,glm-flash"),
     out: Path = typer.Option(R2 / "role_vote_uncertain.jsonl", "--out"),
     concurrency: int = typer.Option(6),
     limit: int = typer.Option(0, help=">0 冒烟只跑 N 张"),
