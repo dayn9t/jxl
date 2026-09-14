@@ -38,3 +38,6 @@
 
 - 通用工具：`src/jxl/bin/`；流程 skill：`~/.claude/skills/consensus-labeling/`
 - 并列项目：`projects/shtm/`；VLM 资源：`docs/infra/spark-vlm.md`
+- LLM 统一网关：`~/cc/llmux`（Rust，9 providers × 9 capability traits；
+  imgmatch 背景相似度匹配 doubao-seed-2-0-mini top-1 94.9%，可复用于场景/机位匹配，
+  bench 见其 `docs/benchmark_report.md`——逐张多图 94.9% vs montage 拼图 59%）

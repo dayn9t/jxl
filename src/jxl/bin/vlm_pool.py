@@ -7,6 +7,11 @@
 - ~/.claude/kb/30-areas/vlm-vision-grounding/20260913-vlm-service-inventory.md
   （候选池成员与 2026-09-13 标定 F1；key 只走 env，值永不落盘）
 - 同目录 20260710-vlm-grounding-coordinate-protocols.md（协议对照 + 7 步清单）
+- 多 key 轮换 / 429 退避 / 统一网关层见 llmux（~/cc/llmux：crates/llmux-core/src/keypool.rs
+  的 KeyPool（Healthy/Unhealthy 冷却 60s/Invalid）+ crates/llmux-openai-base/src/client.rs
+  post_stream（429→Retry-After、401→mark_invalid）；KB
+  30-areas/llm-application-engineering/20260710-multi-llm-backend-gateway.md 有文档化）——
+  本工具现状单 key + asyncio.Semaphore 硬闸 + 断点重入，跑批限流加剧时参考其 KeyPool 设计
 
 标定结论（2026-09-13，20 图 30 框，F1@IoU0.5）：
   qwen35b-local 0.9355（182 本地；2026-09-14 服务端换 3.5-35b 后重测，关思考口径——
