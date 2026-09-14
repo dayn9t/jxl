@@ -10,7 +10,8 @@
 | iapx 三件套（A 重训/B 身份分类器/C 重复框归因） | ✅ 全部落地——**先读 `research/2026-09-12-iapx三件套执行报告.md`**；A 部署物已 stage（`2026-09-12_person_upper_n_v2.*`，symlink 未切待 iapx cache 指纹协同）；B **已到 v3.1 七分类收官**（cleaner 0.879 / teller 0.800 达 0.80 线，最终候选 `2026-09-14_person_role_n_v31.*` 已 stage 待 iapx 对接，词典 `身份分类器词典.md` §6/§7）；C 工具+守卫+v4 回归闭环 |
 | person v4 重训（重复 GT 清洗版） | ✅ **已上线**（2026-09-13 23:19 symlink 切换）：test mAP50-95 **0.9005**（v3 0.8855，+1.5pt）、重复框 1,267→7（清零 99.45%）、新日期共识 GT 评估召回 +1.3~8.7pt；回滚 `ln -sfn 2026-09-09_person_n.* person.*` |
 | person v5（玻璃反光专项重训，2026-09-14） | ✅ 已训（`runs/person_n001_v5/`，v4 数据+glasspack 426 帧唯一差异）：专项 recall 0.911→**0.930**（miss 14→11），代价 FP +21、test 0.9005→0.8945；**建议 v4 保持现役、v5 存档候选**，切换待用户拍板——详见 `research/2026-09-12-检测器重复框归因.md` §6.2 |
-| 身份分类器 v3.1（七分类收官，2026-09-14） | ✅ 词典扩类（teller/manager/security，用户裁决按制服细分）+ uncertain 池 5,541 零人工复审（四模型投票+GLM 视觉仲裁）+ p1 窗扩采（teller 唯一源 1,841）；**最终候选 `2026-09-14_person_role_n_v31.*`**（与 v3 误差内持平、customer 桶污染清洗）；manager/security 素材采集中 |
+| 身份分类器 v3.2（复判数据集重训，2026-09-14） | ✅ **新交付候选已 stage**（`2026-09-14_person_role_n_v32.*`，pt/onnx md5 配对 `2364d5e7`/`16be90c7`）：数据=8,868 旧源图四模型复判（改判 2,588 抽检 12/12）+mgrsec security 91。test top1 **0.8881**（干净口径）；**manager 0.974 / security 0.95 / teller 0.896 / customer 0.80 达线**（5/7），cleaner 0.714 / leader 0.50 现出真实难度（动作/工装在单帧 crop 的天然边界，后续需时序聚合）。v3.1 行保留作历史：其 0.8846 建立在污染 test 上 |
+| 身份分类器 v3.1（七分类，已被 v3.2 取代） | 词典扩类（teller/manager/security）+ uncertain 池 5,541 零人工复审 + p1 窗扩采；候选 `2026-09-14_person_role_n_v31.*` 仍 stage 在位可回退 |
 
 ## 项目状态（2026-09-09）
 

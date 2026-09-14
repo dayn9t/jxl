@@ -283,6 +283,19 @@ iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`
 ——行动导向摘要（v4 行为告知 / upper v2 切换前置序列 / role v3.1 对接契约 / pair list
 与素材请求 / jxl 文档地图）。iapx 侧 cache 指纹修复完成后，其会话可直接按单执行。
 
+**role v3.2 交付（2026-09-14 晚，复判数据集重训——取代 v3.1 成为最终候选）**：当日三线
+收官后重训。数据 = ①8,868 旧源图按词典 v3 语义四模型复判（**改判 2,588 张 = 29%**，
+主改判流 →teller 2,146——旧 prompt 无 teller 类的语义过期实证；抽检 12/12 支持改判）
+②mgrsec security 扩采 91 uid（唯一源 109→200）③train 过采样 cleaner×2/leader×4/
+manager×4/security×4（val/test 不动）。**test top1 0.8881，且口径为复判后干净标签**
+（v31 的 0.8846 建立在过期 test 标签上，两版数字不可直接对比）。per-class recall：
+**manager 0.974 / security 0.95 / teller 0.896 / customer 0.80 达线（5/7）**；
+cleaner 0.714 / leader 0.50 未达——复判挤出账面水分后真实难度显形（保洁/引领是
+动作+工装混合类，单帧 crop 天然边界；改进路径=时序多帧聚合，非补静态样本）。
+**部署候选已 stage：`2026-09-14_person_role_n_v32.pt/.onnx`**（md5 配对
+`2364d5e7`/`16be90c7`；names 与 v31 相同七类字母序）。**建议 iapx 对接 v3.2**；
+v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_role_psq 原地不动）。
+
 ## 8. 待办与恢复快照（2026-09-14 收官落盘，供上下文压缩后续接）
 
 ### 等外部触发（触发即执行）
