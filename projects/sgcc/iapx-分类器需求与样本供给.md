@@ -278,3 +278,7 @@ not_person 边缘框、无一张典型引领员——**v3 在纠正过期标签�
 not_person 0.979；manager/security 素材不足继续采集（词典 §6 扩采中）。**最终部署候选 =
 `2026-09-14_person_role_n_v31.pt/.onnx`**（本地/部署 md5 一致 ebb03262…；stale-onnx 教训已在导出流程加入 md5 配对核对）。边际收益归零，role 分类器迭代到此收官；recommend
 iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`）。
+
+**交付通知单（2026-09-14，已落地 iapx 仓库）**：`~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md`
+——行动导向摘要（v4 行为告知 / upper v2 切换前置序列 / role v3.1 对接契约 / pair list
+与素材请求 / jxl 文档地图）。iapx 侧 cache 指纹修复完成后，其会话可直接按单执行。
