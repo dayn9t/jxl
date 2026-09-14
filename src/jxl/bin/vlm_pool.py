@@ -11,7 +11,8 @@
   的 KeyPool（Healthy/Unhealthy 冷却 60s/Invalid）+ crates/llmux-openai-base/src/client.rs
   post_stream（429→Retry-After、401→mark_invalid）；KB
   30-areas/llm-application-engineering/20260710-multi-llm-backend-gateway.md 有文档化）——
-  本工具现状单 key + asyncio.Semaphore 硬闸 + 断点重入，跑批限流加剧时参考其 KeyPool 设计
+  本模块只含池配置与共识纯函数；并发闸/断点重入在消费侧工具（vlm_role_vote.py 两者皆有、
+  vlm_consensus_gt.py 仅 Semaphore、vlm_grounding_calibrate.py 均无），跑批限流加剧时参考 llmux KeyPool
 
 标定结论（2026-09-13，20 图 30 框，F1@IoU0.5）：
   qwen35b-local 0.9355（182 本地；2026-09-14 服务端换 3.5-35b 后重测，关思考口径——
