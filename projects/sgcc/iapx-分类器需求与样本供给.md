@@ -282,3 +282,32 @@ iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`
 **交付通知单（2026-09-14，已落地 iapx 仓库）**：`~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md`
 ——行动导向摘要（v4 行为告知 / upper v2 切换前置序列 / role v3.1 对接契约 / pair list
 与素材请求 / jxl 文档地图）。iapx 侧 cache 指纹修复完成后，其会话可直接按单执行。
+
+## 8. 待办与恢复快照（2026-09-14 收官落盘，供上下文压缩后续接）
+
+### 等外部触发（触发即执行）
+
+| 项 | 触发条件 | 触发后动作 |
+|---|---|---|
+| OSNet v2（唯一开放任务） | iapx 交付重产 pair list（322 sessions，§7.2 规则） | 管线已验证（`gencheck/osnet_ft.py` build/train/eval 全通；v1 失败=数据量级），直接 build→train→两段验收，~2h |
+| upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
+| role v31 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md` 答疑协同 |
+
+### sgcc 线可开工项（用户点头即做）
+
+- **manager/security 定向扩采**：现唯一源 31/48，目标各 300（七分类最后短板）；管线全自动
+- **test 标签复判（v3.2）**：旧 4 类 test 标签按词典 v3 语义用共识管线复判（leader 8 张
+  错分已证实为标签过期）；标签语义版本升级，非为提分改标签
+- **person v5**：glasspack 431 帧已备（`gencheck/v5_glasspack.jsonl` + 可复现脚本），
+  建议下次检测器重训捎带
+
+### SHTM（冻结）
+
+解冻条件「sgcc/iapx 全部完成」现仅剩上表外部触发。解冻后队列：r2 审核 1,246 帧（用户）→
+hardcase_promote 晋升 → V2.2 干净标签重训 → 双域评估；vlabel 分支审阅（跨项目）。
+冻结完好性已经全项目审核确认（0 违规）。
+
+### 交付通知机制
+
+模型交付自动落 `~/cc/py/iapx/docs/jxl-deliveries-<date>.md`（首例 2026-09-14，4c95c67）——
+iapx 会话照单执行，无需用户转述。
