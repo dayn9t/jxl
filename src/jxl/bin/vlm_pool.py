@@ -38,7 +38,7 @@ from PIL import Image
 
 MAX_SIDE = 1024
 MATCH_IOU = 0.5
-LOCAL_QWEN38 = "http://192.168.18.182:8000/v1/chat/completions"
+LOCAL_QWEN35B = "http://192.168.18.182:8000/v1/chat/completions"
 
 # 别名 → (端点, env 变量名, 模型名, 协议, 默认除数, 强度)
 # strength: strong=主力票（≥2/3 共识）；arbiter=第四意见（救回弱一致）
@@ -59,7 +59,7 @@ CANDIDATES: dict[str, dict] = {
         "protocol": "glm", "divisor": 1000.0, "strength": "arbiter",
     },
     "qwen35b-local": {
-        "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.5-35b-a3b-fp8",
+        "endpoint": LOCAL_QWEN35B, "key_env": "", "model": "qwen3.5-35b-a3b-fp8",
         "protocol": "qwen", "divisor": 1000.0, "strength": "strong",
         # qwen3.5 思考模型：不关思考时小 max_tokens 被吃光 → content=null
         "extra_payload": {"chat_template_kwargs": {"enable_thinking": False}},
