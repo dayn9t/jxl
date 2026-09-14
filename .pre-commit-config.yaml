@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: bin-import-hygiene
+        name: bin tools import hygiene
+        entry: bash scripts/check_bin_imports.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

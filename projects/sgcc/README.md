@@ -7,10 +7,10 @@
 
 | 里程碑 | 状态 |
 |---|---|
-| iapx 三件套（A 重训/B 身份分类器/C 重复框归因） | ✅ 全部落地——**先读 `research/2026-09-12-iapx三件套执行报告.md`**；A 部署物已 stage（`2026-09-12_person_upper_n_v2.*`，symlink 未切待 iapx cache 指纹协同）；B **已到 v3 七分类交付**（cleaner 0.879 / teller 0.875 达 0.80 线，`2026-09-14_person_role_n_v3.*` 已 stage 待 iapx 对接，词典 `身份分类器词典.md` §6 七类）；C 工具+守卫+v4 回归闭环 |
+| iapx 三件套（A 重训/B 身份分类器/C 重复框归因） | ✅ 全部落地——**先读 `research/2026-09-12-iapx三件套执行报告.md`**；A 部署物已 stage（`2026-09-12_person_upper_n_v2.*`，symlink 未切待 iapx cache 指纹协同）；B **已到 v3.1 七分类收官**（cleaner 0.879 / teller 0.800 达 0.80 线，最终候选 `2026-09-14_person_role_n_v31.*` 已 stage 待 iapx 对接，词典 `身份分类器词典.md` §6/§7）；C 工具+守卫+v4 回归闭环 |
 | person v4 重训（重复 GT 清洗版） | ✅ **已上线**（2026-09-13 23:19 symlink 切换）：test mAP50-95 **0.9005**（v3 0.8855，+1.5pt）、重复框 1,267→7（清零 99.45%）、新日期共识 GT 评估召回 +1.3~8.7pt；回滚 `ln -sfn 2026-09-09_person_n.* person.*` |
 | person v5 数据包（玻璃反光形态） | ✅ `gencheck/v5_glasspack.jsonl`（431 帧 v4 miss/FP + 共识 GT 框即标注），下次重训捎带 |
-| 身份分类器 v3（七分类，2026-09-14） | ✅ 词典扩类（teller/manager/security，用户裁决按制服细分）+ uncertain 池 5,541 零人工复审（四模型投票+GLM 视觉仲裁）；部署候选 `2026-09-14_person_role_n_v3.*`；manager/security 素材采集中 |
+| 身份分类器 v3.1（七分类收官，2026-09-14） | ✅ 词典扩类（teller/manager/security，用户裁决按制服细分）+ uncertain 池 5,541 零人工复审（四模型投票+GLM 视觉仲裁）+ p1 窗扩采（teller 唯一源 1,841）；**最终候选 `2026-09-14_person_role_n_v31.*`**（与 v3 误差内持平、customer 桶污染清洗）；manager/security 素材采集中 |
 
 ## 项目状态（2026-09-09）
 

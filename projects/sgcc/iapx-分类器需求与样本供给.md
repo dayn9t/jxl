@@ -255,7 +255,7 @@ iapx 对接时直接指向；**names 契约（字母序权威）**：0=cleaner, 
 v2 已显著优于 v1，建议 iapx 先行接入。
 
 **jxl 侧 role v3 交付（2026-09-14 03:2x，七分类）**：词典 §6 扩类后重训（uncertain 池
-5,541 零人工复审——四模型投票 5,000 张 + GLM 视觉仲裁 285 张 split 残量）。test top1
+5,541 零人工复审——四模型投票 5,000 张 + GLM 视觉仲裁 split 残量（送裁 285 张、落盘 43 行分歧裁决））。test top1
 **0.8926**（v2 0.8414）。分类别 recall：**cleaner 0.879（+19.3pt 首次达 0.80 线）**、
 **teller 0.875（新类首训达线）**、leader 0.775（差 2.5pt）、customer 0.967、not_person
 0.991；manager/security 素材不足（test n=3/1；train 唯一源 ~10/~7 扩采中）仅供参考。**部署候选已 stage：
@@ -272,10 +272,9 @@ not_person 边缘框、无一张典型引领员——**v3 在纠正过期标签�
 非为提分改标签）；无需再补样训练。副本口径（0.775）与唯一源口径（0.830）的差异
 提示：**稀有类验收应以唯一源口径为准**（副本同图同判定只放大分母）。
 
-**role v3.1 最终交付（2026-09-14 05:5x）**：uncertain 复审扩采全部并入重训（teller 唯一源
+**role v3.1 最终交付（2026-09-14，扩采重训终版 09:4x；05:5x 为首训时点）**：uncertain 复审扩采全部并入重训（teller 唯一源
 998→1,841、customer 池清洗至 1,566 纯便装）。test 混淆矩阵与 v3 误差内持平：cleaner
 **0.879** / teller **0.800（n=135 扩大后仍达线）** / customer 0.957 / leader 0.770 /
 not_person 0.979；manager/security 素材不足继续采集（词典 §6 扩采中）。**最终部署候选 =
-`2026-09-14_person_role_n_v31.pt/.onnx`**（本地/部署 md5 一致 ebb03262…；stale-onnx 教训
-已在导出流程加入 md5 配对核对）。边际收益归零，role 分类器迭代到此收官；recommend
+`2026-09-14_person_role_n_v31.pt/.onnx`**（本地/部署 md5 一致 ebb03262…；stale-onnx 教训已在导出流程加入 md5 配对核对）。边际收益归零，role 分类器迭代到此收官；recommend
 iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`）。
