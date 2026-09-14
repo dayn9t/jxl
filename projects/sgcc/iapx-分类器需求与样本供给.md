@@ -293,13 +293,17 @@ iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`
 | upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
 | role v31 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md` 答疑协同 |
 
-### sgcc 线可开工项（用户点头即做）
+### sgcc 线可开工项（2026-09-14 用户点头，三线已开工）
 
-- **manager/security 定向扩采**：现唯一源 31/48，目标各 300（七分类最后短板）；管线全自动
-- **test 标签复判（v3.2）**：旧 4 类 test 标签按词典 v3 语义用共识管线复判（leader 8 张
-  错分已证实为标签过期）；标签语义版本升级，非为提分改标签
-- **person v5**：glasspack 431 帧已备（`gencheck/v5_glasspack.jsonl` + 可复现脚本），
-  建议下次检测器重训捎带
+- **manager/security 定向扩采**（进行中）：素材池 = candidates.jsonl 未投票 38,742 crop；
+  两段漏斗 `gencheck/mgrsec_expandscan.py`（qwen35b-local 粗筛全池 → 三模型共识精筛）；
+  粗筛分布即场景总量上限，不足 300 如实上报
+- **test 标签复判（v3.2）**（进行中）：实际范围=train/val/test 三旧源全量 8,868 图
+  （仅 test 不足以支撑重训——train 标签同样过期）；`gencheck/role_test_relabel.py`
+  plan（四模型共识 diff）→ apply（落 `cls_role_psq_v32` 副本，v3.1 原地不动可回退）
+- **person v5**（进行中）：`gencheck/build_v5_dataset.py` 已建 `dataset_v5_glass`
+  （v4 train 11,030 + glasspack 426 帧 765 框，全帧按 crop_rect 裁部署域，val/test 原样
+  同口径可比）→ sgcc0 训练中（超参照 v4，唯一差异=数据）
 
 ### SHTM（冻结）
 
