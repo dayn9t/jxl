@@ -287,7 +287,8 @@ iapx 对接 v3.1（对接契约见 `research/2026-09-14-role-v3-对接预演.md`
 收官后重训。数据 = ①8,868 旧源图按词典 v3 语义四模型复判（**uid 去重后改判 909 族/3,185 文件 = 16.9%**，
 主改判流 →teller 2,146——旧 prompt 无 teller 类的语义过期实证；抽检 12/12 支持改判）
 ②mgrsec security 扩采 91 uid（唯一源 109→200）③train 过采样 cleaner×2/leader×4/
-manager×4/security×4（val/test 不动）。**test top1 0.8881，且口径为复判后干净标签**
+manager×4/security×4（val/test 不动）。**test top1 0.8877（5 组跨类双标签修复后干净口径）**，
+且口径为复判后干净标签
 （v31 的 0.8846 建立在过期 test 标签上，两版数字不可直接对比）。per-class recall：
 **manager 0.974 / security 0.95 / teller 0.896 / customer 0.80 达线（5/7）**；
 cleaner 0.714 / leader 0.50 未达——复判挤出账面水分后真实难度显形（保洁/引领是
