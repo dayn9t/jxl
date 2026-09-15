@@ -312,30 +312,28 @@ v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_ro
 |---|---|---|
 | OSNet v2（唯一开放任务） | iapx 交付重产 pair list（322 sessions，§7.2 规则） | 管线已验证（`gencheck/osnet_ft.py` build/train/eval 全通；v1 失败=数据量级），直接 build→train→两段验收，~2h |
 | upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
-| role v31 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md` 答疑协同 |
+| role v3.2 对接支持 | iapx 开始对接（通知单已建议**直接对接 v3.2** + 按自身部署规则做 20-50 帧影子验证） | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md` §3 答疑协同；jxl 可提供 crop 集 |
 
-### sgcc 线可开工项（2026-09-14 用户点头，三线已全部收割）
+### sgcc 线 2026-09-14/15 收官总账（三线 + v3.2 重训 + 四维度审核，全部闭环）
 
-- **manager/security 定向扩采** ✅（2026-09-14 收割）：38,742 未投票 crop 两段漏斗收完。
-  **manager 粗筛仅 26**（场景大堂经理出现频率极低），复判线已提至 **352 超额达标**；
-  **security 粗筛 514 → 共识通过仅 91**（粗筛→共识 17.7%；进精筛的 514 中 263 张获
-  非 split 判定，其中 91 security≈35%——粗筛单票噪声大），唯一源
-  109→**200，未达 300——场景总量上限实证不足**（split 残量 95.5% 为低特征难样本，
-  按经验无二次价值）。清单 `gencheck/iapx_round2/mgrsec_security_uids.jsonl`（91 uid，
-  07-01/02/09-03 三日）待 build 消费
-- **test 标签复判（v3.2）** ✅（2026-09-14 收割）：8,868 旧源图复判，**uid 去重后改判 909 族/3,185 文件（16.9%）**
-  （→teller 2,146 为主——旧 prompt 无 teller 类的语义过期实证）；抽检 12/12 支持改判
-  （cleaner→teller 6/6、leader→teller 3/3、leader→manager 3/3 全对）。
-  `cls_role_psq_v32` 已落（909 族 3,185 文件移动，v3.1 原地不动可回退）。
-  train 变化：cleaner 1,694→772 / leader 1,529→408（水分挤出）/ teller 1,070→3,041 /
-  **manager 25→268（复判意外达标）/ security 38→94**。
-  ⚠️ v3.2 build 时排除 `uncertain/` 目录（复判新产生 56 张，否则成第 8 类）
-- **person v5** ✅（2026-09-14 收割）：test 0.8945（−0.6pt）；玻璃反光专项 recall
-  0.911→**0.930**（miss 14→11）代价 FP 138→159。**裁决建议 v4 保持现役，v5 存档候选**
-  （`runs/person_n001_v5/`）——切换属部署决策待用户拍板，详见
-  `research/2026-09-12-检测器重复框归因.md` §6.2
-- **role v3.2 重训（下一步）**：数据 = v32 数据集 + mgrsec security 91 uid；leader/cleaner
-  达标线按复判后干净口径重看
+- **manager/security 定向扩采** ✅：38,742 未投票 crop 两段漏斗收完。manager 复判线
+  **352 超额达标**（粗筛仅 26——场景频率低）；security 粗筛 514→共识通过 91（粗筛→共识
+  17.7%），唯一源 109→**200，场景总量上限实证不足 300**（split 残量 95.5% 无二次价值）。
+  清单 `gencheck/iapx_round2/mgrsec_security_uids.jsonl`
+- **旧源标签复判** ✅：8,868 图，uid 去重后改判 **909 族/3,185 文件（16.9%）**（主改判流
+  →teller——旧 prompt 无 teller 类的语义过期实证；抽检 12/12 全对）。`cls_role_psq_v32`
+  落成（v3.1 数据集原地不动可回退）
+- **person v5** ✅：test 0.8945（−0.6pt）；玻璃反光专项 recall 0.911→**0.930** 代价 FP +21。
+  **裁决建议 v4 保持现役，v5 存档候选**（`runs/person_n001_v5/`，切换待用户拍板），
+  详见归因报告 §6.2
+- **role v3.2 重训交付** ✅：数据 = v32 复判集 + security 91 + train 过采样；**test top1
+  0.8877**（5 组跨类双标签修复后干净口径）；manager 0.974/security 0.95/teller 0.896/
+  customer 0.80 达线（5/7），cleaner 0.714/leader 0.50=挤水后真实难度（改进走时序聚合）。
+  交付物 `2026-09-14_person_role_n_v32.pt/.onnx`（md5 配对 `2364d5e7`/`16be90c7`）。
+  **cleaner/leader 若要冲线的下一步 = v3.3 时序多帧聚合**（非补静态样本），未开工
+- **全项目审核** ✅（四维度 docs/code/data/xref，2 轮 workflow）：19 项确认问题全部修复
+  （rename 覆盖/rsync 漏传/双标签污染/7 步清单分叉/8→9 traits/口径虚高 3 处纠正等）；
+  一次性验证脚本已按教训落盘 gencheck（`role_v32_preview_fair.py` 等）
 
 ### SHTM（冻结）
 
