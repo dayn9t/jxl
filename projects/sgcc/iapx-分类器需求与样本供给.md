@@ -200,7 +200,10 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 ### 7.2 训练数据构造（iapx 供 pair list，jxl 侧切图）
 
 **crop 来源 = §2 samples/ 全帧 + manifest bbox**（`box_norm` 直接换算），无需另行截图。
-**✅ pair list 已交付（2026-09-13 11:41，iapx `540b26e`）**：`/mnt/data/jiang/ws/iapx/n001/samples/pairs/`
+**✅ pair list 已交付（2026-09-13 11:41，iapx `540b26e`；2026-09-15 全量重产覆盖）**：
+`/mnt/data/jiang/ws/iapx/n001/samples/pairs/`（09-15 起为全量版：train 正对 **848** /
+远距负对 861 / 硬负对 7 + eval held-out **328**（same 289/diff 39），L0 采信 287/326
+session，join 抽验零缺失——见 `research/2026-09-15-生产点火v4坐姿回归证据与pairlist交付.md` §交付物②；本节下述 204/106 为 v2 轮历史口径）
 ——`train.jsonl` 418 对（session-anchor 正对 204 / session-distant 远距负对 207 /
 person-change 换人硬负对 7）+ `eval.jsonl` **106 对 held-out**（same 77 / diff 29，v2c
 交叉核验清洗后逐对一致）+ README；行 schema `{label, origin, a, b}`，a/b =
@@ -243,6 +246,27 @@ person-change 换人硬负对 7）+ `eval.jsonl` **106 对 held-out**（same 77 
 命中）。**v2 触发条件 = iapx 用 T9 全量 322 sessions 增量重产 pair list**（正对 204→
 ~966 量级）后重训；脚本/管线已验证可复用（build→train→eval 全通，远端路径契约
 crops.jsonl 需带路径替换——已修）。期间生产维持 HSV@0.8 过渡基线（§7 原决议不变）。
+> **⚠️ v1 结论修正（2026-09-15，v2 训练中发现）**：v1 的验收判据**方向写反**——
+> `heldout_gap` 在余弦**距离**值上沿用了 §7.4 **相似度**口径的判据标签
+> （`same_p5 > diff_p95`），语义变成「惩罚 same 对变近」。实证铁证：triplet 使
+> same_p5 0.113→0.032（模型在正确变好），旧口径 gap 反而 −0.499→−0.746「恶化」。
+> **上段「微调恶化 −0.565」的论据失效**（早停兜底方向碰巧成立，v1 失败主因修正为
+> circle loss 与判据错配）。判据已修复（`same_p95 < diff_p5`）并落盘。
+
+**jxl 侧 OSNet v2 交付（2026-09-15，全量 pair list 重训）**：triplet batch-hard
+margin 0.3、P×K 32×2、Adam lr 3e-4、seed 20260913、sgcc0 4090；train kept 1,410 对
+（same 848/远距负 861/硬负 7，剔触碰 eval 后）/256 ids/654 crops，held-out 328 对
+（289/39）泄漏 0。**eval gap = −0.0938，jxl 侧验收门 PASS**（same_p95 0.3628 <
+diff_p5 0.4566 分布分离；基座未微调同口径 +0.1159 FAIL；ep6 翻正、best@ep42、
+早停@ep62）；对照轮 circle（3e-4/3e-5 正确口径 +0.074/+0.083）均 FAIL——**triplet
+显式优化尾部是翻正关键，数据 4.2× 放大其效果**。交付
+`/mnt/data/jiang/ws/sgcc/person/osnet_weights/osnet_x0_75_ft_v2.pth`（md5
+`a33775ef`）+ `.onnx`（`e235228a`，剥 fc/动态 batch/opset 17，torch-vs-onnx 一致性
+min cos 0.9999999）；cfg tag 建议 `osnet-x0_75-ft-v2`。**§7.4 定标门（全量基线
+gap −0.084 翻正目标）+ 管道门属 iapx 侧复测待办**（距离/相似度两口径数值不可直接
+比）。残留风险：最难 3 对 same（dist 0.71/0.62/0.61）疑似换人残余标签噪声，
+建议 iapx 复测留意；margin 疑似已到本数据量级收益边界，下一档收益 = 扩正对 +
+每 id 增锚解锁 K>2。报告：`research/2026-09-15-osnet-v2微调报告.md`。
 
 **jxl 侧 role v2 交付（2026-09-13 23:5x）**：素材扩至唯一源 cleaner 295 / leader 183 后重训
 （train 1,792/2,120/1,602/2,384，过采样对齐 customer 量级）。test（含副本口径）top1 0.8414，
@@ -306,13 +330,38 @@ v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_ro
 
 ## 8. 待办与恢复快照（2026-09-14 收官落盘，供上下文压缩后续接）
 
-### 等外部触发（触发即执行）
+### 等外部触发（触发即执行，2026-09-16 刷新）
 
 | 项 | 触发条件 | 触发后动作 |
 |---|---|---|
-| OSNet v2（唯一开放任务） | iapx 交付重产 pair list（322 sessions，§7.2 规则） | 管线已验证（`gencheck/osnet_ft.py` build/train/eval 全通；v1 失败=数据量级），直接 build→train→两段验收，~2h |
+| OSNet v2 验收复测 | iapx 执行 §7.4 两段门（reembed_cache→ASYM 定标 gap −0.084 翻正 + 管道门） | jxl 交付物已就位（`osnet_x0_75_ft_v2.pth/.onnx`，md5 `a33775ef`/`e235228a`）；答疑协同，复测留意最难 3 对 same（疑标签噪声，§7 v2 注记） |
+| **v5 切现网** | iapx 照通知单 §1 执行（切 symlink→cache 失效→src2 07-06 冒烟→灰度） | jxl 部署物已 stage（`2026-09-15_person_n_v5.*`）；灰度期关注 ROI 下方柜体区 FP（+9.2% 集中段） |
 | upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
-| role v3.2 对接支持 | iapx 开始对接（通知单已建议**直接对接 v3.2** + 按自身部署规则做 20-50 帧影子验证） | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-14.md` §3 答疑协同；jxl 可提供 crop 集 |
+| role v3.2 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md` §2（softmax 全向量契约 + cleaner/leader 按工作人员粗类使用）；jxl 可提供 crop 集 |
+| spark 恢复 | 用户重启 spark（=182 vLLM 机，内存压死后待人工恢复） | 重测 :8000 服务 → sitpack `vlm-retry` 补第四票 → 免费池主力切回（并发 ≤3 红线） |
+
+### sgcc 线 2026-09-15/16 总账（生产点火应对 + OSNet v2 + spike，全部闭环）
+
+- **生产点火 v4 坐姿回归应对** ✅：v4「保持现役」被真机证据推翻（生产已回退 v3，
+  `research/2026-09-15-生产点火v4坐姿回归证据与pairlist交付.md`）→ v5 三臂真机验收
+  **PASS**（塌陷段 226/226 帧闭合、C 阳性覆盖 99.8%、FP raw +3.6%、铁证帧 conf .916）
+  → 部署物 stage + iapx 通知单（含回滚路径）。附：部署惯例不一致发现——v3 部署物带
+  embed_contract 契约而 v4/role/upper 系裸导出，v5 已回归 v3 同款（`export_yolo_with_contract`）
+- **OSNet v2 域微调** ✅：全量 pair list（正对 848=4.2×）triplet 微调，eval gap
+  −0.094 分布分离 PASS（基座不微调 +0.116 FAIL）；**发现并修正 v1 判据方向 bug**
+  （§7 ⚠️ 块——余弦距离误用相似度口径，v1「恶化」论据失效）；§7.4 两段门交 iapx 复测
+- **role v3.3 时序聚合 spike** ✅ 实证否定：cleaner/leader 错误 100% 个体级系统性
+  （oracle 聚合上限=逐帧），词典 0.80 线对两类**单列不适用**（词典已修）；v3.3 不实施
+- **sitpack_v6** ✅：623 帧/1,049 框 glasspack 兼容包预备**归档**（v5 已闭合坐姿缺口
+  故不并包；spark 恢复后可补第四票冻结）
+- **训练机切换** ✅：sgcc0→sgcc3 默认（+用户授权双机并行），环境（torch cu128/sm_120
+  实算验证）/数据（12G 机间直传）/脚本 host 全就位；**依赖源修正：本仓 uv.lock 走
+  devpi（192.168.18.146:3141），阿里镜像会致 lock 重解析**；本机→sgcc3 仅 ~2MB/s，
+  大文件必机间直传（11.2MB/s）
+- **spark 事故入账**：批量图片请求 8 并发压死整机（内存），**并发 ≤3 红线**已入
+  memory；sitpack 585 帧缺第四票（豆包顶替期间产出，语义安全）待恢复补投
+- 数据口径：manifest 实测 **133,299 行**（§2 的 101,503 为 09-13 历史口径，iapx 侧
+  又增量过）
 
 ### sgcc 线 2026-09-14/15 收官总账（三线 + v3.2 重训 + 四维度审核，全部闭环）
 

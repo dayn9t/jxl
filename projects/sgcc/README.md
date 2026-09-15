@@ -1,7 +1,19 @@
 # SGCC — n001 收费窗口 person 检测与属性分类（与 SHTM 并列项目）
 
 > 数据根：`/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/`（本机数据盘）
-> 训练机：sgcc0（对等路径 `~/ws/sgcc/...`，见 memory training-on-sgcc0）
+> 训练机：**sgcc3**（默认，2026-09-15 起；RTX 5060 Ti 16G，环境就绪 torch cu128/sm_120 实算验证——
+> 赶时间可按用户授权用 sgcc0 或双机并行；对等路径 `~/ws/sgcc/...`，见 memory training-on-sgcc3）
+
+## 项目状态（2026-09-15/16：v5 真机验收上线 + OSNet v2 + 训练机切换）
+
+| 里程碑 | 状态 |
+|---|---|
+| **v4 坐姿召回回归（生产实证）** | ⚠️ **v4「保持现役」结论被推翻**（2026-09-15 生产点火）：src2 07-06 全日语料 v4 对隔玻璃+反光坐姿人物整段漏检（v3 同域对照检出），生产已回退 v3。证据 `research/2026-09-15-生产点火v4坐姿回归证据与pairlist交付.md` |
+| **person v5 真机验收 + 上线** | ✅ **验收 PASS、已 stage 待 iapx 切换**：塌陷段 226/226 帧闭合、C 阳性帧覆盖 99.8%、FP raw 仅 +3.6%（离线 FP +21 未在生产放大）、铁证帧 conf .916。部署物 `2026-09-15_person_n_v5.pt/.onnx`（md5 `a135025a`/`ee129ec3`，ONNX 铁证帧保真 <0.11px）；通知单 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md`。报告 `research/2026-09-15-v5真机验收报告.md` |
+| sitpack_v6（坐姿盲区数据包） | ✅ 预备归档（623 帧/1,049 框，glasspack 兼容）：v5 已闭合坐姿缺口故**归档不并包**；spark 恢复后可 `vlm-retry` 补第四票冻结。`research/2026-09-15-v6坐姿数据包预备.md` |
+| **role v3.3 时序聚合 spike** | ✅ **实证否定**：cleaner/leader 错误 100% 个体级系统性（12/12 错分轨零对帧，oracle 聚合上限=逐帧），**词典 0.80 线对两类单列不适用**（已修词典）；softmax 全向量契约保留作消费侧平滑自由度。`research/2026-09-15-v33时序聚合spike.md` |
+| **OSNet v2 域微调（#26）** | ✅ **jxl 侧验收 PASS**：triplet 微调后 eval gap −0.094 分布分离（基座 +0.116 FAIL）；**并发现 v1 判据方向写反**（余弦距离误用相似度口径，v1「恶化」论据失效——需求文档 §7 已修）。交付 `osnet_x0_75_ft_v2.pth/.onnx`（md5 `a33775ef`/`e235228a`）；§7.4 定标门+管道门待 iapx 复测。`research/2026-09-15-osnet-v2微调报告.md` |
+| 训练机切换 | sgcc0→**sgcc3**（默认，环境就绪）；数据 12G/36 万文件已机间直传；活跃脚本 host 已切（osnet_ft REMOTE_HOST 归位 sgcc3）；**依赖源修正：本仓 uv.lock 用 devpi（192.168.18.146:3141），勿用阿里镜像**。spark（=182 vLLM 机）并发 ≤3 红线（8 并发曾压死整机） |
 
 ## 项目状态（2026-09-14 增补：v4 上线 + role v3 七分类）
 
