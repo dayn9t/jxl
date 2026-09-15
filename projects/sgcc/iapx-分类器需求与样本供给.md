@@ -338,9 +338,9 @@ v31 仍在位可回退。数据集 `gencheck/attr_bank/cls_role_psq_v32`（数�
 
 | 项 | 触发条件 | 触发后动作 |
 |---|---|---|
-| OSNet v2 验收复测 | iapx 执行 §7.4 两段门（reembed_cache→ASYM 定标 gap −0.084 翻正 + 管道门） | jxl 交付物已就位（`osnet_x0_75_ft_v2.pth/.onnx`，md5 `a33775ef`/`e235228a`）；答疑协同，复测留意最难 3 对 same（疑标签噪声，§7 v2 注记） |
-| **v5 切现网** | iapx 照通知单 §1 执行（切 symlink→cache 失效→src2 07-06 冒烟→灰度） | jxl 部署物已 stage（`2026-09-15_person_n_v5.*`）；灰度期关注 ROI 下方柜体区 FP（+9.2% 集中段） |
-| upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
+| OSNet v2 验收复测 | iapx 执行 §7.4 两段门（reembed_cache→ASYM 定标 gap −0.084 翻正 + 管道门） | **✅ 已执行（2026-09-16，jxl 授权代理，temp 通道生产零写入）**：定标门 **PASS**（v2c same_p5 0.685 > diff_p95 0.685，gap **+0.001** 翻正，三表征全正）；管道门 **FAIL**（F1 0.9375 < 0.9677，唯一回归 = 07-02 src1 10-41 姿态漂移重入同人 cos 0.36-0.58 被判新人，参数全组合免疫；换人 0/过切 2 达标）→ **生产 reid 轴维持 handcrafted**，回裁决层（候选：v2 加姿态漂移正对）；复测报告 `research/2026-09-16-上线执行与OSNet复测.md` §3 |
+| **v5 切现网** | iapx 照通知单 §1 执行（切 symlink→cache 失效→src2 07-06 冒烟→灰度） | **✅ 已执行（2026-09-16）**：md5 核对过；生产配置 model_name + 部署树 symlink 双切 v5（实测加载路径 = dated 直指，配置才是生效轴）；cache 两侧指纹自然失效；jxl 侧等价冒烟 **10/10 PASS**（铁证帧 (501.7,177.4,687.3,428.4) conf 0.913 + 三塌陷段抽样）——**36 MKV 全日生产冒烟待 iapx 侧执行**；灰度期关注 ROI 下方柜体区 FP（+9.2% 集中段） |
+| upper_body v2 上线 | iapx cache 指纹修复 | **✅ 已执行（2026-09-16）**：指纹两侧早已就位（iapx cfg_tag 7 分量 + Rust upper_schema，09-13 审计已修——本行触发条件实为既成事实）；生产 Rust 配置 09-15 Ignition 已切 v2 且旁车缓存重分类已完成；本轮补齐 iapx TOML/默认常量/symlink 三位一体（commit e72b3ab）；iapx 侧重分类随下轮 run_pipeline 自然完成 |
 | role v3.2 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md` §2（softmax 全向量契约 + cleaner/leader 按工作人员粗类使用）；jxl 可提供 crop 集 |
 | spark 恢复 | 用户重启 spark（=182 vLLM 机，内存压死后待人工恢复） | 重测 :8000 服务 → 免费池主力切回（并发 ≤3 红线）；sitpack 第四票**已由豆包补齐**（09-16），spark 恢复后重跑仅为可选的回归原四模型口径 |
 
