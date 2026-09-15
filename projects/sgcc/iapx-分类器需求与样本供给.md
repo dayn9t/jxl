@@ -11,7 +11,7 @@ iapx 是 n001 收费窗口的**会话切分原型**（检测 → 上半身分类
 
 | 模型 | 部署物 | iapx 侧角色 |
 |---|---|---|
-| person 检测器 | `2026-09-13_person_n.pt/.onnx`（v4，09-13 23:19 上线） | crop640 域 person 检测；重复框 1,267→7，消费端 IoU≥0.95 防御仍建议保留 |
+| person 检测器 | 现役 `2026-09-09_person_n.pt/.onnx`（**v3**——2026-09-15 生产点火实证 v4 坐姿回归后回退；**v5 已 stage 待切**：`2026-09-15_person_n_v5.*`，验收+跨日期扩展验收双 PASS，见 §8） | crop640 域 person 检测；重复框 1,267→7，消费端 IoU≥0.95 防御仍建议保留 |
 | upper_body 分类器 | `2026-09-10_person_upper_n.pt/.onnx`（主力） | 行走下半身过滤（0.5 阈） |
 
 iapx 产出根：`/mnt/data/jiang/ws/iapx/n001/`；源视频（只读）：
@@ -254,8 +254,9 @@ crops.jsonl 需带路径替换——已修）。期间生产维持 HSV@0.8 过�
 > circle loss 与判据错配）。判据已修复（`same_p95 < diff_p5`）并落盘。
 
 **jxl 侧 OSNet v2 交付（2026-09-15，全量 pair list 重训）**：triplet batch-hard
-margin 0.3、P×K 32×2、Adam lr 3e-4、seed 20260913、sgcc0 4090；train kept 1,410 对
-（same 848/远距负 861/硬负 7，剔触碰 eval 后）/256 ids/654 crops，held-out 328 对
+margin 0.3、P×K 32×2、Adam lr 3e-4、seed 20260913、sgcc0 4090；train 输入池 1,716 对
+（same 848/远距负 861/硬负 7）→ 剔触碰 eval 的 crop 后 **kept 1,410 对**/256 ids/654
+crops，held-out 328 对
 （289/39）泄漏 0。**eval gap = −0.0938，jxl 侧验收门 PASS**（same_p95 0.3628 <
 diff_p5 0.4566 分布分离；基座未微调同口径 +0.1159 FAIL；ep6 翻正、best@ep42、
 早停@ep62）；对照轮 circle（3e-4/3e-5 正确口径 +0.074/+0.083）均 FAIL——**triplet
@@ -316,10 +317,13 @@ manager×4/security×4（val/test 不动）。**test top1 0.8877（5 组跨类�
 （v31 的 0.8846 建立在过期 test 标签上，两版数字不可直接对比）。per-class recall：
 **manager 0.974 / security 0.95 / teller 0.896 / customer 0.80 达线（5/7）**；
 cleaner 0.714 / leader 0.50 未达——复判挤出账面水分后真实难度显形（保洁/引领是
-动作+工装混合类，单帧 crop 天然边界；改进路径=时序多帧聚合，非补静态样本）。
+动作+工装混合类，单帧 crop 天然边界；**09-15 spike 实证：时序聚合收益上限 0，两类
+错误 100% 个体级系统性——词典 0.80 线单列不适用，不再实施 v3.3**，见 §8 与
+`research/2026-09-15-v33时序聚合spike.md`）。
 **部署候选已 stage：`2026-09-14_person_role_n_v32.pt/.onnx`**（md5 配对
 `2364d5e7`/`16be90c7`；names 与 v31 相同七类字母序）。**建议 iapx 对接 v3.2**；
-v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_role_psq 原地不动）。
+v31 仍在位可回退。数据集 `gencheck/attr_bank/cls_role_psq_v32`（数据根
+`crop640_persons/` 下；v31 的 cls_role_psq 原地不动）。
 
 **v32 预演说明（2026-09-15 补，诚实口径）**：v31 的「20 帧预演 20/20」系一次性内联
 脚本产出（未存档），检测层重跑存在框序漂移（NMS 超时截断），v32 无法与之直接对比；
@@ -338,7 +342,7 @@ v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_ro
 | **v5 切现网** | iapx 照通知单 §1 执行（切 symlink→cache 失效→src2 07-06 冒烟→灰度） | jxl 部署物已 stage（`2026-09-15_person_n_v5.*`）；灰度期关注 ROI 下方柜体区 FP（+9.2% 集中段） |
 | upper_body v2 上线 | iapx cache 指纹修复 | 切 symlink（`2026-09-12_person_upper_n_v2.*`）→ 通知 iapx 重分类 pass |
 | role v3.2 对接支持 | iapx 开始对接 | 照 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md` §2（softmax 全向量契约 + cleaner/leader 按工作人员粗类使用）；jxl 可提供 crop 集 |
-| spark 恢复 | 用户重启 spark（=182 vLLM 机，内存压死后待人工恢复） | 重测 :8000 服务 → sitpack `vlm-retry` 补第四票 → 免费池主力切回（并发 ≤3 红线） |
+| spark 恢复 | 用户重启 spark（=182 vLLM 机，内存压死后待人工恢复） | 重测 :8000 服务 → 免费池主力切回（并发 ≤3 红线）；sitpack 第四票**已由豆包补齐**（09-16），spark 恢复后重跑仅为可选的回归原四模型口径 |
 
 ### sgcc 线 2026-09-15/16 总账（生产点火应对 + OSNet v2 + spike，全部闭环）
 
@@ -352,15 +356,18 @@ v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_ro
   （§7 ⚠️ 块——余弦距离误用相似度口径，v1「恶化」论据失效）；§7.4 两段门交 iapx 复测
 - **role v3.3 时序聚合 spike** ✅ 实证否定：cleaner/leader 错误 100% 个体级系统性
   （oracle 聚合上限=逐帧），词典 0.80 线对两类**单列不适用**（词典已修）；v3.3 不实施
-- **sitpack_v6** ✅：623 帧/1,049 框 glasspack 兼容包预备**归档**（v5 已闭合坐姿缺口
-  故不并包；spark 恢复后可补第四票冻结）
+- **sitpack_v6** ✅ **四票完整包已冻结归档**：621 帧/1,036 框 glasspack 兼容（09-16
+  豆包第四票补齐 623/623 帧、0 弃权、框级一致 98.65%、手术剔 32 框/推翻 2 帧）；
+  v5 已闭合坐姿缺口故不并包
 - **训练机切换** ✅：sgcc0→sgcc3 默认（+用户授权双机并行），环境（torch cu128/sm_120
   实算验证）/数据（12G 机间直传）/脚本 host 全就位；**依赖源修正：本仓 uv.lock 走
   devpi（192.168.18.146:3141），阿里镜像会致 lock 重解析**；本机→sgcc3 仅 ~2MB/s，
   大文件必机间直传（11.2MB/s）
 - **spark 事故入账**：批量图片请求 8 并发压死整机（内存），**并发 ≤3 红线**已入
-  memory；sitpack 585 帧缺第四票（豆包顶替期间产出，语义安全）待恢复补投
-- 数据口径：manifest 实测 **133,299 行**（§2 的 101,503 为 09-13 历史口径，iapx 侧
+  memory；sitpack 缺失的 585 张第四票**已由豆包补齐**（09-16，FALLBACK 用户授权），
+  spark 恢复后重跑仅为可选回归口径
+- 数据口径：manifest 实测 **133,299 行**（§4.1 iapx 回填的 101,503 为 09-13 历史口径，
+  §2 初版为 28,498；iapx 侧
   又增量过）
 
 ### sgcc 线 2026-09-14/15 收官总账（三线 + v3.2 重训 + 四维度审核，全部闭环）
@@ -374,12 +381,16 @@ v31 仍在位可回退。数据集 `attr_bank/cls_role_psq_v32`（v31 的 cls_ro
   落成（v3.1 数据集原地不动可回退）
 - **person v5** ✅：test 0.8945（−0.6pt）；玻璃反光专项 recall 0.911→**0.930** 代价 FP +21。
   **裁决建议 v4 保持现役，v5 存档候选**（`runs/person_n001_v5/`，切换待用户拍板），
-  详见归因报告 §6.2
+  详见归因报告 §6.2（**此建议已被 09-15 生产点火推翻**：v4 坐姿回归实证、v5 真机+跨日期
+  验收双 PASS，见上文 09-15/16 总账——v5 已 stage 待切）
 - **role v3.2 重训交付** ✅：数据 = v32 复判集 + security 91 + train 过采样；**test top1
   0.8877**（5 组跨类双标签修复后干净口径）；manager 0.974/security 0.95/teller 0.896/
-  customer 0.80 达线（5/7），cleaner 0.714/leader 0.50=挤水后真实难度（改进走时序聚合）。
+  customer 0.80 达线（5/7），cleaner 0.714/leader 0.50=挤水后真实难度（改进走时序聚合——
+  **09-15 spike 已实证否定该路径**，词典 0.80 线单列，见上文 09-15/16 总账）。
   交付物 `2026-09-14_person_role_n_v32.pt/.onnx`（md5 配对 `2364d5e7`/`16be90c7`）。
   **cleaner/leader 若要冲线的下一步 = v3.3 时序多帧聚合**（非补静态样本），未开工
+  （**09-15 更新：spike 实证否定，v3.3 不再实施**——聚合收益上限 0，两类按
+  「工作人员粗类」使用，词典 0.80 线单列）
 - **全项目审核** ✅（四维度 docs/code/data/xref，2 轮 workflow）：19 项确认问题全部修复
   （rename 覆盖/rsync 漏传/双标签污染/7 步清单分叉/8→9 traits/口径虚高 3 处纠正等）；
   一次性验证脚本已按教训落盘 gencheck（`role_v32_preview_fair.py` 等）
