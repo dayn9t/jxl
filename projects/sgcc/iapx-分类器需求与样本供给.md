@@ -269,6 +269,23 @@ gap −0.084 翻正目标）+ 管道门属 iapx 侧复测待办**（距离/相�
 建议 iapx 复测留意；margin 疑似已到本数据量级收益边界，下一档收益 = 扩正对 +
 每 id 增锚解锁 K>2。报告：`research/2026-09-15-osnet-v2微调报告.md`。
 
+**jxl 侧 OSNet v2.1 交付（2026-09-16，姿态漂移正对补训——管道门回归的靶向处置）**：
+用户裁决 jxl 自挖 pair 解除前置（原等 iapx 挖掘；知会单
+`iapx docs/jxl-notice-2026-09-16-osnet-v21-pair-self-mining.md`）。jxl 侧伪轨迹+
+困难正对挖掘（`gencheck/osnet_drift_mine.py`：conf≥0.5 全检、帧级贪心 IoU≥0.5、
+帧间 >4s 断链防粘连、跨空档重连 8-60s 几何双门、ft_v2 余弦 <0.62 难例筛）产出
+**119 对**（10-41 铁证段定向 5 + 困难 114，18 src×date 组均衡）。与 v2 全量
+合并重训（sgcc3 首训，同配方单一变量）：kept 1,527 对/352 ids（drift 簇并入），
+held-out 328 泄漏 0。**双证据 PASS**：①held-out gap −0.0938→**−0.1138**（不回退
+且改善，best@ep34/早停 ep54）；②drift 119 对 **118 对余弦改善**，铁证段
+0.195→0.787、0.352→0.824（复测混淆带 0.36-0.58 拉回 same 带，全体最低
+0.195→0.758）。交付 `osnet_weights/osnet_x0_75_ft_v21.pth`（md5 `c4b13f74`）+
+`.onnx`（`fcb4dcfa`，opset17/动态 batch/剥 fc，一致性 min cos 0.9999999）；
+cfg tag 建议 `osnet-x0_75-ft-v21`。**§7.4 管道门复测靶点 = 10-41 段**
+（F1 0.9375→≥0.9677）；残留风险：drift 重连族标签噪声若致换人上升可按 origin
+消融。报告 `research/2026-09-16-OSNet-v21姿态漂移补训.md`；BN 导出脚本
+`gencheck/export_osnet_bn_onnx.py`（iap-s2 脚本系 AIN 硬编码不可复用，本轮固化）。
+
 **jxl 侧 role v2 交付（2026-09-13 23:5x）**：素材扩至唯一源 cleaner 295 / leader 183 后重训
 （train 1,792/2,120/1,602/2,384，过采样对齐 customer 量级）。test（含副本口径）top1 0.8414，
 分类别 recall 对比 v1——**leader 0.496→0.719（+22pt）**、cleaner 0.667→0.686、customer

@@ -739,6 +739,7 @@ dependencies = [
     { name = "nvidia-cusparselt-cu12" },
     { name = "onnx" },
     { name = "onnxruntime-gpu" },
+    { name = "onnxscript" },
     { name = "openai" },
     { name = "opencv-python" },
     { name = "orjson" },
@@ -781,6 +782,7 @@ requires-dist = [
     { name = "nvidia-cusparselt-cu12", specifier = ">=0.7.1" },
     { name = "onnx" },
     { name = "onnxruntime-gpu", specifier = "<1.28" },
+    { name = "onnxscript", specifier = ">=0.7.2" },
     { name = "openai" },
     { name = "opencv-python" },
     { name = "orjson" },
@@ -1228,6 +1230,22 @@ wheels = [
 ]
 
 [[package]]
+name = "onnx-ir"
+version = "1.0.0"
+source = { registry = "http://192.168.18.146:3141/root/dev/+simple/" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "http://192.168.18.146:3141/root/pypi/+f/9e2/61f25fde8da96/onnx_ir-1.0.0.tar.gz", hash = "sha256:9e261f25fde8da9612ae5cb43b3b374d5ff469c04af0363cad588b2bb000b812" }
+wheels = [
+    { url = "http://192.168.18.146:3141/root/pypi/+f/e57/8f0d608d30628/onnx_ir-1.0.0-py3-none-any.whl", hash = "sha256:e578f0d608d3062866b48223616eb2d10a6d6d01f8b8faac596129034f483cc7" },
+]
+
+[[package]]
 name = "onnxruntime"
 version = "1.23.2"
 source = { registry = "http://192.168.18.146:3141/root/dev/+simple/" }
@@ -1260,6 +1278,23 @@ dependencies = [
 wheels = [
     { url = "http://192.168.18.146:3141/root/pypi/+f/b2b/8d6afabf3c23c/onnxruntime_gpu-1.27.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b2b8d6afabf3c23c2c698639a16388816dc7298f388a9ddddf504b283990ea01" },
     { url = "http://192.168.18.146:3141/root/pypi/+f/9f9/2c12578433cff/onnxruntime_gpu-1.27.0-cp312-cp312-win_amd64.whl", hash = "sha256:9f92c12578433cffa6017ec843f4b4c500b9ebaf65f6c4497ddec01af5cd5396" },
+]
+
+[[package]]
+name = "onnxscript"
+version = "0.7.2"
+source = { registry = "http://192.168.18.146:3141/root/dev/+simple/" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "onnx-ir" },
+    { name = "packaging" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "http://192.168.18.146:3141/root/pypi/+f/2c6/64f6383d10f33/onnxscript-0.7.2.tar.gz", hash = "sha256:2c664f6383d10f332a4d47b2876dcab16dba84909fe703656b19abc281fda165" }
+wheels = [
+    { url = "http://192.168.18.146:3141/root/pypi/+f/d0e/7121c6a1eefd6/onnxscript-0.7.2-py3-none-any.whl", hash = "sha256:d0e7121c6a1eefd608058928e111cbdb76709f70d269ff0d07aee493bd1d13c9" },
 ]
 
 [[package]]
