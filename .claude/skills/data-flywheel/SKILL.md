@@ -9,6 +9,13 @@ description: n001 数据飞轮执行入口（SGCC）。当新视频数据拷回/
 > 组件动作做全 ≠ 飞轮在转；触发挂在管道尾巴，不挂在下次对话的运气）。
 > 制度文档（为什么/跨方契约）：iap `docs/DATA-FLYWHEEL-SOP.md`——本 skill 只管怎么跑。
 
+## 模式声明（2026-09-19 用户裁决）
+
+**当前默认 = 全模型例行沉淀**：每批新数据，四个视觉模型（person 检测器正样本、
+upper 分类器、role 分类器、OSNet 身份认定）的样本**全部**提取+自动标注+入池，
+**不论当轮是否重训**——沉淀是资产积累，训练节奏另定。「先评估再选择是否沉淀」
+是系统稳定后的**未来降级模式**，现在不启用。
+
 ## 触发条件（任一）
 
 - 新视频数据拷回/落盘 `/var/howell/iap/v0.10/ias/sh-sgcc/n001/video/`（**只读红线**）
@@ -57,6 +64,23 @@ python3 vlm_gate.py --dir <候选目录> --mode neg-person   # 全检，并发�
 - 刻度三条：多 seed（**<0.006 单次 mAP 差异不可判**，2026-09-18 烤机结论）+ FP 探针
   （v5 基线 1/帧 → 目标 0）+ eval held-out 冻结（防自我强化）
 - 训练机 sgcc3；每转记录 `projects/sgcc/README.md` 状态表 + 通知单往返 iap
+
+## 第六步：全模型例行沉淀（默认模式，2026-09-19 起）
+
+| 模型 | 样本形态 | 自动标注方式 | 入池位置 |
+|---|---|---|---|
+| person 检测器（正样本） | 整帧 + YOLO txt（框来自检测缓存） | 抽帧（日期×src×小时分层）→ spark VLM 验证「有人且框贴合」→ 通过者带框入池 | `gencheck/pospool/<date>/` |
+| person 检测器（负样本） | 640×640 crop + 空 txt | FP 信号簇挖掘（第二步）→ VLM 全检无人 | `gencheck/neg_<date>/` |
+| upper 分类器 | crop + upper_body 标签 | 缓存 upper_body 字段（upper_n_v2 预填）→ VLM 复核上半身可见性一致性 | `gencheck/upperpool/<date>/` |
+| role 分类器 | session target_crop + role 标签 | step5 高置信判定作代理级标签（⚠️ 代理级，按 j-eval-benchmarks 分级记录） | `gencheck/rolepool/<date>/` |
+| OSNet 身份认定 | 同人对（jsonl pair） | osnet_drift_mine（**v2.1 口径筛+split_points 门**——v2.2 证伪教训：用当前最强权重口径+配比甜点区，训练时再定并入量） | `osnet_ft/drift_pairs_<date>.jsonl` |
+
+**自标注局限（记录在案）**：正样本框来自模型自身检出（SAM 引擎阶段 2 形态——
+高置信预填+验证），模型漏检侧不覆盖；upper/role 标签含自产成分。例行沉淀的
+已知边界，重大版本重训前应补人工抽检。
+
+**新段 reid 切分画像**（随沉淀附带）：新段 session 密度/切分形态 vs 历史段——
+若显著漂移，reid「终态」结论需重开。
 
 ## 资产指针
 
