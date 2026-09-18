@@ -75,6 +75,13 @@ python3 vlm_gate.py --dir <候选目录> --mode neg-person   # 全检，并发�
 | role 分类器 | session target_crop + role 标签 | step5 高置信判定作代理级标签（⚠️ 代理级，按 j-eval-benchmarks 分级记录） | `gencheck/rolepool/<date>/` |
 | OSNet 身份认定 | 同人对（jsonl pair） | osnet_drift_mine（**v2.1 口径筛+split_points 门**——v2.2 证伪教训：用当前最强权重口径+配比甜点区，训练时再定并入量） | `osnet_ft/drift_pairs_<date>.jsonl` |
 
+**reconnect 族强制 VLM 同人门（2026-09-19 实证）**：新段跨空档重连对经几何门+
+余弦难例门后仍有 **52% 被 VLM 判 diff**（岗位固定场景不同员工先后占位，余弦门
+反向富集异人对；benchmark split_points 在新段无切点=裸奔）——**reconnect 族
+入库前必须过 spark VLM 同人门**（drift_mine_newdates.py 已默认开启；被拒对落
+`*_rejected.jsonl` 留证）。intra/interframe 族无需此门（空间连续性背书，v2.1
+时代零错标）。
+
 **自标注局限（记录在案）**：正样本框来自模型自身检出（SAM 引擎阶段 2 形态——
 高置信预填+验证），模型漏检侧不覆盖；upper/role 标签含自产成分。例行沉淀的
 已知边界，重大版本重训前应补人工抽检。
