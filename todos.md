@@ -1,0 +1,27 @@
+# jxl 代办（todos.md）
+
+> j-todo 单一归宿。状态：`[ ]` 待办 / `[x]` 完成 / `[~]` 进行中。
+
+## 今天（2026-09-19）用户要参与的
+
+- [ ] **隔离台账人工批量复核（290 条，高优先 121）**：`gencheck/quarantine/2026-09-19-sedimentation.jsonl`
+  ——重点高优先类（模型分歧/不可判定）：upper 不一致 7、osnet 重连异人对 114（含不可判定）。
+  每条三选一：回收（人工验证后入池）/确认丢弃/升级入参照集。看图入口参考 visual-adjudication skill。
+- [ ] **ASR 评估集 5 个决策点**（方案 `research/2026-09-19-ASR评估集设计方案.md`）：
+  抽样量 24/30/36、时长边界、A/B 判定门、**裁决人资质（你本人裁沪语 verbatim 是否可行）**、LLM 辅助边界。
+- [ ] **role v3.3 切换前 50 张人工抽检**（清单 `gencheck/rolepool_20260919/rolepool_spotsample_checklist.md`，C 类 12 张优先）。
+- [ ] **v6/v7 切换裁决**（对象已变：iapx 解散后移交 iap TODO——见下条）：v6（FP 修复）与 v7（+正样本）双 staged。
+- [ ] **sgcc3 升级后验证**（你升级完成后我来跑：驱动/CUDA 栈核验+轻量烤机，并定默认训练机归属）。
+- [ ] cleaner 稀有类正样本人工裁（1 张，role_conf 0.97 窗前交互——稀有类样本矿）。
+
+## iapx 解散对 jxl 的影响（2026-09-19 发现，spec `iap docs/superpowers/specs/2026-09-19-polyglot-restructure-design.md`）
+
+- [ ] **osnet vendor 移交**：spec 裁定 `iapx pipeline/osnet.py + vendor/osnet.py → jxl.vdt`（Embedder 第二实现 reid_osnet + vendored）。iapx 归档前 jxl 须切换 osnet_ft 的 import（现指 iapx 路径）。
+- [ ] **reid 复测通道将失效**：iapx pipeline+影子测试被删（Rust 已镜像+GT 门绿）——v2.1 正式复测须改走 iap Rust 重放（monitor_replay_corpus），reid-retest skill 的 temp 通道流程届时更新。
+- [ ] **数据资产去向关注**：`/mnt/data/jiang/ws/iapx/n001/`（samples/eval.jsonl held-out 328/benchmark）——export-samples/export-reid-pairs 工具进 iap py/tools 接口不变，但存量数据迁移方案需确认。
+- [x]（无需动）spec 明确「jxl 除 osnet 外零改动」；通知单 4 份归档 iap docs/jxl-deliveries/，在办事项移交 iap TODO。
+
+## 飞轮例行
+
+- [ ] 下批 iap 增量到 → 信号盘点+全模型沉淀（skill data-flywheel 自动触发路径，含第七步台账）
+- [ ] SHTM 下周解冻：r2 审核 1,246 帧（用户人工）→ hardcase → V2.2 重训

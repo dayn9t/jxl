@@ -109,6 +109,15 @@ python3 vlm_gate.py --dir <候选目录> --mode neg-person   # 全检，并发�
 后续每轮飞轮：各门的 rejected/removed 产出**同步登记**进队列 INDEX；复审结论
 回写（回收/确认丢弃/修正标注），高价值结论沉淀为参照集素材。
 
+## 第七步：隔离台账（无声丢弃禁止，2026-09-19 用户裁决）
+
+凡第六步任何门（VLM 人/框判定、upper 一致性、osnet 同人门、role 归因）拒绝
+的样本，**连同判定上下文写入当批台账** `gencheck/quarantine/<batch>.jsonl`
+（格式与人工批量处理回路见通用 skill **`j-quarantine-ledger`**
+~/.claude/skills/j-quarantine-ledger/SKILL.md——单一数据源）。阈值 50 条 →
+记 j-todo 代办触发人工批量复核（回收/确认丢弃/升级入参照集三选一，结果回写）。
+**禁止只留计数不留样本**——特殊情况样本的每次无声丢弃都是模型盲区的加深。
+
 ## 资产指针
 
 | 资产 | 位置 |
