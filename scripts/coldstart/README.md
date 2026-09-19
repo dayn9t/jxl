@@ -118,12 +118,13 @@
 ## 训练结果（golden 对拍 + EVAL 基准数字）
 
 每模型：golden 对拍（.pt predict vs 契约化 ONNX 前向，导出保真 <1e-3，不覆盖 Rust/usls 在线路径）+
-`eval_classifier.py` val 混淆矩阵（⚠️ 代理级——域外分布，待域内微调）。
+`eval_classifier.py` val+test 混淆矩阵（评分器合并 val/test 两 split 计分；⚠️ 代理级
+——域外分布，待域内微调）。
 
-| 模型 | 训练 val top-1 | golden worst | EVAL val | 备注 |
+| 模型 | 训练 val top-1 | golden worst | EVAL val+test | 备注 |
 |---|---|---|---|---|
-| `yolo26n-cls-drowse.onnx` | 1.000（30ep） | 2.61e-15（3 crop） | top1=1.000（10,026 张：awake 4,655 / drowsy 5,371 全对） | 域=驾驶员人脸；标签 clip 级含过渡帧噪声 |
-| `yolo26n-cls-phone-in-hand.onnx` | 0.994（30ep） | 5.49e-16（4 crop） | top1=1.000（177 张：other 100 / phone_in_hand 77 全对） | 正=司机手持；负=COCO 桌面手机（域差最大，仅预训练） |
+| `yolo26n-cls-drowse.onnx` | 1.000（30ep） | 2.61e-15（3 crop） | top1=1.000（val+test 合计 10,026 张 = val 1,667 + test 8,359：awake 4,655 / drowsy 5,371 全对） | 域=驾驶员人脸；标签 clip 级含过渡帧噪声 |
+| `yolo26n-cls-phone-in-hand.onnx` | 0.994（30ep） | 5.49e-16（4 crop） | top1=1.000（177 张：other 100 / phone_in_hand 77 全对；该数据集无 test split，数字即 val） | 正=司机手持；负=COCO 桌面手机（域差最大，仅预训练） |
 | `yolo26n-cls-head-cover.onnx` | —（受阻） | — | — | SLP 密码表单不可得，未训练未入库 |
 
 drowse 行注：训练数据为 DDD 人脸帧直转 ImageFolder，未过 head:0.35 crop 管线——
