@@ -89,6 +89,26 @@ python3 vlm_gate.py --dir <候选目录> --mode neg-person   # 全检，并发�
 **新段 reid 切分画像**（随沉淀附带）：新段 session 密度/切分形态 vs 历史段——
 若显著漂移，reid「终态」结论需重开。
 
+### 第六步 B：升级队列（无声丢弃禁止，2026-09-19 用户裁决）
+
+> 通用原则见全局 rule `j-escalation-queue.md`（j-cc 库）——本项目实例落
+> `gencheck/escalation_queue/`。
+
+本轮飞轮中所有「保守排除」的样本**必须**归拢进升级队列（指针索引+状态标记），
+不阻塞流程、累积批量人工复审（阈值 ≥100 条或每周，挂 TODO）：
+
+| 丢弃源（已发生） | 队列来源文件 | 状态 |
+|---|---|---|
+| person bad_fit 弃帧（100 帧/119 pass 框） | `pospool_20260919/vlm_person_verdicts.jsonl` 筛 bad_fit | 待复审 |
+| person not_person 框 57 | 同上筛 not_person | 待复审 |
+| upper 双门不一致 7 | `upperpool_20260919/removed.jsonl` | 待复审 |
+| role 归因失败 7 + cleaner 稀有样本 1 | `rolepool_20260919/rolepool_excluded.jsonl` | 待复审（cleaner 优先） |
+| osnet 重连对 VLM 判 diff 114 | `osnet_ft/drift_pairs_new0919_rejected.jsonl` | 待复审（含不可判定对） |
+| spark/4.5v 分歧边缘框 | 审核 finding（v6 预冒烟 bad_fit 边缘 1 例等） | 待补录 |
+
+后续每轮飞轮：各门的 rejected/removed 产出**同步登记**进队列 INDEX；复审结论
+回写（回收/确认丢弃/修正标注），高价值结论沉淀为参照集素材。
+
 ## 资产指针
 
 | 资产 | 位置 |
