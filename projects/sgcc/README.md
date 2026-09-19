@@ -8,6 +8,7 @@
 
 | 里程碑 | 状态 |
 |---|---|
+| **飞轮第一轮全模型（2026-09-19 晨）** | ✅ **v7 验收 PASS 已 stage**（mAP 0.8981 带内上部 + FP 探针 0 保持 + ONNX 保真 <0.003px；+615 正样本，seed0 注明）；upper v3 回归门过/legs 门 174 张 +2 张判条件过；role v3.3 0.8858 门内（代理级标签待人工抽检）；**OSNet v2.3 三档 sweep 全档证伪——v2.2/v2.3 双证伪加固 v2.1 终态**。md5 v7 `71165d39`/`91ba15c9`（v6/v7 双 staged 未切）；通知单 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-19.md` |
 | **person v6（座椅区静物 FP 修复，飞轮首转）** | ✅ **验收 PASS、已 stage 待 iapx/iap 切换**：FP 探针（neg_2026-07-05 独立 35 张）v5 1 检出→**v6 0 检出**；test mAP50-95 0.8979（v5 seed 带内上段，无回归）；ONNX 保真 <0.005px。v5 数据+66 张 neg0906 负样本（spark VLM 66/66 全检无人）单变量，val/test 逐字节冻结；seed1 主轮（sgcc0，sgcc3 seed0 因升级中止 @ep17）。部署物 `2026-09-18_person_n_v6.pt/.onnx`（md5 `109af4b7`/`f7762723`，sgcc0 /opt/howell v0.10 stage）；通知单 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-18.md`。报告 `research/2026-09-18-person-v6交付报告.md` |
 | iap 夜间批交接（09-05~09-17 新数据全链） | 📥 **已入库**（`research/2026-09-18-iap夜间全链批交接报告.md`）：424 段 v5 四指纹缓存落 n001（v5 上线后首批全域生产数据）；★09-06 误检框群（10,121 恒定尺寸框，员工座椅区、ROI 外）= person_n 下一轮 hard-negative 候选；09-05+ 新日期域表现评估素材。待办：难例提取 + 新日期域评估 |
 | **09-06 误检簇处置 + v6 素材** | ✅ **看图门+提取+全检+入池全链当日完成**：spark VLM 三时段裁决=静物非人（排除留守人员，09-08 教训门）→ 10,121 框聚 35 簇 → **66 张 640×640 crop 全检无人零剔除**入池就绪 `gencheck/neg0906/`（形态同 v5_glass）；知会 iap `~/cc/next/iap/docs/jxl-notice-2026-09-18-neg0906-hard-negatives.md`（含 FP 探针参照集建议） |
