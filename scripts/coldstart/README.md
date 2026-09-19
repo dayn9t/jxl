@@ -26,6 +26,8 @@
 - **受阻点**：zip 内数据文件加密（实测中央目录 15,489/15,904 entry 置 encryption bit）；
   密码须在 ACLab 页面填 request form 并用机构邮箱申请——本任务无可用机构邮箱通道，
   且规则禁止注册/表单类获取。HF 无镜像（`SLP` 关键词仅文本数据集；in-bed/blanket 关键词空）。
+- 许可状态：SLP 原始分发为申请制（request form + 机构邮箱），使用条款以官方申请
+  通道为准；本仓未获数据、无再分发。
 - 结论：head-cover 冷启动 blocked，`yolo26n-cls-head-cover.onnx` 不入库（No Silent
   Degradation——占位模型禁止）。jail 侧该事件走 fake-classifier 测试 + example 注释态。
 - 代码仓（仅文档参考，未用其数据）：`slp/code/` = github.com/ostadabbas/SLP-Dataset-and-Code 浅克隆。
@@ -37,6 +39,9 @@
   WITS 2020，DOI 10.1007/978-981-33-6893-4_6）。
 - 形态：HF parquet（image + class_label 0=Drowsy / 1=Non Drowsy；train 33,434 / test 8,359）。
 - 域差声明：驾驶员座舱域，非监控室值班民警域——仅预训练/链路验证，指标待域内微调。
+- **许可（如实标注）**：akahana 镜像未声明任何 license（HF cardData 无 license
+  字段，2026-09-19 HF API 实查）；底层 NTHU-DDD 原始分发为申请制（学术申请受
+  限），派生镜像的再分发许可**无法确认**。数据仅作冷启动预训练，域内替换排期 P2-5。
 - 下载：
 
   ```bash
@@ -78,6 +83,10 @@
     `images.cocodataset.org` 在本机 DNS 挂起——改走 S3 端点
     `https://s3.amazonaws.com/images.cocodataset.org/train2017/<file>`（URL 清单
     由脚本外一次性生成：`train2017_phone_urls_s3.txt`，xargs -P 8 curl）。
+- **许可（如实标注）**：正例 = State Farm Distracted Driver Detection 竞赛集的
+  HF 再镜像（gymprathap 自标 "cc"，不构成对底层竞赛数据的权利来源；Kaggle 竞赛
+  条款通常限竞赛/研究使用，用于交付物前须自查）；负例 = COCO 2017，CC BY 4.0
+  ——署名义务，交付物引用需注明来源与链接。数据仅作冷启动预训练，域内替换排期 P2-5。
 - 裁切配方（与在线 PhoneVerifier 同源于契约 `phone_context:0.5`，复用
   `jxl.bin.build_attr_crops.phone_context_crop`）：
   - 正例 `phone_in_hand`：c1-c4 → yolo26n 检 cell phone(67) conf≥0.25
