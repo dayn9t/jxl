@@ -54,6 +54,10 @@
 - 转换：`uv run python scripts/coldstart/drowse/parquet_to_imagefolder.py`（polars 读
   parquet——venv 既有依赖；HF 0=Drowsy→`drowsy/`、1=Non Drowsy→`awake/`；train 内
   每分片每类前 5% 作 val；test 原样）。
+- **crop 管线披露**：训练数据 = DDD 人脸帧直转 ImageFolder，**未过**
+  `build_attr_crops` head:0.35 管线——模型契约的 `crop: head:0.35` 字段仅描述
+  在线侧裁切，**不代表训练分布**（域内微调 P2-5 时须改走 build_attr_crops 产
+  训练 crop，届时本披露撤下）。
 - **标签方向验证**（转换前核）：HF imagefolder 的 label 序 = 类目录名排序
   （"Drowsy"(0) < "Non Drowsy"(1)，与 dataset card 一致）；蒙太奇抽检 label-0 多数
   闭眼/垂头、label-1 全部清醒。标签为 NTHU-DDD clip 级——含少量过渡帧噪声（个别
@@ -121,6 +125,9 @@
 | `yolo26n-cls-drowse.onnx` | 1.000（30ep） | 2.61e-15（3 crop） | top1=1.000（10,026 张：awake 4,655 / drowsy 5,371 全对） | 域=驾驶员人脸；标签 clip 级含过渡帧噪声 |
 | `yolo26n-cls-phone-in-hand.onnx` | 0.994（30ep） | 5.49e-16（4 crop） | top1=1.000（177 张：other 100 / phone_in_hand 77 全对） | 正=司机手持；负=COCO 桌面手机（域差最大，仅预训练） |
 | `yolo26n-cls-head-cover.onnx` | —（受阻） | — | — | SLP 密码表单不可得，未训练未入库 |
+
+drowse 行注：训练数据为 DDD 人脸帧直转 ImageFolder，未过 head:0.35 crop 管线——
+契约 crop 字段仅描述在线侧裁切，不代表训练分布（详见「drowse」小节披露）。
 
 训练环境：本机 RTX 4060 Ti（drowse 30ep ≈ 22min；phone 30ep ≈ 2min），
 `device=0`；golden_check 固定 `device=cpu`（pt/onnx 同设备确定性对拍）。
