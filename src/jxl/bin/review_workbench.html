@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>裁决工作台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: system-ui, "Noto Sans CJK SC", sans-serif; background: #f4f5f7; color: #222; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  .tabs button { padding: 6px 12px; margin-right: 6px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .progress { margin-left: auto; font-size: 13px; color: #555; }
+  .bar { width: 160px; height: 8px; background: #e2e4e9; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .bar i { display: block; height: 100%; background: #22c55e; }
+  main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 18px; }
+  .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .imgs figure { text-align: center; }
+  .imgs img { max-width: 46%; max-height: 420px; border: 1px solid #ccc; border-radius: 6px; }
+  .imgs figcaption { font-size: 12px; color: #777; margin-top: 4px; }
+  .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre-wrap; }
+  .opts { display: flex; gap: 10px; flex-wrap: wrap; }
+  .opts button { padding: 10px 18px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
+  .opts button b { color: #2563eb; margin-right: 6px; }
+  .opts button:hover { border-color: #2563eb; }
+  .opts button.picked { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .opts button.picked b { color: #fff; }
+  .nav { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+  .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
+  .nav .note { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
+  .hint { font-size: 12px; color: #888; margin-top: 12px; }
+  .done { text-align: center; padding: 60px 0; color: #16a34a; font-size: 18px; }
+  .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>裁决工作台</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
+</header>
+<main>
+  <div class="card" id="card"></div>
+  <div class="err" id="err"></div>
+  <div class="hint">快捷键：数字键 = 选对应选项并跳下一张未裁样本 ｜ ←/→ = 前后翻 ｜ 已裁样本重选即覆盖（追加行，合并取最后）</div>
+</main>
+<script>
+"use strict";
+let tasks = {}, task = null, samples = [], verdicts = {}, idx = 0;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const imgUrl = (p) => "/img?p=" + encodeURIComponent(p);
+
+async function load() {
+  tasks = await (await fetch("/api/tasks")).json();
+  verdicts = await (await fetch("/api/progress")).json();
+  const names = Object.keys(tasks);
+  $("tabs").innerHTML = names.map(n =>
+    `<button data-n="${esc(n)}">${esc(n)} (${tasks[n].n_samples})</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b =>
+    b.onclick = () => switchTask(b.dataset.n));
+  if (names.length) switchTask(names[0]);
+}
+
+async function switchTask(name) {
+  task = await (await fetch("/api/task?name=" + encodeURIComponent(name))).json();
+  samples = task.samples; idx = 0;
+  document.querySelectorAll("#tabs button").forEach(b =>
+    b.classList.toggle("active", b.dataset.n === name));
+  render();
+}
+
+function done(sid) { return verdicts[task.name] && verdicts[task.name].includes(sid); }
+
+function render() {
+  const total = samples.length, ndone = samples.filter(s => done(s.id)).length;
+  $("ptext").textContent = `${ndone}/${total} 已裁`;
+  $("pbar").style.width = total ? (ndone / total * 100) + "%" : 0;
+  if (idx >= total) {
+    $("card").innerHTML = `<div class="done">本任务已到末尾（${ndone}/${total} 已裁）<br><br>
+      <button onclick="idx=0;render()">回到开头</button></div>`;
+    return;
+  }
+  const s = samples[idx];
+  const meta = Object.entries(s.meta || {}).map(([k, v]) => `${k}: ${v}`).join("\n") || "（无附加信息）";
+  const imgs = s.images.map((p, i) =>
+    `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
+  const opts = task.options.map((o, i) =>
+    `<button data-k="${esc(o.key)}" class="${done(s.id) ? "" : ""}"><b>${i + 1}</b>${esc(o.label)}</button>`).join("");
+  $("card").innerHTML = `
+    <div class="imgs">${imgs}</div>
+    <div class="meta">[${idx + 1}/${total}] ${esc(s.id)}${done(s.id) ? " ✅已裁" : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
+    <div class="opts">${opts}</div>
+    <div class="nav">
+      <button onclick="idx=Math.max(0,idx-1);render()">← 上一张</button>
+      <input class="note" id="note" placeholder="备注（可选，随裁决落盘）">
+      <button onclick="idx=Math.min(samples.length-1,idx+1);render()">下一张 →</button>
+    </div>`;
+  document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
+}
+
+async function pick(key) {
+  const s = samples[idx];
+  const note = ($("note") && $("note").value.trim()) || "";
+  try {
+    const r = await fetch("/api/verdict", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({task: task.name, sample_id: s.id, choice: key, note})});
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+    verdicts[task.name] = verdicts[task.name] || [];
+    if (!verdicts[task.name].includes(s.id)) verdicts[task.name].push(s.id);
+    $("err").textContent = "";
+    const next = samples.findIndex((x, i) => i > idx && !done(x.id));
+    idx = next >= 0 ? next : idx + 1;
+    render();
+  } catch (e) { $("err").textContent = "保存失败: " + e.message; }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!task || e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft") { idx = Math.max(0, idx - 1); render(); }
+  else if (e.key === "ArrowRight") { idx = Math.min(samples.length - 1, idx + 1); render(); }
+  else if (/^[1-9]$/.test(e.key)) {
+    const o = task.options[Number(e.key) - 1];
+    if (o) pick(o.key);
+  }
+});
+
+load();
+</script>
+</body>
+</html>
