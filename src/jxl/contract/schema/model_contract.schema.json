@@ -213,6 +213,18 @@
             }
           ]
         },
+        "crop": {
+          "description": "裁切管线（属性事件的 crop 来源；None = 整图）。",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CropPipeline"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "normalize": {
           "description": "归一化（mean/std）。",
           "anyOf": [
@@ -321,6 +333,57 @@
           "minimum": 0.0
         }
       }
+    },
+    "CropPipeline": {
+      "description": "分类输入的裁切管线（属性事件 crop 来源描述）。\n\n训练样本生成（jxl 工具）与在线推理（crop 实现）同源于此——单一数据源 保证两侧裁切策略一致（spec 预处理同构红线）。`None` = 整图直接分类。",
+      "oneOf": [
+        {
+          "description": "person bbox 上端头部区域：取 bbox 高度的 `ratio` 比例（0 < ratio <= 1）。",
+          "type": "object",
+          "required": [
+            "head"
+          ],
+          "properties": {
+            "head": {
+              "type": "object",
+              "required": [
+                "ratio"
+              ],
+              "properties": {
+                "ratio": {
+                  "description": "bbox 高度占比（0 < ratio <= 1）。",
+                  "type": "number",
+                  "format": "float"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "phone bbox 外扩上下文（手持判定）：各边外扩 `expand` 比例（相对 phone 边长）。",
+          "type": "object",
+          "required": [
+            "phone_context"
+          ],
+          "properties": {
+            "phone_context": {
+              "type": "object",
+              "required": [
+                "expand"
+              ],
+              "properties": {
+                "expand": {
+                  "description": "各边外扩比例（相对 phone 边长）。",
+                  "type": "number",
+                  "format": "float"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "DType": {
       "description": "张量数据类型。",
