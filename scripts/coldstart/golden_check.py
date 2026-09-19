@@ -1,13 +1,17 @@
-"""对拍 .pt predict 与契约化 ONNX 前向概率（预处理一致性金标准）。
+"""对拍 .pt predict 与契约化 ONNX 前向概率——验证 .pt→ONNX 导出数值保真。
 
-spec 预处理同构红线（2026-09-19-attr-wave2-design §2）：Rust 在线推理与
-ultralytics .pt predict 的概率差必须 <1e-3，否则导出不合格。
+覆盖范围（如实声明）：双侧使用同一套 ultralytics 式预处理（preprocess() 手写
+复刻 ultralytics classify_transforms 的契约 center_crop），只证明导出 ONNX 在
+相同输入张量上复现 .pt 输出；**不覆盖 Rust/usls 在线路径**——生产链
+（ml-vision → usls Letterbox）的预处理不在本脚本内。spec 预处理同构红线
+（2026-09-19-attr-wave2-design §2）要求的「Rust 推理与 .pt predict 一致」
+须在 Rust 侧对拍另行验收，本脚本不是该红线的证据。
 
 用法:
     uv run python scripts/coldstart/golden_check.py best.pt contracted.onnx img1.jpg [img2.jpg ...]
     # 每张图各跑一次；任一张超阈即退出码 1。
 
-在线侧等价预处理（ultralytics classify_transforms 契约 center_crop）：
+预处理（ultralytics classify_transforms 契约 center_crop 语义）：
 shortest-edge resize + CenterCrop 224 + /255（无 ImageNet mean/std）。
 """
 

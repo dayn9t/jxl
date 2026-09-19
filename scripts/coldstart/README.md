@@ -14,7 +14,8 @@
 
 工具（本目录）：
 
-- `golden_check.py` — .pt predict vs 契约化 ONNX 前向概率对拍（spec 预处理同构红线，<1e-3）
+- `golden_check.py` — .pt predict vs 契约化 ONNX 前向概率对拍（导出数值保真，<1e-3；
+  双侧同一 ultralytics 式预处理，不覆盖 Rust/usls 在线路径）
 - `eval_classifier.py` — 契约化模型 × ImageFolder val/test → 混淆矩阵 + top-1（EVAL 基准数字产器）
 
 ## head-cover（SLP）——❌ 受阻，模型未入库
@@ -103,7 +104,7 @@
 
 ## 训练结果（golden 对拍 + EVAL 基准数字）
 
-每模型：golden 对拍（.pt predict vs 契约化 ONNX 前向，spec 红线 <1e-3）+
+每模型：golden 对拍（.pt predict vs 契约化 ONNX 前向，导出保真 <1e-3，不覆盖 Rust/usls 在线路径）+
 `eval_classifier.py` val 混淆矩阵（⚠️ 代理级——域外分布，待域内微调）。
 
 | 模型 | 训练 val top-1 | golden worst | EVAL val | 备注 |
