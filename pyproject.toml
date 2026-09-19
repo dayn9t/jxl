@@ -59,6 +59,7 @@ d2d_label = "jxl.bin.d2d_label:main"
 sam_label = "jxl.bin.sam_label:app"
 peoplenet_check = "jxl.bin.d2d_peoplenet_check:app"
 jxl_export_yolo_with_contract = "jxl.bin.export_yolo_with_contract:app"
+jxl_build_attr_crops = "jxl.bin.build_attr_crops:main"
 vdt = "jxl.vdt.cli:app"
 vtag = "jxl.vtag.cli:app"
 
