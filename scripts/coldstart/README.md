@@ -59,7 +59,7 @@
 
   ```bash
   uv run python -m jxl.bin.export_yolo_with_contract \
-    scripts/coldstart/drowse/runs/classify/train/weights/best.pt \
+    scripts/coldstart/drowse/runs/train/weights/best.pt \
     ~/cc/next/jail/rs/s3-detention/models/yolo26n-cls-drowse.onnx \
     --task classify --imgsz 224 --crop head:0.35
   ```
