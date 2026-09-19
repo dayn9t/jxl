@@ -12,14 +12,14 @@
 - [ ] **role v3.3 切换前 50 张人工抽检**（清单 `gencheck/rolepool_20260919/rolepool_spotsample_checklist.md`，C 类 12 张优先）。
 - [ ] **v6 切换执行跟进**：切换建议已正式发 iap（通知单 2026-09-19 补遗：v7 撤回、改推 v6）——等 iap 执行 `ln -sfn 2026-09-18_person_n_v6.*` 后确认。
 - [ ] **v7.1 回炉**（依赖台账复核）：从隔离台账 100 帧 bad_fit 弃帧回收低头坐姿正样本 → 重训 v7.1 → 重跑预冒烟（重点坐姿）。
-- [ ] **sgcc3 升级后验证**（你升级完成后我来跑：驱动/CUDA 栈核验+轻量烤机，并定默认训练机归属）。
+- [~] **sgcc3 升级后验证**：升级已完成（内核 7.0.0-1012-aws/驱动 **615.71.09 已载**——SB 问题已解）。零负载核验 PASS（venv torch 2.9.1+cu128 CUDA 实算/本次开机零 NVIDIA Xid/GPU 空闲）。**轻量烤机待 root stress-ng（17:13 起 CPU+VM 压测）结束后跑**，跑完定默认训练机归属。
 - [ ] cleaner 稀有类正样本人工裁（1 张，role_conf 0.97 窗前交互——稀有类样本矿）。
 
 ## iapx 解散对 jxl 的影响（2026-09-19 发现，spec `iap docs/superpowers/specs/2026-09-19-polyglot-restructure-design.md`）
 
-- [ ] **osnet vendor 移交**：spec 裁定 `iapx pipeline/osnet.py + vendor/osnet.py → jxl.vdt`（Embedder 第二实现 reid_osnet + vendored）。iapx 归档前 jxl 须切换 osnet_ft 的 import（现指 iapx 路径）。
+- [x] **osnet vendor 移交（09-19 午后完成）**：jxl.vdt 侧移交已就位（`reid_osnet.py`+`vendored/osnet.py`）；gencheck 侧 `osnet_ft.py` VENDOR_CANDIDATES + 两个 export 脚本 VENDOR 已切 jxl.vdt 路径（原 iapx 路径随解散已删、实际已断）。验证：vendored 加载 v2.1 权重 strict 全匹配 + 前向 PASS（352 类）。
 - [ ] **reid 复测通道将失效**：iapx pipeline+影子测试被删（Rust 已镜像+GT 门绿）——v2.1 正式复测须改走 iap Rust 重放（monitor_replay_corpus），reid-retest skill 的 temp 通道流程届时更新。
-- [ ] **数据资产去向关注**：`/mnt/data/jiang/ws/iapx/n001/`（samples/eval.jsonl held-out 328/benchmark）——export-samples/export-reid-pairs 工具进 iap py/tools 接口不变，但存量数据迁移方案需确认。
+- [ ] **数据资产去向关注**：`/mnt/data/jiang/ws/iapx/n001/`（samples/eval.jsonl held-out 328/benchmark）——export-samples/export-reid-pairs 工具进 iap py/tools 接口不变，但存量数据迁移方案需确认。09-19 午后核实：**数据原地完好未迁**（annotations/benchmark/cache 全在），role 训练链（iapx_role_train_v33）与 osnet eval 数据依赖暂无恙。
 - [x]（无需动）spec 明确「jxl 除 osnet 外零改动」；通知单 4 份归档 iap docs/jxl-deliveries/，在办事项移交 iap TODO。
 
 ## 飞轮例行
