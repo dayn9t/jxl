@@ -1,0 +1,7 @@
+# 数据集本体与训练产物不入仓（No Silent Degradation：来源与命令记录在 README）
+# 每事件目录只留脚本本身，数据/下载物/训练 runs 全忽略。
+slp/code/
+drowse/*
+!drowse/parquet_to_imagefolder.py
+phone_in_hand/*
+!phone_in_hand/build_phone_dataset.py

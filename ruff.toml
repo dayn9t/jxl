@@ -41,6 +41,9 @@ ignore = [
 # gencheck/ 一次性生成/校验 CLI 脚本区（不被 import，print=脚本 stdout 汇报，
 # 同 bin/ 策略；注解仍强制——新写脚本按全注解口径）。
 "gencheck/**/*.py" = ["T201"]
+# scripts/coldstart/ 冷启动数据管线脚本（attr-wave2 Task 5）：同 gencheck 策略——
+# 一次性数据处理 CLI，print=stdout 汇报；注解仍强制。
+"scripts/coldstart/**/*.py" = ["T201"]
 # bin/ 下 ~50 个遗留 argparse CLI 脚本：本轮（T6b）显式不迁移 typer、不补注解（CLI 回归风险高，
 # 标后续 PR）。新增的 typer 脚本（如 d2d_peoplenet_check.py）已写完整注解但一并豁免以保持一致，
 # 待 bin/ 整体迁移后按脚本粒度纳入。
