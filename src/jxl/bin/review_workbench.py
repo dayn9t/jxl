@@ -35,6 +35,8 @@ ROUND_DIR = re.compile(r"^r(\d+)_(\d{4}-\d{2}-\d{2})(?:_(.+))?$")
 class Round:
     """一轮沉淀的任务包集合 + 结果落盘（与 HTTP 层解耦，可单测）。"""
 
+    CLEAR = "__clear__"  # 取消标注哨兵值（不在任务 options 内）
+
     def __init__(self, dir_: Path, results_dir: Path) -> None:
         m = ROUND_DIR.match(dir_.name)
         if not m:
@@ -56,7 +58,8 @@ class Round:
         return self.results_dir / f"{task}.jsonl"
 
     def progress(self) -> dict[str, dict[str, dict]]:
-        """每任务已裁决样本 → 最后一次裁决 {choice, note}（同 id 后写覆盖先写）。"""
+        """每任务已裁决样本 → 最后一次裁决 {choice, note}（同 id 后写覆盖先写；
+        __clear__ 行=取消标注，样本回到未标注态）。"""
         out: dict[str, dict[str, dict]] = {}
         for name in self.tasks:
             p = self.result_path(name)
@@ -65,14 +68,17 @@ class Round:
                 for line in p.read_text().splitlines():
                     if line.strip():
                         r = json.loads(line)
-                        last[r["sample_id"]] = {"choice": r["choice"], "note": r.get("note", "")}
+                        if r["choice"] == "__clear__":
+                            last.pop(r["sample_id"], None)
+                        else:
+                            last[r["sample_id"]] = {"choice": r["choice"], "note": r.get("note", "")}
             out[name] = last
         return out
 
     def append(self, task: str, sample_id: str, choice: str, note: str) -> None:
         if task not in self.tasks:
             raise KeyError(f"未知任务: {task}")
-        options = {o["key"] for o in self.tasks[task]["options"]}
+        options = {o["key"] for o in self.tasks[task]["options"]} | {self.CLEAR}
         if choice not in options:
             raise ValueError(f"非法选项 {choice}（任务 {task} 允许 {sorted(options)}）")
         row = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "sample_id": sample_id,

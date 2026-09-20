@@ -123,7 +123,7 @@
   <div class="sizerow">尺寸 <input type="range" id="imgsize" min="150" max="600" step="10"><span id="imgsizev">300</span>px</div>
   <div class="paneltitle">快捷键</div>
   <div class="hint" style="margin-top:0;border-top:none;padding-top:0">
-    A / D = 上一张 / 下一张<br>W / S = 向上 / 向下滚动屏幕<br>数字键 1-9 = 选对应选项并跳下一张未裁样本<br>Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
+    A / D = 上一张 / 下一张<br>W / S = 向上 / 向下滚动屏幕<br>数字键 1-9 = 选对应选项并跳下一张未裁样本<br>X = 取消标注（清除本张裁决）<br>Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
   </div>
 </aside>
 <script>
@@ -227,8 +227,8 @@ function render() {
   $("badges").innerHTML =
     `<b data-k="" class="${!filter ? "on" : ""}" style="background:#e5e7eb;color:#374151">全部 ${total}</b>` +
     `<b data-k="${UNDONE}" class="${filter === UNDONE ? "on" : ""}" style="background:#f8f9fb;color:#555">未标注 ${total - ndone}</b>` +
-    (task.options || []).filter(o => counts[o.key]).map(o =>
-      `<b data-k="${esc(o.key)}" class="${filter === o.key ? "on" : ""}" style="background:${BADGE_BG[o.tone || "meta"]};color:${BADGE_C[o.tone || "meta"]}">${esc(o.label || o.key)} ${counts[o.key]}</b>`).join("");
+    (task.options || []).map(o =>
+      `<b data-k="${esc(o.key)}" class="${filter === o.key ? "on" : ""}" style="background:${BADGE_BG[o.tone || "meta"]};color:${BADGE_C[o.tone || "meta"]}">${esc(o.label || o.key)} ${counts[o.key] || 0}</b>`).join("");
   document.querySelectorAll("#badges b").forEach(el =>
     el.onclick = () => {
       filter = el.dataset.k === "" ? null : el.dataset.k;  // 「全部」=无过滤
@@ -265,7 +265,8 @@ function render() {
   const optsHtml = task.options.map((o, i) => {
     const picked = last && last.choice === o.key;
     return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
-  }).join("");
+  }).join("")
+    + `<button data-k="__clear__" data-tone="mid"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
@@ -285,7 +286,8 @@ async function pick(key) {
       body: JSON.stringify({round: curRound, task: task.name, sample_id: s.id, choice: key, note})});
     if (!r.ok) throw new Error((await r.json()).error || r.status);
     verdicts[task.name] = verdicts[task.name] || {};
-    verdicts[task.name][s.id] = {choice: key, note};
+    if (key === "__clear__") delete verdicts[task.name][s.id];
+    else verdicts[task.name][s.id] = {choice: key, note};
     try { localStorage.removeItem(draftKey(s.id)); } catch {}
     $("err").textContent = "";
     if (filter) { gotoNext(); return; }  // 过滤态：集内下一张
@@ -307,6 +309,7 @@ document.addEventListener("keydown", (e) => {
   else if (k === "d" || e.key === "ArrowRight") gotoNext();
   else if (k === "w") window.scrollBy({top: -Math.round(innerHeight * 0.85), behavior: "smooth"});
   else if (k === "s") window.scrollBy({top: Math.round(innerHeight * 0.85), behavior: "smooth"});
+  else if (k === "x") pick("__clear__");
   else if (/^[1-9]$/.test(e.key)) {
     const o = task.options[Number(e.key) - 1];
     if (o) pick(o.key);
