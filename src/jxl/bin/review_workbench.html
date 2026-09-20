@@ -44,7 +44,7 @@
   /* 大图模式：左右并排，每张宽度 --imgw（右栏滑杆可调，默认 300px），中缝约 100px */
   .imgs.big { display: flex; justify-content: center; align-items: flex-start; column-gap: clamp(60px, 7vw, 110px); row-gap: 12px; flex-wrap: wrap; }
   .imgs.big figure { flex: 0 0 min(var(--imgw, 300px), 30vw); }
-  .imgs.big img { width: 100%; max-width: 100%; height: auto; max-height: 640px; object-fit: contain; }
+  .imgs.big img { width: auto; max-width: 100%; height: auto; max-height: 640px; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
   .opts { margin-top: 12px; }
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
