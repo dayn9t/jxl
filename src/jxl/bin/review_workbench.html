@@ -46,16 +46,21 @@
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
   .meta .bad { color: #dc2626; font-weight: 800; font-size: 16px; }
-  .meta .q { color: #d97706; font-weight: 800; font-size: 16px; }
+  .meta .q { color: #6b7280; font-weight: 800; font-size: 16px; }
   .dock { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e2e4e9; padding: 10px 0 4px; border-radius: 0 0 10px 10px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
-  .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
+  .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; border-left-width: 5px; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
   .opts button .k { display: block; }
-  .opts button .k b { color: #2563eb; margin-right: 6px; }
+  .opts button .k b { margin-right: 6px; }
   .opts button .d { display: block; font-size: 11.5px; color: #777; margin-top: 3px; max-width: 300px; line-height: 1.45; }
-  .opts button:hover { border-color: #2563eb; }
-  .opts button.picked { background: #16a34a; color: #fff; border-color: #16a34a; }
-  .opts button.picked .k b, .opts button.picked .d { color: #eaffea; }
+  /* 语义配色标准：ok 正向判定=绿 ｜ no 负向=红 ｜ mid 不可判定=灰（黑白难分） ｜ meta 元操作=蓝 ｜ out 域外剔除=紫 */
+  .opts button[data-tone=ok]  { border-color: #16a34a; background: #f0fdf4; } .opts button[data-tone=ok] .k,  .opts button[data-tone=ok] .k b  { color: #15803d; }
+  .opts button[data-tone=no]  { border-color: #dc2626; background: #fef2f2; } .opts button[data-tone=no] .k,  .opts button[data-tone=no] .k b  { color: #b91c1c; }
+  .opts button[data-tone=mid] { border-color: #6b7280; background: #f4f4f5; } .opts button[data-tone=mid] .k, .opts button[data-tone=mid] .k b { color: #4b5563; }
+  .opts button[data-tone=meta]{ border-color: #2563eb; background: #eff6ff; } .opts button[data-tone=meta] .k,.opts button[data-tone=meta] .k b{ color: #1d4ed8; }
+  .opts button[data-tone=out] { border-color: #7c3aed; background: #f5f3ff; } .opts button[data-tone=out] .k, .opts button[data-tone=out] .k b { color: #6d28d9; }
+  .opts button.picked { background: var(--tone, #16a34a); color: #fff; border-color: var(--tone, #16a34a); }
+  .opts button.picked .k, .opts button.picked .k b, .opts button.picked .d { color: #fff; }
   .nav { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
   .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
   .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
@@ -195,8 +200,11 @@ function render() {
   ].join("\n") || "（无附加信息）";
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
-  const opts = task.options.map((o, i) =>
-    `<button data-k="${esc(o.key)}" class="${last && last.choice === o.key ? "picked" : ""}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
+  const TONE_BG = {ok: "#16a34a", no: "#dc2626", mid: "#6b7280", meta: "#2563eb", out: "#7c3aed"};
+  const opts = task.options.map((o, i) => {
+    const picked = last && last.choice === o.key;
+    return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
+  }).join("");
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
