@@ -101,6 +101,7 @@ class Bench:
 
 class Handler(BaseHTTPRequestHandler):
     bench: Bench  # 由 serve() 注入
+    title: str = "裁决工作台"  # 由 main() --title 注入（实例命名，如「SGCC 裁决工作台」）
 
     def _send(self, code: int, body: bytes, ctype: str) -> None:
         self.send_response(code)
@@ -119,7 +120,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802（http.server 接口名）
         u = urllib.parse.urlparse(self.path)
         if u.path == "/" or u.path == "/index.html":
-            self._send(200, HTML.read_bytes(), "text/html; charset=utf-8")
+            self._send(200, HTML.read_text().replace("{{TITLE}}", self.title)
+                       .encode(), "text/html; charset=utf-8")
         elif u.path == "/api/rounds":
             self._json([{"dir": k, "no": r.no, "date": r.date, "note": r.note,
                          "n_tasks": len(r.tasks),
@@ -175,10 +177,13 @@ def main() -> None:
                     help="任务包根目录（其下每轮一个 r01_2026-09-19 形式子目录）")
     ap.add_argument("--results", type=Path, required=True, help="结果根目录（按轮次建同名子目录）")
     ap.add_argument("--port", type=int, default=8787)
+    ap.add_argument("--title", default="裁决工作台",
+                    help="实例标题（页面标题栏显示，如「SGCC 裁决工作台」）")
     args = ap.parse_args()
 
     bench = Bench(args.tasks, args.results)
     Handler.bench = bench
+    Handler.title = args.title
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     rounds = ", ".join(
         f"第{r.no}轮 {r.date}({sum(len(t['samples']) for t in r.tasks.values())}样本)"
