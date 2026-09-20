@@ -47,19 +47,18 @@ class Workbench:
     def result_path(self, task: str) -> Path:
         return self.results_dir / f"{task}.jsonl"
 
-    def progress(self) -> dict[str, list[str]]:
-        """每任务已裁决的 sample_id 列表（同 id 去重，保留出现序）。"""
-        out: dict[str, list[str]] = {}
+    def progress(self) -> dict[str, dict[str, dict]]:
+        """每任务已裁决样本 → 最后一次裁决 {choice, note}（同 id 后写覆盖先写）。"""
+        out: dict[str, dict[str, dict]] = {}
         for name in self.tasks:
             p = self.result_path(name)
-            seen: list[str] = []
+            last: dict[str, dict] = {}
             if p.exists():
                 for line in p.read_text().splitlines():
                     if line.strip():
-                        sid = json.loads(line)["sample_id"]
-                        if sid not in seen:
-                            seen.append(sid)
-            out[name] = seen
+                        r = json.loads(line)
+                        last[r["sample_id"]] = {"choice": r["choice"], "note": r.get("note", "")}
+            out[name] = last
         return out
 
     def append(self, task: str, sample_id: str, choice: str, note: str) -> None:

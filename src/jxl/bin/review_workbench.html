@@ -64,6 +64,8 @@ let tasks = {}, task = null, samples = [], verdicts = {}, idx = 0;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const imgUrl = (p) => "/img?p=" + encodeURIComponent(p);
+const draftKey = (sid) => `wb-draft-${task.name}-${sid}`;
+const loadDraft = (sid) => { try { return localStorage.getItem(draftKey(sid)) ?? ""; } catch { return ""; } };
 
 async function load() {
   tasks = await (await fetch("/api/tasks")).json();
@@ -91,7 +93,8 @@ async function switchTask(name) {
   render();
 }
 
-function done(sid) { return verdicts[task.name] && verdicts[task.name].includes(sid); }
+function done(sid) { return verdicts[task.name] && (sid in verdicts[task.name]); }
+function lastOf(sid) { return (verdicts[task.name] || {})[sid] || null; }
 
 function render() {
   const total = samples.length, ndone = samples.filter(s => done(s.id)).length;
@@ -103,20 +106,28 @@ function render() {
     return;
   }
   const s = samples[idx];
+  const last = lastOf(s.id);
+  const draft = loadDraft(s.id);
+  const shownNote = draft !== "" ? draft : (last ? last.note : "");
+  const lastLabel = last ? ((task.options.find(o => o.key === last.choice) || {}).label || last.choice) : "";
   const meta = Object.entries(s.meta || {}).map(([k, v]) => `${k}: ${v}`).join("\n") || "（无附加信息）";
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const opts = task.options.map((o, i) =>
-    `<button data-k="${esc(o.key)}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
+    `<button data-k="${esc(o.key)}" class="${last && last.choice === o.key ? "picked" : ""}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
   $("card").innerHTML = `
     <div class="imgs">${imgs}</div>
-    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${done(s.id) ? " ｜ ✅ 已裁（可重选覆盖）" : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
+    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
     <div class="opts">${opts}</div>
     <div class="nav">
       <button onclick="idx=Math.max(0,idx-1);render()">← 上一张</button>
-      <input class="note" id="note" placeholder="备注（可选，随裁决一起落盘）">
+      <input class="note" id="note" value="${esc(shownNote)}" placeholder="备注（选选项时随裁决一起落盘）">
       <button onclick="idx=Math.min(samples.length-1,idx+1);render()">下一张 →</button>
     </div>`;
+  const noteEl = $("note");
+  noteEl.addEventListener("input", () => {
+    try { localStorage.setItem(draftKey(s.id), noteEl.value); } catch {}
+  });
   document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
 }
 
@@ -127,8 +138,9 @@ async function pick(key) {
     const r = await fetch("/api/verdict", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({task: task.name, sample_id: s.id, choice: key, note})});
     if (!r.ok) throw new Error((await r.json()).error || r.status);
-    verdicts[task.name] = verdicts[task.name] || [];
-    if (!verdicts[task.name].includes(s.id)) verdicts[task.name].push(s.id);
+    verdicts[task.name] = verdicts[task.name] || {};
+    verdicts[task.name][s.id] = {choice: key, note};
+    try { localStorage.removeItem(draftKey(s.id)); } catch {}
     $("err").textContent = "";
     const next = samples.findIndex((x, i) => i > idx && !done(x.id));
     idx = next >= 0 ? next : idx + 1;
