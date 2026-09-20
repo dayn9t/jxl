@@ -15,6 +15,10 @@
   .bar { width: 160px; height: 8px; background: #e2e4e9; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
   .bar i { display: block; height: 100%; background: #22c55e; }
   main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .taskinfo { background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; }
+  .taskinfo summary { cursor: pointer; font-weight: 600; color: #1d4ed8; font-size: 13px; }
+  .taskinfo .intro { white-space: pre-wrap; line-height: 1.8; color: #333; margin-top: 8px; }
+  .taskinfo ul { margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8; color: #444; }
   .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 18px; }
   .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
   .imgs figure { text-align: center; }
@@ -22,11 +26,13 @@
   .imgs figcaption { font-size: 12px; color: #777; margin-top: 4px; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre-wrap; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
-  .opts button { padding: 10px 18px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
-  .opts button b { color: #2563eb; margin-right: 6px; }
+  .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
+  .opts button .k { display: block; }
+  .opts button .k b { color: #2563eb; margin-right: 6px; }
+  .opts button .d { display: block; font-size: 11.5px; color: #777; margin-top: 3px; max-width: 300px; line-height: 1.45; }
   .opts button:hover { border-color: #2563eb; }
   .opts button.picked { background: #16a34a; color: #fff; border-color: #16a34a; }
-  .opts button.picked b { color: #fff; }
+  .opts button.picked .k b, .opts button.picked .d { color: #eaffea; }
   .nav { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
   .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
   .nav .note { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
@@ -42,9 +48,14 @@
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
 </header>
 <main>
+  <details class="taskinfo" id="taskinfo" open>
+    <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）</summary>
+    <div class="intro" id="intro"></div>
+    <ul id="optdesc"></ul>
+  </details>
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
-  <div class="hint">快捷键：数字键 = 选对应选项并跳下一张未裁样本 ｜ ←/→ = 前后翻 ｜ 已裁样本重选即覆盖（追加行，合并取最后）</div>
+  <div class="hint">快捷键：数字键 = 选对应选项并跳到下一张未裁样本 ｜ ←/→ = 前后翻页 ｜ 选完立即落盘，中断后可续；已裁样本重选即覆盖（以最后一次为准）</div>
 </main>
 <script>
 "use strict";
@@ -58,8 +69,11 @@ async function load() {
   tasks = await (await fetch("/api/tasks")).json();
   verdicts = await (await fetch("/api/progress")).json();
   const names = Object.keys(tasks);
-  $("tabs").innerHTML = names.map(n =>
-    `<button data-n="${esc(n)}">${esc(n)} (${tasks[n].n_samples})</button>`).join("");
+  $("tabs").innerHTML = names.map(n => {
+    const t = tasks[n];
+    const label = `${t.title || n}（${t.n_samples} 张）`;
+    return `<button data-n="${esc(n)}" title="${esc(n)}">${esc(label)}</button>`;
+  }).join("");
   document.querySelectorAll("#tabs button").forEach(b =>
     b.onclick = () => switchTask(b.dataset.n));
   if (names.length) switchTask(names[0]);
@@ -70,6 +84,10 @@ async function switchTask(name) {
   samples = task.samples; idx = 0;
   document.querySelectorAll("#tabs button").forEach(b =>
     b.classList.toggle("active", b.dataset.n === name));
+  $("intro").textContent = task.intro || "（任务包未提供说明）";
+  $("optdesc").innerHTML = (task.options || []).map(o =>
+    `<li><b>${esc(o.label || o.key)}</b>：${esc(o.desc || "（未提供描述）")}</li>`).join("");
+  $("taskinfo").open = true;
   render();
 }
 
@@ -77,10 +95,10 @@ function done(sid) { return verdicts[task.name] && verdicts[task.name].includes(
 
 function render() {
   const total = samples.length, ndone = samples.filter(s => done(s.id)).length;
-  $("ptext").textContent = `${ndone}/${total} 已裁`;
+  $("ptext").textContent = `已完成 ${ndone}/${total}`;
   $("pbar").style.width = total ? (ndone / total * 100) + "%" : 0;
   if (idx >= total) {
-    $("card").innerHTML = `<div class="done">本任务已到末尾（${ndone}/${total} 已裁）<br><br>
+    $("card").innerHTML = `<div class="done">本任务已到末尾（${ndone}/${total} 张已裁）<br><br>
       <button onclick="idx=0;render()">回到开头</button></div>`;
     return;
   }
@@ -89,14 +107,14 @@ function render() {
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const opts = task.options.map((o, i) =>
-    `<button data-k="${esc(o.key)}" class="${done(s.id) ? "" : ""}"><b>${i + 1}</b>${esc(o.label)}</button>`).join("");
+    `<button data-k="${esc(o.key)}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
   $("card").innerHTML = `
     <div class="imgs">${imgs}</div>
-    <div class="meta">[${idx + 1}/${total}] ${esc(s.id)}${done(s.id) ? " ✅已裁" : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
+    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${done(s.id) ? " ｜ ✅ 已裁（可重选覆盖）" : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
     <div class="opts">${opts}</div>
     <div class="nav">
       <button onclick="idx=Math.max(0,idx-1);render()">← 上一张</button>
-      <input class="note" id="note" placeholder="备注（可选，随裁决落盘）">
+      <input class="note" id="note" placeholder="备注（可选，随裁决一起落盘）">
       <button onclick="idx=Math.min(samples.length-1,idx+1);render()">下一张 →</button>
     </div>`;
   document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
@@ -119,7 +137,7 @@ async function pick(key) {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (!task || e.target.tagName === "INPUT") return;
+  if (!task || e.target.tagName === "INPUT" || e.target.tagName === "SUMMARY") return;
   if (e.key === "ArrowLeft") { idx = Math.max(0, idx - 1); render(); }
   else if (e.key === "ArrowRight") { idx = Math.min(samples.length - 1, idx + 1); render(); }
   else if (/^[1-9]$/.test(e.key)) {

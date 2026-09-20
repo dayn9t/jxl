@@ -94,7 +94,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/" or u.path == "/index.html":
             self._send(200, HTML.read_bytes(), "text/html; charset=utf-8")
         elif u.path == "/api/tasks":
-            self._json({n: {"hint": t.get("hint", ""), "options": t["options"],
+            self._json({n: {"title": t.get("title", ""), "intro": t.get("intro", ""),
+                            "hint": t.get("hint", ""), "options": t["options"],
                             "n_samples": len(t["samples"]), "file": t["_file"]}
                         for n, t in self.bench.tasks.items()})
         elif u.path == "/api/task":
