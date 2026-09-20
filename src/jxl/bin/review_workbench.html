@@ -50,8 +50,6 @@
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
   .meta .bad { color: #dc2626; font-weight: 800; font-size: 16px; }
   .meta .q { color: #6b7280; font-weight: 800; font-size: 16px; }
-  .dock { position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid #ddd;
-           border-radius: 10px; padding: 10px 14px 8px; margin-bottom: 12px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
   .opts button { padding: 10px 18px; font-size: 14px; border: 1px solid #bbb; border-left-width: 5px; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
   .opts button .k { display: block; white-space: nowrap; }
@@ -104,18 +102,18 @@
   </div>
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
-  <div class="dock">
-    <span class="pos" id="pos"></span>
-    <button id="prevbtn">← 上一张 (A)</button>
-    <button id="nextbtn">下一张 (D) →</button>
-    <span class="navhint">W/S = 上下滚动屏幕</span>
-  </div>
   <details class="taskinfo" id="taskinfo">
     <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）</summary>
     <div class="intro" id="intro"></div>
     <ul id="optdesc"></ul>
     <div class="paths" id="datapaths"></div>
   </details>
+  <div class="dock">
+    <span class="pos" id="pos"></span>
+    <button id="prevbtn">← 上一张 (A)</button>
+    <button id="nextbtn">下一张 (D) →</button>
+    <span class="navhint">W / S = ±10 张</span>
+  </div>
 </main>
 <aside class="right">
   <div class="paneltitle">图片显示</div>
@@ -123,7 +121,7 @@
   <div class="sizerow">尺寸 <input type="range" id="imgsize" min="150" max="600" step="10"><span id="imgsizev">300</span>px</div>
   <div class="paneltitle">快捷键</div>
   <div class="hint" style="margin-top:0;border-top:none;padding-top:0">
-    A / D = 上一张 / 下一张<br>W / S = 向上 / 向下滚动屏幕<br>数字键 1-9 = 选对应选项并跳下一张未裁样本<br>X = 取消标注（清除本张裁决）<br>Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
+    A / D = 上一张 / 下一张<br>W / S = 向前 / 向后跳 10 张<br>数字键 1-9 = 选对应选项并跳下一张未裁样本<br>X = 取消标注（清除本张裁决）<br>Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
   </div>
 </aside>
 <script>
@@ -136,6 +134,14 @@ const viewIdxs = () => samples.map((s, i) => i)
            : true);
 function gotoPrev() { const v = viewIdxs(); idx = (v.filter(i => i < idx).pop() ?? v[v.length - 1] ?? idx); render(); }
 function gotoNext() { const v = viewIdxs(); idx = (v.find(i => i > idx) ?? v[0] ?? idx); render(); }
+function gotoJump(n) {  // 集内向前/向后跳 n 张（W/S = ±10）
+  const v = viewIdxs();
+  if (!v.length) return;
+  const p = v.indexOf(idx);
+  if (p < 0) { idx = v[0]; render(); return; }
+  const q = Math.min(v.length - 1, Math.max(0, p + n));
+  idx = v[q]; render();
+}
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -308,8 +314,8 @@ document.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (k === "a" || e.key === "ArrowLeft") gotoPrev();
   else if (k === "d" || e.key === "ArrowRight") gotoNext();
-  else if (k === "w") window.scrollBy({top: -Math.round(innerHeight * 0.85), behavior: "smooth"});
-  else if (k === "s") window.scrollBy({top: Math.round(innerHeight * 0.85), behavior: "smooth"});
+  else if (k === "w") gotoJump(-10);
+  else if (k === "s") gotoJump(10);
   else if (k === "x") pick("__clear__");
   else if (/^[1-9]$/.test(e.key)) {
     const o = task.options[Number(e.key) - 1];
