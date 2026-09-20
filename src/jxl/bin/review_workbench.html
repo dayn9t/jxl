@@ -6,21 +6,26 @@
 <title>裁决工作台</title>
 <style>
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: system-ui, "Noto Sans CJK SC", sans-serif; background: #f4f5f7; color: #222; }
-  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
-  header h1 { font-size: 16px; font-weight: 600; }
-  .tabs button { padding: 6px 12px; margin-right: 6px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  body { font-family: system-ui, "Noto Sans CJK SC", sans-serif; background: #f4f5f7; color: #222; display: flex; min-height: 100vh; }
+  aside { width: 240px; flex: 0 0 240px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+          background: #fff; border-right: 1px solid #ddd; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  aside h1 { font-size: 16px; font-weight: 600; }
+  .tabs { display: flex; flex-direction: column; gap: 6px; }
+  .tabs button { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer;
+                 font-size: 13px; text-align: left; line-height: 1.4; }
   .tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
-  .progress { margin-left: auto; font-size: 13px; color: #555; }
-  .bar { width: 160px; height: 8px; background: #e2e4e9; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .viewtoggle { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .progress { font-size: 13px; color: #555; }
+  .bar { width: 100%; height: 8px; background: #e2e4e9; border-radius: 4px; overflow: hidden; display: block; margin-top: 5px; }
   .bar i { display: block; height: 100%; background: #22c55e; }
-  main { max-width: 1440px; margin: 20px auto; padding: 0 16px; }
-  .taskinfo { background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; }
+  .hint { font-size: 11.5px; color: #888; line-height: 1.7; margin-top: auto; border-top: 1px solid #eee; padding-top: 10px; }
+  main { flex: 1; min-width: 0; margin: 14px auto; padding: 0 16px; max-width: 1200px; }
+  .taskinfo { background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
   .taskinfo summary { cursor: pointer; font-weight: 600; color: #1d4ed8; font-size: 13px; }
   .taskinfo .intro { white-space: pre-wrap; line-height: 1.8; color: #333; margin-top: 8px; }
   .taskinfo ul { margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8; color: #444; }
-  .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 18px; }
-  .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+  .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
   .imgs figure { text-align: center; }
   .imgs img { max-width: 46%; max-height: 420px; border: 1px solid #ccc; border-radius: 6px; }
   .imgs figcaption { font-size: 12px; color: #777; margin-top: 4px; }
@@ -28,8 +33,7 @@
   .imgs.big { display: flex; justify-content: center; align-items: flex-start; column-gap: clamp(60px, 7vw, 110px); row-gap: 12px; flex-wrap: wrap; }
   .imgs.big figure { flex: 0 0 min(300px, 30vw); }
   .imgs.big img { width: 100%; max-width: 100%; max-height: none; height: auto; }
-  .viewtoggle { padding: 6px 12px; margin-right: 6px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
-  .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre-wrap; }
+  .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
   .dock { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e2e4e9; padding: 10px 0 4px; border-radius: 0 0 10px 10px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
   .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
@@ -40,21 +44,21 @@
   .opts button.picked { background: #16a34a; color: #fff; border-color: #16a34a; }
   .opts button.picked .k b, .opts button.picked .d { color: #eaffea; }
   .nav { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-  .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
   .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
-  .nav .note { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
-  .hint { font-size: 12px; color: #888; margin-top: 12px; }
+  .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
+  .nav .note { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; min-width: 120px; }
   .done { text-align: center; padding: 60px 0; color: #16a34a; font-size: 18px; }
   .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
 </style>
 </head>
 <body>
-<header>
+<aside>
   <h1>裁决工作台</h1>
   <div class="tabs" id="tabs"></div>
   <button class="viewtoggle" id="viewtoggle">📐 大图：开</button>
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
-</header>
+  <div class="hint">快捷键：数字键 1-9 = 选对应选项并跳下一张未裁样本<br>←/→ = 前后翻页<br>Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖</div>
+</aside>
 <main>
   <details class="taskinfo" id="taskinfo">
     <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）</summary>
@@ -63,7 +67,6 @@
   </details>
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
-  <div class="hint">快捷键：数字键 1-9 = 选对应选项并跳到下一张未裁样本 ｜ ←/→ = 前后翻页 ｜ Esc = 退出备注框（备注输入状态下数字键暂不生效，按 Esc 恢复）｜ 选完立即落盘；已裁样本重选即覆盖</div>
 </main>
 <script>
 "use strict";
