@@ -25,5 +25,6 @@
 
 ## 飞轮例行
 
+- [ ] **rolepool/role_7 裁片方案修正（P1，2026-09-20 实证）**：训练/抽检输入误用 `target_crop.jpg`（480×320 固定窗口，延伸 0.94~3.2 倍随机、2/7 目标被切边）——应为 **bbox 各边 ±10% 自适应裁片**（session 内 `target_raw.jpg` 即贴框原尺寸可作起点）。修前先核对线上 role 分类器推理的裁切口径（防 train-serve skew）。规范已固化 skill `bbox-crop-expansion`。
 - [ ] 下批 iap 增量到 → 信号盘点+全模型沉淀（skill data-flywheel 自动触发路径，含第七步台账）
 - [ ] SHTM 下周解冻：r2 审核 1,246 帧（用户人工）→ hardcase → V2.2 重训
