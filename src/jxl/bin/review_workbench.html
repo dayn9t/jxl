@@ -35,6 +35,9 @@
   .imgs.big figure { flex: 0 0 min(300px, 30vw); }
   .imgs.big img { width: 100%; max-width: 100%; max-height: none; height: auto; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
+  .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
+  .meta .bad { color: #dc2626; font-weight: 800; font-size: 16px; }
+  .meta .q { color: #d97706; font-weight: 800; font-size: 16px; }
   .dock { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e2e4e9; padding: 10px 0 4px; border-radius: 0 0 10px 10px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
   .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
@@ -133,11 +136,13 @@ function render() {
   const draft = loadDraft(s.id);
   const shownNote = draft !== "" ? draft : (last ? last.note : "");
   const lastLabel = last ? ((task.options.find(o => o.key === last.choice) || {}).label || last.choice) : "";
-  // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 符号化
-  const sym = (v) => ({same: "✓", diff: "✗", unsure: "?"})[v] ?? v;
+  // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 彩色符号
+  const sym = (v) => v === "same" ? '<span class="ok">✓</span>'
+    : v === "diff" ? '<span class="bad">✗</span>'
+    : v === "unsure" ? '<span class="q">?</span>' : esc(v);
   const entries = Object.entries(s.meta || {}).filter(([k]) => k !== "src");
   const shorts = [], longs = [];
-  for (const [k, v] of entries) (String(v).length <= 14 ? shorts : longs).push(`${k}: ${sym(v)}`);
+  for (const [k, v] of entries) (String(v).length <= 14 ? shorts : longs).push(`${esc(k)}: ${sym(v)}`);
   const meta = [
     ...(shorts.length ? [shorts.join(" ｜ ")] : []),
     ...longs,
@@ -148,7 +153,7 @@ function render() {
     `<button data-k="${esc(o.key)}" class="${last && last.choice === o.key ? "picked" : ""}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
-    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${esc(meta)}</div>
+    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
     <div class="dock">
       <div class="opts">${opts}</div>
       <div class="nav">
