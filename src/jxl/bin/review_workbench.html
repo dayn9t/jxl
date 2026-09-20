@@ -31,6 +31,9 @@
   .taskinfo .intro { white-space: pre-wrap; line-height: 1.8; color: #333; margin-top: 8px; }
   .taskinfo .intro b { color: #1d4ed8; }
   .taskinfo ul { margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8; color: #444; }
+  .taskinfo .paths { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #c7d7f5;
+                     font-family: ui-monospace, monospace; font-size: 11px; color: #667; line-height: 1.8; word-break: break-all; }
+  .taskinfo .paths span { color: #99a; }
   .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
   .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
   .imgs figure { text-align: center; }
@@ -73,6 +76,7 @@
     <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）</summary>
     <div class="intro" id="intro"></div>
     <ul id="optdesc"></ul>
+    <div class="paths" id="datapaths"></div>
   </details>
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
@@ -152,6 +156,10 @@ async function switchTask(name) {
   $("intro").innerHTML = esc(task.intro || "（任务包未提供说明）").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
   $("optdesc").innerHTML = (task.options || []).map(o =>
     `<li><b>${esc(o.label || o.key)}</b>：${esc(o.desc || "（未提供描述）")}</li>`).join("");
+  const p = task._paths || {};
+  $("datapaths").innerHTML = p.task
+    ? `<span>任务包：</span>${esc(p.task)}<br><span>裁决结果（你的标注落盘）：</span>${esc(p.results)}`
+    : "";
   $("taskinfo").open = false;  // 默认折叠，点开细读
   render();
 }

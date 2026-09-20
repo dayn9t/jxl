@@ -136,6 +136,10 @@ class Handler(BaseHTTPRequestHandler):
             b = self.bench.get(self._q(u, "round"))
             name = self._q(u, "name") or ""
             task = b.tasks.get(name)
+            if task:
+                task = {**task, "_paths": {  # 数据绝对路径（说明区展示，便于用户按需查看）
+                    "task": str(b.dir / task["_file"]),
+                    "results": str(b.result_path(name))}}
             self._json(task if task else {"error": f"未知任务 {name}"}, 200 if task else 404)
         elif u.path == "/api/progress":
             self._json(self.bench.get(self._q(u, "round")).progress())
