@@ -1,0 +1,36 @@
+- generic [active] [ref=f18e1]:
+  - complementary [ref=f18e2]:
+    - heading "裁决工作台" [level=1] [ref=f18e3]
+    - generic [ref=f18e4]:
+      - button "跨窗跟踪·同人异人裁决（114 张）" [ref=f18e5] [cursor=pointer]
+      - button "正样本池·门拒绝候选复核（162 张）" [ref=f18e6] [cursor=pointer]
+      - button "身份归因失败·7 条存疑样本（7 张）" [ref=f18e7] [cursor=pointer]
+      - button "身份分类器 v3.3·切换前抽检（50 张）" [ref=f18e8] [cursor=pointer]
+      - button "上装可见性·分歧裁决（7 张）" [ref=f18e9] [cursor=pointer]
+    - button "📐 大图：开" [ref=f18e10] [cursor=pointer]
+    - generic [ref=f18e11]: 已完成 114/114
+    - generic [ref=f18e14]: 快捷键：数字键 1-9 = 选对应选项并跳下一张未裁样本←/→ = 前后翻页Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖
+  - main [ref=f18e15]:
+    - group [ref=f18e16]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）" [ref=f18e17] [cursor=pointer]
+    - generic [ref=f18e18]:
+      - generic [ref=f18e19]:
+        - figure "a 09-30-02.00 09-32-41.051 d1" [ref=f18e20]
+        - figure "b 09-30-02.00 09-33-01.061 d0" [ref=f18e23]
+      - generic [ref=f18e26]: "第 1/114 张 ｜ 样本号 000:09-32-41.051x09-33-01.061 ｜ ✅ 已裁：上次选「不可判定」（重选即覆盖） 跟踪判: ✓ ｜ VLM判: ✗ VLM理由: VERDICT=diff，左侧画面仅显示穿着黑色长裤和黑白运动鞋的下半身，而右侧画面显示一名穿着灰色短袖上衣的男子，两者可见的衣着部位、颜色及款式完全不同，无法"
+      - generic [ref=f18e27]:
+        - generic [ref=f18e28]:
+          - button "1同人 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报" [ref=f18e29] [cursor=pointer]:
+            - generic [ref=f18e30]: 1同人
+            - generic [ref=f18e31]: 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报
+          - button "2异人 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连" [ref=f18e32] [cursor=pointer]:
+            - generic [ref=f18e33]: 2异人
+            - generic [ref=f18e34]: 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连
+          - button "3不可判定 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准" [ref=f18e35] [cursor=pointer]:
+            - generic [ref=f18e36]: 3不可判定
+            - generic [ref=f18e37]: 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准
+        - generic [ref=f18e38]:
+          - button "← 上一张" [ref=f18e39] [cursor=pointer]
+          - generic [ref=f18e40]: 第 1 / 114 张
+          - textbox "备注（选选项时随裁决一起落盘）" [ref=f18e41]: 我不同意大模型这个判断，两者的。呃，量一个只有上半身，一个只有下半身，身体部位完全不重叠。大模型做出这个判断，VLM做出这个判断有点武断。
+          - button "下一张 →" [ref=f18e42] [cursor=pointer]

@@ -1,0 +1,22 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - heading "裁决工作台" [level=1] [ref=f1e3]
+    - generic [ref=f1e4]:
+      - button "pospool_162 (162)" [ref=f1e5] [cursor=pointer]
+      - button "role_spotsample_50 (50)" [ref=f1e6] [cursor=pointer]
+      - button "upper_7 (7)" [ref=f1e7] [cursor=pointer]
+    - generic [ref=f1e8]: 0/162 已裁
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - figure "s1_2026-09-05_084912179_d0.jpg" [ref=f1e13]
+      - generic [ref=f1e16]: "[1/162] s1_2026-09-05_084912179.jpg#d0 gate: vlm-not_person 拒绝理由: 框内为桌下杂物及座椅，无真人 conf: 0.5044 bbox: 944.1,561.7,1323.7,640 src: 1 date: 026-09-05_ 被 VLM 门拒绝的正样本候选。回收=内容值得入池；业务员=窗口内侧工作人员（直接丢弃）。从严判真人。"
+      - generic [ref=f1e17]:
+        - button "1回收（真人且框可用）" [ref=f1e18] [cursor=pointer]
+        - button "2确认丢弃" [ref=f1e19] [cursor=pointer]
+        - button "3业务员（丢弃并计污染）" [ref=f1e20] [cursor=pointer]
+        - button "4升级入参照集" [ref=f1e21] [cursor=pointer]
+      - generic [ref=f1e22]:
+        - button "← 上一张" [ref=f1e23] [cursor=pointer]
+        - textbox "备注（可选，随裁决落盘）" [ref=f1e24]
+        - button "下一张 →" [ref=f1e25] [cursor=pointer]
+    - generic [ref=f1e26]: 快捷键：数字键 = 选对应选项并跳下一张未裁样本 ｜ ←/→ = 前后翻 ｜ 已裁样本重选即覆盖（追加行，合并取最后）

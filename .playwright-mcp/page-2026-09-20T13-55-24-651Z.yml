@@ -1,0 +1,25 @@
+- generic [active] [ref=f34e1]:
+  - complementary [ref=f34e2]:
+    - heading "SGCC 裁决工作台" [level=1] [ref=f34e3]
+    - generic [ref=f34e4]: ◈ 轮次
+    - combobox [ref=f34e5] [cursor=pointer]:
+      - option "第 1 轮 · 2026-09-19（340 张）" [selected]
+    - generic [ref=f34e7]: ◈ 任务
+  - main [ref=f34e11]:
+    - generic [ref=f34e12]: "过滤器:"
+    - generic [ref=f34e15]:
+      - button "← 上一张 (A)" [ref=f34e16] [cursor=pointer]
+      - button "下一张 (D) →" [ref=f34e17] [cursor=pointer]
+      - generic [ref=f34e18]: W/S = 上下滚动屏幕
+    - group [ref=f34e19]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）" [ref=f34e20] [cursor=pointer]
+  - complementary [ref=f34e21]:
+    - generic [ref=f34e22]: 图片显示
+    - button "📐 大图：开" [ref=f34e23] [cursor=pointer]
+    - generic [ref=f34e24]:
+      - text: 尺寸
+      - slider [ref=f34e25]: "300"
+      - generic [ref=f34e26]: "300"
+      - text: px
+    - generic [ref=f34e27]: 快捷键
+    - generic [ref=f34e28]: A / D = 上一张 / 下一张W / S = 向上 / 向下滚动屏幕数字键 1-9 = 选对应选项并跳下一张未裁样本Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖

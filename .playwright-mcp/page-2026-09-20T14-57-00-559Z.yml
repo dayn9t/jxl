@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - heading "SGCC 裁决工作台" [level=1] [ref=e3]
+    - generic [ref=e4]: ◈ 轮次
+    - combobox [ref=e5] [cursor=pointer]:
+      - option "第 1 轮 · 2026-09-19（340 张）" [selected]
+    - generic [ref=e7]: ◈ 任务
+  - main [ref=e11]:
+    - generic [ref=e12]: "过滤器:"
+    - generic [ref=e15]:
+      - button "← 上一张 (A)" [ref=e16] [cursor=pointer]
+      - button "下一张 (D) →" [ref=e17] [cursor=pointer]
+      - generic [ref=e18]: W/S = 上下滚动屏幕
+    - group [ref=e19]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）" [ref=e20] [cursor=pointer]

@@ -4,16 +4,17 @@
 
 ## 今天（2026-09-19）用户要参与的
 
-- [ ] **隔离台账人工批量复核（290 条，高优先 121）——★坐姿正样本回收是 v7.1 前置**：`gencheck/quarantine/2026-09-19-sedimentation.jsonl`
-  ——重点高优先类（模型分歧/不可判定）：upper 不一致 7、osnet 重连异人对 114（含不可判定）。
-  每条三选一：回收（人工验证后入池）/确认丢弃/升级入参照集。看图入口参考 visual-adjudication skill。
-- [ ] **ASR 评估集 5 个决策点**（方案 `research/2026-09-19-ASR评估集设计方案.md`）：
+- [ ] **隔离台账人工批量复核（290 条，高优先 121）——★坐姿正样本回收是 v7.1 前置**
+  ——已全部装载**裁决工作台**（`http://127.0.0.1:8787`，启动 `python -m jxl.bin.review_workbench`，
+  任务包 `gencheck/review/tasks/`）：pospool_162 / osnet_114 / role_spotsample_50 / upper_7 / role_7（含 cleaner 0.97 稀有矿）。
+  每张点选即落盘断点续审；台账本身 `gencheck/quarantine/2026-09-19-sedimentation.jsonl` 仅为机器侧归档。
+- [ ] **ASR 评估集 5 个决策点**（方案 `projects/sgcc/research/2026-09-19-ASR评估集设计方案.md`）：
   抽样量 24/30/36、时长边界、A/B 判定门、**裁决人资质（你本人裁沪语 verbatim 是否可行）**、LLM 辅助边界。
-- [ ] **role v3.3 切换前 50 张人工抽检**（清单 `gencheck/rolepool_20260919/rolepool_spotsample_checklist.md`，C 类 12 张优先）。
+- [ ] **role v3.3 切换前 50 张人工抽检**——已入裁决工作台任务 role_spotsample_50（C 类排前）；原清单 `gencheck/rolepool_20260919/rolepool_spotsample_checklist.md` 为机器侧归档。
 - [ ] **v6 切换执行跟进**：切换建议已正式发 iap（通知单 2026-09-19 补遗：v7 撤回、改推 v6）——等 iap 执行 `ln -sfn 2026-09-18_person_n_v6.*` 后确认。
 - [ ] **v7.1 回炉**（依赖台账复核）：从隔离台账 100 帧 bad_fit 弃帧回收低头坐姿正样本 → 重训 v7.1 → 重跑预冒烟（重点坐姿）。
 - [x] **sgcc3 升级后验证（零负载部分完成，烤机取消）**：升级完成（内核 7.0.0-1012-aws/驱动 **615.71.09 已载**——SB 问题已解）；零负载核验 PASS（venv torch 2.9.1+cu128 CUDA 实算/本次开机零 NVIDIA Xid）。**烤机监控按用户 2026-09-19 深夜裁决取消**，不再跟踪。
-- [ ] cleaner 稀有类正样本人工裁（1 张，role_conf 0.97 窗前交互——稀有类样本矿）。
+- [ ] cleaner 稀有类正样本人工裁（1 张，role_conf 0.97 窗前交互——稀有类样本矿）——已入裁决工作台 role_7 任务（样本 `2_2026-09-08_09-48-01.100`，meta 已标注稀有矿背景）。
 
 ## iapx 解散对 jxl 的影响（2026-09-19 发现，spec `iap docs/superpowers/specs/2026-09-19-polyglot-restructure-design.md`）
 

@@ -1,0 +1,168 @@
+- generic [active] [ref=f28e1]:
+  - complementary [ref=f28e2]:
+    - heading "SGCC 裁决工作台" [level=1] [ref=f28e3]
+    - generic [ref=f28e4]: ◈ 轮次
+    - combobox [ref=f28e5] [cursor=pointer]:
+      - option "第 1 轮 · 2026-09-19（340 张）" [selected]
+    - generic [ref=f28e7]: ◈ 任务
+    - generic [ref=f28e8]:
+      - button "跨窗跟踪·同人异人裁决（114 张）" [ref=f28e9] [cursor=pointer]
+      - button "正样本池·门拒绝候选复核（162 张）" [ref=f28e10] [cursor=pointer]
+      - button "身份归因失败·7 条存疑样本（7 张）" [ref=f28e11] [cursor=pointer]
+      - button "身份分类器 v3.3·切换前抽检（50 张）" [ref=f28e12] [cursor=pointer]
+      - button "上装可见性·分歧裁决（7 张）" [ref=f28e13] [cursor=pointer]
+    - generic [ref=f28e14]: 已完成 114/114
+  - main [ref=f28e17]:
+    - generic [ref=f28e19]:
+      - button "← 上一张" [ref=f28e20] [cursor=pointer]
+      - generic "裁决分布：每格一个样本，颜色=已裁结果；点格跳转" [ref=f28e21] [cursor=pointer]:
+        - generic "1. 000:09-32-41.051x09-33-01.061 → unsure" [ref=f28e22]
+        - generic "2. 001:10-39-32.181x10-39-40.190 → diff" [ref=f28e23]
+        - generic "3. 002:10-26-26.129x10-26-48.140 → diff" [ref=f28e24]
+        - generic "4. 003:09-47-51.099x09-48-33.139 → diff" [ref=f28e25]
+        - generic "5. 004:10-33-40.070x10-34-08.080 → diff" [ref=f28e26]
+        - generic "6. 005:10-26-26.129x10-27-14.130 → diff" [ref=f28e27]
+        - generic "7. 006:11-14-37.119x11-15-17.089 → diff" [ref=f28e28]
+        - generic "8. 007:11-49-04.170x11-49-30.210 → diff" [ref=f28e29]
+        - generic "9. 008:09-34-40.081x09-35-00.120 → diff" [ref=f28e30]
+        - generic "10. 009:10-47-05.141x10-47-35.141 → diff" [ref=f28e31]
+        - generic "11. 010:10-47-27.141x10-47-35.141 → diff" [ref=f28e32]
+        - generic "12. 011:09-15-46.099x09-16-20.129 → diff" [ref=f28e33]
+        - generic "13. 012:09-47-34.149x09-47-48.138 → diff" [ref=f28e34]
+        - generic "14. 013:10-57-39.129x10-57-59.171 → diff" [ref=f28e35]
+        - generic "15. 014:10-33-36.079x10-33-46.090 → diff" [ref=f28e36]
+        - generic "16. 015:10-31-20.029x10-31-54.039 → diff" [ref=f28e37]
+        - generic "17. 016:10-12-36.040x10-13-10.080 → diff" [ref=f28e38]
+        - generic "18. 017:10-30-42.009x10-31-38.029 → diff" [ref=f28e39]
+        - generic "19. 018:10-30-42.009x10-31-40.029 → diff" [ref=f28e40]
+        - generic "20. 019:11-17-16.161x11-17-58.151 → diff" [ref=f28e41]
+        - generic "21. 020:10-29-21.160x10-29-29.180 → diff" [ref=f28e42]
+        - generic "22. 021:09-15-08.110x09-15-54.120 → diff" [ref=f28e43]
+        - generic "23. 022:10-18-39.180x10-18-55.180 → diff" [ref=f28e44]
+        - generic "24. 023:10-08-45.190x10-09-03.190 → diff" [ref=f28e45]
+        - generic "25. 024:10-32-22.049x10-33-04.079 → diff" [ref=f28e46]
+        - generic "26. 025:11-02-33.019x11-02-45.051 → diff" [ref=f28e47]
+        - generic "27. 026:10-11-36.040x10-12-36.040 → diff" [ref=f28e48]
+        - generic "28. 027:13-57-42.150x13-58-04.161 → diff" [ref=f28e49]
+        - generic "29. 028:14-38-22.169x14-38-54.189 → diff" [ref=f28e50]
+        - generic "30. 029:11-23-41.081x11-24-33.141 → diff" [ref=f28e51]
+        - generic "31. 030:10-09-52.169x10-10-40.030 → diff" [ref=f28e52]
+        - generic "32. 031:10-57-47.150x10-58-39.150 → diff" [ref=f28e53]
+        - generic "33. 032:10-55-03.070x10-55-13.090 → diff" [ref=f28e54]
+        - generic "34. 033:10-58-11.170x10-59-11.160 → diff" [ref=f28e55]
+        - generic "35. 034:09-20-03.980x09-20-54.020 → diff" [ref=f28e56]
+        - generic "36. 035:10-40-51.970x10-41-29.989 → diff" [ref=f28e57]
+        - generic "37. 036:10-33-00.070x10-33-46.090 → diff" [ref=f28e58]
+        - generic "38. 037:14-18-15.150x14-18-25.129 → diff" [ref=f28e59]
+        - generic "39. 038:10-58-53.169x10-59-11.160 → diff" [ref=f28e60]
+        - generic "40. 039:10-19-54.199x10-20-43.999 → diff" [ref=f28e61]
+        - generic "41. 040:09-13-40.081x09-14-26.071 → diff" [ref=f28e62]
+        - generic "42. 041:10-51-35.009x10-52-27.009 → diff" [ref=f28e63]
+        - generic "43. 042:09-56-19.099x09-56-45.110 → diff" [ref=f28e64]
+        - generic "44. 043:09-52-45.049x09-53-05.040 → unsure" [ref=f28e65]
+        - generic "45. 044:09-56-25.099x09-56-45.110 → diff" [ref=f28e66]
+        - generic "46. 045:10-08-45.190x10-09-21.200 → diff" [ref=f28e67]
+        - generic "47. 046:09-09-17.180x09-09-31.169 → diff" [ref=f28e68]
+        - generic "48. 047:10-58-43.161x10-59-11.160 → diff" [ref=f28e69]
+        - generic "49. 048:14-06-09.130x14-06-21.130 → diff" [ref=f28e70]
+        - generic "50. 049:10-09-01.160x10-09-43.180 → diff" [ref=f28e71]
+        - generic "51. 050:10-58-28.190x10-58-56.180 → diff" [ref=f28e72]
+        - generic "52. 051:10-33-26.080x10-33-46.090 → diff" [ref=f28e73]
+        - generic "53. 052:10-20-49.990x10-21-04.021 → diff" [ref=f28e74]
+        - generic "54. 053:10-52-01.000x10-52-41.049 → diff" [ref=f28e75]
+        - generic "55. 054:14-39-38.199x14-39-50.199 → diff" [ref=f28e76]
+        - generic "56. 055:10-33-26.080x10-34-08.080 → diff" [ref=f28e77]
+        - generic "57. 056:10-44-23.078x10-45-17.089 → diff" [ref=f28e78]
+        - generic "58. 057:10-32-22.049x10-32-50.069 → diff" [ref=f28e79]
+        - generic "59. 058:09-47-57.140x09-48-19.160 → diff" [ref=f28e80]
+        - generic "60. 059:10-39-04.180x10-39-44.178 → diff" [ref=f28e81]
+        - generic "61. 060:10-30-42.009x10-31-06.039 → diff" [ref=f28e82]
+        - generic "62. 061:11-56-14.128x11-57-00.149 → diff" [ref=f28e83]
+        - generic "63. 062:10-01-06.999x10-01-23.040 → diff" [ref=f28e84]
+        - generic "64. 063:10-58-28.190x10-59-28.179 → diff" [ref=f28e85]
+        - generic "65. 064:11-33-48.020x11-34-22.070 → diff" [ref=f28e86]
+        - generic "66. 065:16-07-08.139x16-07-40.119 → diff" [ref=f28e87]
+        - generic "67. 066:11-29-19.180x11-29-51.168 → diff" [ref=f28e88]
+        - generic "68. 067:10-25-54.129x10-26-48.140 → diff" [ref=f28e89]
+        - generic "69. 068:10-30-42.009x10-31-14.010 → diff" [ref=f28e90]
+        - generic "70. 069:09-33-17.058x09-34-07.099 → diff" [ref=f28e91]
+        - generic "71. 070:10-44-25.069x10-45-17.089 → diff" [ref=f28e92]
+        - generic "72. 071:09-47-23.140x09-47-43.129 → diff" [ref=f28e93]
+        - generic "73. 072:16-07-22.129x16-07-40.119 → diff" [ref=f28e94]
+        - generic "74. 073:11-22-55.050x11-23-45.081 → diff" [ref=f28e95]
+        - generic "75. 074:10-47-15.120x10-47-31.139 → diff" [ref=f28e96]
+        - generic "76. 075:12-06-19.130x12-07-03.141 → diff" [ref=f28e97]
+        - generic "77. 076:09-32-33.039x09-33-01.059 → diff" [ref=f28e98]
+        - generic "78. 077:10-17-02.139x10-17-18.140 → unsure" [ref=f28e99]
+        - generic "79. 078:09-49-56.220x09-50-46.989 → diff" [ref=f28e100]
+        - generic "80. 079:10-58-44.150x10-59-02.170 → diff" [ref=f28e101]
+        - generic "81. 080:10-51-16.999x10-52-03.039 → diff" [ref=f28e102]
+        - generic "82. 081:10-51-41.010x10-52-03.039 → diff" [ref=f28e103]
+        - generic "83. 082:10-58-48.220x10-59-28.179 → diff" [ref=f28e104]
+        - generic "84. 083:11-03-17.060x11-03-37.050 → diff" [ref=f28e105]
+        - generic "85. 084:11-07-15.130x11-08-11.139 → diff" [ref=f28e106]
+        - generic "86. 085:09-51-04.989x09-51-57.010 → diff" [ref=f28e107]
+        - generic "87. 086:09-33-03.058x09-33-13.068 → diff" [ref=f28e108]
+        - generic "88. 087:14-44-24.070x14-45-10.119 → diff" [ref=f28e109]
+        - generic "89. 088:10-07-54.160x10-08-30.150 → diff" [ref=f28e110]
+        - generic "90. 089:10-36-54.119x10-37-40.150 → diff" [ref=f28e111]
+        - generic "91. 090:10-33-36.079x10-34-04.109 → diff" [ref=f28e112]
+        - generic "92. 091:11-56-14.128x11-56-24.150 → diff" [ref=f28e113]
+        - generic "93. 092:11-14-27.079x11-14-45.099 → diff" [ref=f28e114]
+        - generic "94. 093:08-36-23.079x08-36-49.099 → diff" [ref=f28e115]
+        - generic "95. 094:08-36-07.080x08-36-49.099 → diff" [ref=f28e116]
+        - generic "96. 095:10-31-48.029x10-32-32.060 → diff" [ref=f28e117]
+        - generic "97. 096:12-06-05.130x12-07-03.141 → diff" [ref=f28e118]
+        - generic "98. 097:10-30-58.050x10-31-54.039 → diff" [ref=f28e119]
+        - generic "99. 098:14-41-30.050x14-41-54.040 → diff" [ref=f28e120]
+        - generic "100. 099:08-36-33.080x08-37-05.120 → diff" [ref=f28e121]
+        - generic "101. 100:11-22-55.050x11-23-27.070 → diff" [ref=f28e122]
+        - generic "102. 101:10-30-58.050x10-31-40.029 → diff" [ref=f28e123]
+        - generic "103. 102:10-30-42.009x10-31-20.029 → diff" [ref=f28e124]
+        - generic "104. 103:09-33-17.058x09-33-57.079 → diff" [ref=f28e125]
+        - generic "105. 104:12-05-55.121x12-06-07.130 → diff" [ref=f28e126]
+        - generic "106. 105:08-36-33.080x08-36-49.099 → diff" [ref=f28e127]
+        - generic "107. 106:10-12-14.039x10-12-36.040 → same" [ref=f28e128]
+        - generic "108. 107:10-39-32.181x10-39-50.190 → diff" [ref=f28e129]
+        - generic "109. 108:09-32-15.019x09-33-13.068 → diff" [ref=f28e130]
+        - generic "110. 109:09-32-15.019x09-32-51.058 → diff" [ref=f28e131]
+        - generic "111. 110:09-20-52.030x09-21-28.030 → diff" [ref=f28e132]
+        - generic "112. 111:10-12-14.039x10-13-10.080 → diff" [ref=f28e133]
+        - generic "113. 112:10-23-56.070x10-24-08.059 → diff" [ref=f28e134]
+        - generic "114. 113:10-16-42.140x10-17-20.139 → diff" [ref=f28e135]
+      - generic [ref=f28e136]:
+        - generic [ref=f28e137] [cursor=pointer]: 同人 1
+        - generic [ref=f28e138] [cursor=pointer]: 异人 110
+        - generic [ref=f28e139] [cursor=pointer]: 不可判定 3
+        - generic [ref=f28e140]: ｜ 第 1 / 114 张
+      - button "下一张 →" [ref=f28e141] [cursor=pointer]
+    - generic [ref=f28e142]:
+      - generic [ref=f28e143]:
+        - figure "a 09-30-02.00 09-32-41.051 d1" [ref=f28e144]
+        - figure "b 09-30-02.00 09-33-01.061 d0" [ref=f28e147]
+      - generic [ref=f28e150]: "样本号 000:09-32-41.051x09-33-01.061 ｜ ✅ 已裁：上次选「不可判定」（重选即覆盖） 跟踪判: ✓ ｜ VLM判: ✗ VLM理由: 左侧画面仅显示穿着黑色长裤和黑白运动鞋的下半身，而右侧画面显示一名穿着灰色短袖上衣的男子，两者可见的衣着部位、颜色及款式完全不同，无法"
+      - generic [ref=f28e151]:
+        - button "1同人 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报" [ref=f28e152] [cursor=pointer]:
+          - generic [ref=f28e153]: 1同人
+          - generic [ref=f28e154]: 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报
+        - button "2异人 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连" [ref=f28e155] [cursor=pointer]:
+          - generic [ref=f28e156]: 2异人
+          - generic [ref=f28e157]: 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连
+        - button "3不可判定 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准" [ref=f28e158] [cursor=pointer]:
+          - generic [ref=f28e159]: 3不可判定
+          - generic [ref=f28e160]: 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准
+      - generic [ref=f28e161]:
+        - generic [ref=f28e162]: "备注:"
+        - textbox "选选项时随裁决一起落盘" [ref=f28e163]: 我不同意大模型这个判断，两者的。呃，量一个只有上半身，一个只有下半身，身体部位完全不重叠。大模型做出这个判断，VLM做出这个判断有点武断。
+    - group [ref=f28e164]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）" [ref=f28e165] [cursor=pointer]
+  - complementary [ref=f28e166]:
+    - generic [ref=f28e167]: 图片显示
+    - button "📐 大图：开" [ref=f28e168] [cursor=pointer]
+    - generic [ref=f28e169]:
+      - text: 尺寸
+      - slider [ref=f28e170]: "300"
+      - generic [ref=f28e171]: "300"
+      - text: px
+    - generic [ref=f28e172]: 快捷键
+    - generic [ref=f28e173]: 数字键 1-9 = 选对应选项并跳下一张未裁样本←/→ = 前后翻页Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖

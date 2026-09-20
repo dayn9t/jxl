@@ -1,0 +1,23 @@
+- generic [active] [ref=f30e1]:
+  - complementary [ref=f30e2]:
+    - heading "SGCC 裁决工作台" [level=1] [ref=f30e3]
+    - generic [ref=f30e4]: ◈ 轮次
+    - combobox [ref=f30e5] [cursor=pointer]
+    - generic [ref=f30e7]: ◈ 任务
+  - main [ref=f30e11]:
+    - generic [ref=f30e13]:
+      - button "← 上一张" [ref=f30e14] [cursor=pointer]
+      - generic "裁决分布：每格一个样本，颜色=已裁结果；点格跳转" [ref=f30e15] [cursor=pointer]
+      - button "下一张 →" [ref=f30e16] [cursor=pointer]
+    - group [ref=f30e18]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）" [ref=f30e19] [cursor=pointer]
+  - complementary [ref=f30e20]:
+    - generic [ref=f30e21]: 图片显示
+    - button "📐 大图：开" [ref=f30e22] [cursor=pointer]
+    - generic [ref=f30e23]:
+      - text: 尺寸
+      - slider [ref=f30e24]: "380"
+      - generic [ref=f30e25]: "300"
+      - text: px
+    - generic [ref=f30e26]: 快捷键
+    - generic [ref=f30e27]: 数字键 1-9 = 选对应选项并跳下一张未裁样本←/→ = 前后翻页Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖

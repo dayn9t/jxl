@@ -1,0 +1,25 @@
+- generic [ref=f2e1]:
+  - banner [ref=f2e2]:
+    - heading "裁决工作台" [level=1] [ref=f2e3]
+    - generic [ref=f2e4]:
+      - button "osnet_114 (114)" [active] [ref=f2e5] [cursor=pointer]
+      - button "pospool_162 (162)" [ref=f2e6] [cursor=pointer]
+      - button "role_7 (7)" [ref=f2e7] [cursor=pointer]
+      - button "role_spotsample_50 (50)" [ref=f2e8] [cursor=pointer]
+      - button "upper_7 (7)" [ref=f2e9] [cursor=pointer]
+    - generic [ref=f2e10]: 0/114 已裁
+  - main [ref=f2e13]:
+    - generic [ref=f2e14]:
+      - generic [ref=f2e32]:
+        - figure "a 09-30-02.00 09-32-41.051 d1" [ref=f2e33]
+        - figure "b 09-30-02.00 09-33-01.061 d0" [ref=f2e36]
+      - generic [ref=f2e39]: "[1/114] 000:09-32-41.051x09-33-01.061 跟踪判: same VLM判: diff VLM理由: VERDICT=diff，左侧画面仅显示穿着黑色长裤和黑白运动鞋的下半身，而右侧画面显示一名穿着灰色短袖上衣的男子，两者可见的衣着部位、颜色及款式完全不同，无法 src: 1 身份裁决：跟踪认为同一个人（same），VLM 认为异人（diff）。左右两图比对衣着/发型/体型——判到底同人或换人。10-41 案例流程。"
+      - generic [ref=f2e40]:
+        - button "1同人（跟踪对）" [ref=f2e41] [cursor=pointer]
+        - button "2异人（VLM 对）" [ref=f2e42] [cursor=pointer]
+        - button "3不可判定" [ref=f2e43] [cursor=pointer]
+      - generic [ref=f2e44]:
+        - button "← 上一张" [ref=f2e45] [cursor=pointer]
+        - textbox "备注（可选，随裁决落盘）" [ref=f2e46]
+        - button "下一张 →" [ref=f2e47] [cursor=pointer]
+    - generic [ref=f2e15]: 快捷键：数字键 = 选对应选项并跳下一张未裁样本 ｜ ←/→ = 前后翻 ｜ 已裁样本重选即覆盖（追加行，合并取最后）

@@ -1,0 +1,26 @@
+- generic [active] [ref=f26e1]:
+  - complementary [ref=f26e2]:
+    - heading "SGCC 裁决工作台" [level=1] [ref=f26e3]
+    - generic [ref=f26e4]: ◈ 轮次
+    - combobox [ref=f26e5] [cursor=pointer]:
+      - option "第 1 轮 · 2026-09-19（340 张）" [selected]
+    - generic [ref=f26e7]: ◈ 任务
+  - main [ref=f26e11]:
+    - generic [ref=f26e12]:
+      - textbox "备注（选选项时随裁决一起落盘）" [ref=f26e14]
+      - generic [ref=f26e15]:
+        - button "← 上一张" [ref=f26e16] [cursor=pointer]
+        - generic "裁决分布：每格一个样本，颜色=已裁结果；点格跳转" [ref=f26e17] [cursor=pointer]
+        - button "下一张 →" [ref=f26e18] [cursor=pointer]
+    - group [ref=f26e20]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）" [ref=f26e21] [cursor=pointer]
+  - complementary [ref=f26e22]:
+    - generic [ref=f26e23]: 图片显示
+    - button "📐 大图：开" [ref=f26e24] [cursor=pointer]
+    - generic [ref=f26e25]:
+      - text: 尺寸
+      - slider [ref=f26e26]: "300"
+      - generic [ref=f26e27]: "300"
+      - text: px
+    - generic [ref=f26e28]: 快捷键
+    - generic [ref=f26e29]: 数字键 1-9 = 选对应选项并跳下一张未裁样本←/→ = 前后翻页Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖

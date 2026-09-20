@@ -1,0 +1,46 @@
+- generic [active] [ref=f24e1]:
+  - complementary [ref=f24e2]:
+    - heading "裁决工作台" [level=1] [ref=f24e3]
+    - combobox [ref=f24e4]:
+      - option "第 1 轮 · 2026-09-19（340 张）" [selected]
+    - generic [ref=f24e5]:
+      - button "跨窗跟踪·同人异人裁决（114 张）" [ref=f24e6] [cursor=pointer]
+      - button "正样本池·门拒绝候选复核（162 张）" [ref=f24e7] [cursor=pointer]
+      - button "身份归因失败·7 条存疑样本（7 张）" [ref=f24e8] [cursor=pointer]
+      - button "身份分类器 v3.3·切换前抽检（50 张）" [ref=f24e9] [cursor=pointer]
+      - button "上装可见性·分歧裁决（7 张）" [ref=f24e10] [cursor=pointer]
+    - generic [ref=f24e11]: 已完成 114/114
+  - main [ref=f24e14]:
+    - group [ref=f24e15]:
+      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）" [ref=f24e16] [cursor=pointer]
+    - generic [ref=f24e17]:
+      - generic [ref=f24e18]:
+        - figure "a 09-30-02.00 09-32-41.051 d1" [ref=f24e19]
+        - figure "b 09-30-02.00 09-33-01.061 d0" [ref=f24e22]
+      - generic [ref=f24e25]: "样本号 000:09-32-41.051x09-33-01.061 ｜ ✅ 已裁：上次选「不可判定」（重选即覆盖） 跟踪判: ✓ ｜ VLM判: ✗ VLM理由: 左侧画面仅显示穿着黑色长裤和黑白运动鞋的下半身，而右侧画面显示一名穿着灰色短袖上衣的男子，两者可见的衣着部位、颜色及款式完全不同，无法"
+      - generic [ref=f24e26]:
+        - generic [ref=f24e27]:
+          - button "1同人 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报" [ref=f24e28] [cursor=pointer]:
+            - generic [ref=f24e29]: 1同人
+            - generic [ref=f24e30]: 左右确为同一人（衣着/发型/体格吻合）→ 跟踪判对，视觉模型误报
+          - button "2异人 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连" [ref=f24e31] [cursor=pointer]:
+            - generic [ref=f24e32]: 2异人
+            - generic [ref=f24e33]: 左右是不同的人（换了办理人）→ 视觉模型判对，跟踪误连
+          - button "3不可判定 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准" [ref=f24e34] [cursor=pointer]:
+            - generic [ref=f24e35]: 3不可判定
+            - generic [ref=f24e36]: 图糊/遮挡/只拍到局部，无法确认 → 记不可判定，不参与校准
+        - generic [ref=f24e37]:
+          - button "← 上一张" [ref=f24e38] [cursor=pointer]
+          - generic [ref=f24e39]: 第 1 / 114 张
+          - textbox "备注（选选项时随裁决一起落盘）" [ref=f24e40]: 我不同意大模型这个判断，两者的。呃，量一个只有上半身，一个只有下半身，身体部位完全不重叠。大模型做出这个判断，VLM做出这个判断有点武断。
+          - button "下一张 →" [ref=f24e41] [cursor=pointer]
+  - complementary [ref=f24e42]:
+    - generic [ref=f24e43]: 图片显示
+    - button "📐 大图：开" [ref=f24e44] [cursor=pointer]
+    - generic [ref=f24e45]:
+      - text: 尺寸
+      - slider [ref=f24e46]: "300"
+      - generic [ref=f24e47]: "300"
+      - text: px
+    - generic [ref=f24e48]: 快捷键
+    - generic [ref=f24e49]: 数字键 1-9 = 选对应选项并跳下一张未裁样本←/→ = 前后翻页Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）选完立即落盘；已裁样本重选即覆盖
