@@ -56,7 +56,7 @@
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
 </header>
 <main>
-  <details class="taskinfo" id="taskinfo" open>
+  <details class="taskinfo" id="taskinfo">
     <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）</summary>
     <div class="intro" id="intro"></div>
     <ul id="optdesc"></ul>
@@ -108,7 +108,7 @@ async function switchTask(name) {
   $("intro").textContent = task.intro || "（任务包未提供说明）";
   $("optdesc").innerHTML = (task.options || []).map(o =>
     `<li><b>${esc(o.label || o.key)}</b>：${esc(o.desc || "（未提供描述）")}</li>`).join("");
-  $("taskinfo").open = true;
+  $("taskinfo").open = false;  // 默认折叠，点开细读
   render();
 }
 
