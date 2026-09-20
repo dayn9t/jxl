@@ -7,6 +7,11 @@ from jvi.gui.record_viewer import RecordViewer
 from vlabel.dataset import LabelFormat, open_label_set
 from vlabel.meta_jxl import find_meta
 
+# 格式集注册是 import 副作用：HopSet 在 jxl.label.hop，DarknetSet 在 vlabel.formats。
+# 缺任一 import 时 open_label_set 对 HOP/DARKNET 返回 Err（工厂查不到实现类）。
+import jxl.label.hop  # noqa: F401
+import vlabel.formats  # noqa: F401
+
 from jxl.label.viewer import LabelRecord
 
 
