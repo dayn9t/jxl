@@ -23,6 +23,7 @@
   .taskinfo { background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
   .taskinfo summary { cursor: pointer; font-weight: 600; color: #1d4ed8; font-size: 13px; }
   .taskinfo .intro { white-space: pre-wrap; line-height: 1.8; color: #333; margin-top: 8px; }
+  .taskinfo .intro b { color: #1d4ed8; }
   .taskinfo ul { margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8; color: #444; }
   .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
   .imgs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -108,7 +109,7 @@ async function switchTask(name) {
   samples = task.samples; idx = 0;
   document.querySelectorAll("#tabs button").forEach(b =>
     b.classList.toggle("active", b.dataset.n === name));
-  $("intro").textContent = task.intro || "（任务包未提供说明）";
+  $("intro").innerHTML = esc(task.intro || "（任务包未提供说明）").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
   $("optdesc").innerHTML = (task.options || []).map(o =>
     `<li><b>${esc(o.label || o.key)}</b>：${esc(o.desc || "（未提供描述）")}</li>`).join("");
   $("taskinfo").open = false;  // 默认折叠，点开细读
@@ -132,14 +133,22 @@ function render() {
   const draft = loadDraft(s.id);
   const shownNote = draft !== "" ? draft : (last ? last.note : "");
   const lastLabel = last ? ((task.options.find(o => o.key === last.choice) || {}).label || last.choice) : "";
-  const meta = Object.entries(s.meta || {}).map(([k, v]) => `${k}: ${v}`).join("\n") || "（无附加信息）";
+  // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 符号化
+  const sym = (v) => ({same: "✓", diff: "✗", unsure: "?"})[v] ?? v;
+  const entries = Object.entries(s.meta || {}).filter(([k]) => k !== "src");
+  const shorts = [], longs = [];
+  for (const [k, v] of entries) (String(v).length <= 14 ? shorts : longs).push(`${k}: ${sym(v)}`);
+  const meta = [
+    ...(shorts.length ? [shorts.join(" ｜ ")] : []),
+    ...longs,
+  ].join("\n") || "（无附加信息）";
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const opts = task.options.map((o, i) =>
     `<button data-k="${esc(o.key)}" class="${last && last.choice === o.key ? "picked" : ""}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
-    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${esc(meta)}\n${esc(task.hint || "")}</div>
+    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${esc(meta)}</div>
     <div class="dock">
       <div class="opts">${opts}</div>
       <div class="nav">
