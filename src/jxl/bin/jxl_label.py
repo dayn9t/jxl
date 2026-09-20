@@ -14,8 +14,9 @@ from jvi.geo.polygon import Polygon
 from jvi.gui.record_viewer import RecordViewer
 from jvi.image.image_nda import ImageNda
 from rustshed import Null, Option, Some
+from vlabel.a2d import A2dImageLabel, A2dObjectLabel, A2dObjectLabels
+from vlabel.meta_jxl import LabelMeta, find_meta
 
-from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel, A2dObjectLabels
 from jxl.label.hop import (
     LabelFilter,
     hop_del_label,
@@ -24,7 +25,6 @@ from jxl.label.hop import (
     import_label,
     load_label_records,
 )
-from jxl.label.meta import LabelMeta, find_meta
 
 NEAR_R2: Final[float] = 0.05**2 / 4  # TODO:
 """点的邻域半径平方"""

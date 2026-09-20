@@ -19,11 +19,11 @@ import typer
 from jcx.sys.fs import find
 from jvi.image.image_nda import ImageNda
 from loguru import logger
+from vlabel.dataset import MetaDataset
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yoloe import D2dYoloE
-from jxl.label.a2d.dd import A2dImageLabel
-from jxl.label.meta_dataset import MetaDataset
+from jxl.label.d2d_converters import a2d_image_from_d2d
 from jxl.yolo.util import yolo_set_weights_dir
 
 app = typer.Typer(help="图像目录自动标注工具 - 基于 YOLOE 开放词汇检测")
@@ -102,7 +102,7 @@ def process_image_dir(
                 logger.info("[{}/{}] {} - 未检测到目标", i, total, image_file.name)
                 continue
 
-            a2d_ret = A2dImageLabel.from_d2d(d2d_ret)
+            a2d_ret = a2d_image_from_d2d(d2d_ret)
 
             # 使用原文件名（不含扩展名）作为样本名
             name = image_file.stem

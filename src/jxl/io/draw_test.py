@@ -3,9 +3,9 @@ from jvi.geo.rectangle import Rect
 from jvi.geo.size2d import SIZE_VGA
 from jvi.image.image_nda import ImageNda
 from jvi.image.trace import trace_image
+from vlabel.prop import ProbValue
 
 from jxl.io.draw import draw_box, draw_class_item
-from jxl.label.prop import ProbValue
 
 
 def show_draw_box() -> None:

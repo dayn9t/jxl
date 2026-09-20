@@ -9,10 +9,10 @@ from jvi.image.trans import PilImage, bgr_to_pil
 from loguru import logger
 from torch import Tensor
 from torchsummary import summary
+from vlabel.prop import ProbValue
 
 from jxl.cls.arch.torch_image import load_pth_tar
 from jxl.cls.classifier import ClassifierOpt, IClassifier, ModelFormat
-from jxl.label.a2d.dd import ProbValue
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 

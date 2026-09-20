@@ -5,8 +5,8 @@ import shutil
 from pathlib import Path
 
 from jcx.sys.fs import files_in
+from vlabel.a2d import IMG_EXT
 
-from jxl.label.a2d.dd import IMG_EXT
 from jxl.label.hop import HOP_EXT
 
 

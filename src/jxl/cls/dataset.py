@@ -4,8 +4,7 @@ from jcx.data.split import random_split
 from jcx.sys.fs import StrPath, dirs_in, files_in, link_files, remake_subdir
 from jvi.image.image_nda import is_image
 from loguru import logger
-
-from jxl.label.darknet.darknet_set import img2label
+from vlabel.formats.darknet import img2label
 
 
 def remake_dirs(dst: StrPath) -> list[str]:

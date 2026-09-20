@@ -11,7 +11,7 @@ from jvi.image.image_nda import ImageNda
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yolo import D2dYolo
-from jxl.label.a2d.dd import A2dImageLabel
+from jxl.label.d2d_converters import a2d_image_from_d2d
 
 app = typer.Typer(help="Yolo检测器")
 
@@ -56,7 +56,7 @@ def main(
         print(f"  {src_file} => {dst_file}")
 
         res = detector.detect(image_in)
-        label = A2dImageLabel.from_d2d(res)
+        label = a2d_image_from_d2d(res)
         save_json(label, dst_file)
 
 

@@ -9,10 +9,9 @@ from typing import Annotated
 
 import typer
 from loguru import logger
-
-from jxl.label.darknet.darknet_set import darknet_dump_labels
-from jxl.label.io import dump_label_prop, load_image_label_pairs
-from jxl.label.meta import find_meta
+from vlabel.dataset import dump_label_prop, load_image_label_pairs
+from vlabel.formats.darknet import darknet_dump_labels
+from vlabel.meta_jxl import find_meta
 
 
 class SampleFormat(StrEnum):

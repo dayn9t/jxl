@@ -1,8 +1,7 @@
 from pathlib import Path
 
 from jcx.sys.fs import StrPath
-
-from jxl.label.io import label_path_of
+from vlabel.dataset import label_path_of
 
 """IAS文件系统相关内容, 不设计具体格式"""
 

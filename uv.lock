@@ -754,6 +754,7 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
     { name = "ultralytics" },
+    { name = "vlabel" },
     { name = "volcengine-python-sdk" },
 ]
 
@@ -797,6 +798,7 @@ requires-dist = [
     { name = "transformers" },
     { name = "typer" },
     { name = "ultralytics", specifier = ">=8.4.65" },
+    { name = "vlabel", directory = "/home/jiang/cc/next/vlabel/py" },
     { name = "volcengine-python-sdk" },
 ]
 
@@ -2233,6 +2235,44 @@ source = { registry = "http://192.168.18.146:3141/root/dev/+simple/" }
 sdist = { url = "http://192.168.18.146:3141/root/pypi/+f/3fc/47733c7e419d4/urllib3-2.5.0.tar.gz", hash = "sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760" }
 wheels = [
     { url = "http://192.168.18.146:3141/root/pypi/+f/e6b/01673c0fa6a13/urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc" },
+]
+
+[[package]]
+name = "vlabel"
+version = "0.1.0"
+source = { directory = "/home/jiang/cc/next/vlabel/py" }
+dependencies = [
+    { name = "jcx" },
+    { name = "json5" },
+    { name = "jvi" },
+    { name = "loguru" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "rustshed" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jcx", directory = "/home/jiang/cc/py/jcx" },
+    { name = "json5", specifier = ">=0.9" },
+    { name = "jvi", directory = "/home/jiang/cc/py/jvi" },
+    { name = "loguru", specifier = ">=0.7" },
+    { name = "pillow", specifier = ">=11" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "rustshed", specifier = ">=0.1" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1" },
+    { name = "orjson", specifier = ">=3" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "ruff", specifier = ">=0.6" },
+    { name = "scikit-learn", specifier = ">=1.6" },
+    { name = "types-pyyaml", specifier = ">=6" },
 ]
 
 [[package]]

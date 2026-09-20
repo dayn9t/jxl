@@ -7,12 +7,18 @@ from jcx.text.txt_json import load_json, save_json
 from jvi.gui.record_viewer import FileRecord
 from loguru import logger
 from rustshed import Option
+from vlabel.a2d import IMG_EXT, A2dImageLabel, A2dImageLabelPairs
+from vlabel.dataset import (
+    HOP,
+    A2dLabelSet,
+    LabelFormat,
+    label_path_of,
+    load_image_label_pairs,
+    register_label_set,
+)
+from vlabel.meta_jxl import meta_fix
 
-from jxl.label.a2d.dd import IMG_EXT, A2dImageLabel, A2dImageLabelPairs
-from jxl.label.a2d.label_set import HOP, A2dLabelSet, LabelFormat
 from jxl.label.ias import ias_label_path_of
-from jxl.label.io import label_path_of, load_image_label_pairs
-from jxl.label.meta import meta_fix
 
 HOP_EXT = ".json"  # 标注文件扩展名
 HOP_FIX = "hop"  # HOP名称前缀/后缀
@@ -136,3 +142,8 @@ class HopSet(A2dLabelSet):
 
     def save(self, _root: Path) -> None:
         assert self
+
+
+# HopSet 留守 jxl（依赖 jvi.gui.record_viewer），注册进 vlabel 的标注集注册表，
+# 使 vlabel.dataset.open_label_set 对 HOP 格式与迁移前 factory 行为一致。
+register_label_set(LabelFormat.HOP, HopSet)

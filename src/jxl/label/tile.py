@@ -12,17 +12,17 @@ from jvi.image.image_nda import ImageNda
 from jvi.image.proc import resize
 from loguru import logger
 from rustshed import Null, Option, Some
+from vlabel.a2d import A2dImageLabel, A2dObjectLabel
+from vlabel.meta_jxl import PropMeta
+from vlabel.prop import CONF_EXCLUDE, PROP_EXCLUDE, ProbValue
 
 from jxl.io.draw import draw_boxi
-from jxl.label.a2d.dd import A2dImageLabel, A2dObjectLabel
 from jxl.label.hop import (
     LabelFilter,
     hop_load_label,
     hop_save_label,
     load_label_records,
 )
-from jxl.label.meta import PropMeta
-from jxl.label.prop import CONF_EXCLUDE, PROP_EXCLUDE, ProbValue
 
 
 @dataclass

@@ -5,9 +5,9 @@ from jvi.image.image_nda import ImageNda
 from loguru import logger
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
+from vlabel.prop import ProbValue
 
 from jxl.cls.classifier import ClassifierOpt, IClassifier
-from jxl.label.a2d.dd import ProbValue
 
 
 class ClassifierResY8:

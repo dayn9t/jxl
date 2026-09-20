@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Protocol, Self
 
 import numpy as np
+from vlabel.prop import ProbValue
 
-from jxl.label.a2d.dd import ProbValue
 from jxl.model.types import ModelInfo
 
 

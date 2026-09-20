@@ -2,8 +2,7 @@ import cv2
 from jvi.drawing.color import COLORS7, Color
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
-
-from jxl.label.prop import ProbValue
+from vlabel.prop import ProbValue
 
 
 def draw_boxi(

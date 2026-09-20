@@ -8,8 +8,8 @@ from jvi.geo.point2d import Point
 from jvi.geo.rectangle import Rect
 from jvi.gui.record_viewer import RecordViewer
 from jvi.image.image_nda import ImageNda
+from vlabel.meta_jxl import LabelMeta, find_meta
 
-from jxl.label.meta import LabelMeta, find_meta
 from jxl.label.tile import TileObject, TileObjects, TileRecord, load_tiles
 
 

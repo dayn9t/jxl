@@ -1,8 +1,8 @@
 from jvi.image.image_nda import ImageNda
 from jvi.image.struct import find_polygons
+from vlabel.prop import ProbValue
 
 from jxl.det.idetector import DetObject, DetObjects
-from jxl.label.prop import ProbValue
 from jxl.seg.iseg import ISegRes
 
 

@@ -18,10 +18,10 @@ import typer
 from jcx.sys.fs import files_in, make_subdir
 from jcx.text.txt_json import load_json
 from loguru import logger
+from vlabel.a2d import A2dObjectLabel, A2dObjectLabels
+from vlabel.formats.darknet import darknet_export_objects
 
 from jxl.det.a2d import A2dObject, A2dResult
-from jxl.label.a2d.dd import A2dObjectLabel, A2dObjectLabels
-from jxl.label.darknet.darknet_set import darknet_export_objects
 
 # typer CLI 惯用模式: 参数校验异常消息豁免噪声规则
 

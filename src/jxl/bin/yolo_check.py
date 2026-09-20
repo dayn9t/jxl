@@ -3,11 +3,11 @@ from pathlib import Path
 import typer
 from jvi.image.image_nda import ImageNda
 from loguru import logger
+from vlabel.a2d import A2dImageLabel
+from vlabel.formats.darknet import DarknetSet, darknet_dump_labels
 
 from jxl.det.d2d import D2dObject, D2dOpt, D2dResult
 from jxl.det.yolo.d2d_yolo import D2dYolo
-from jxl.label.a2d.dd import A2dImageLabel
-from jxl.label.darknet.darknet_set import DarknetSet, darknet_dump_labels
 
 
 def iou_match(res: D2dResult, label: A2dImageLabel, iou_threshold: float) -> bool:

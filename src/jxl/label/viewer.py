@@ -7,9 +7,8 @@ from jvi.drawing.color import LIME
 from jvi.geo.point2d import Point
 from jvi.gui.record_viewer import PImageEntry
 from jvi.image.image_nda import ImageNda
-
-from jxl.label.a2d.dd import A2dImageLabel
-from jxl.label.meta import LabelMeta
+from vlabel.a2d import A2dImageLabel
+from vlabel.meta_jxl import LabelMeta
 
 
 @dataclass(frozen=True)
