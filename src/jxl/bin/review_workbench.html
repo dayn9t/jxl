@@ -11,8 +11,10 @@
           background: #fff; border-right: 1px solid #ddd; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
   aside.right { border-right: none; border-left: 1px solid #ddd; width: 220px; flex: 0 0 220px; }
   aside h1 { font-size: 16px; font-weight: 600; }
-  #roundsel { padding: 6px 8px; border: 1px solid #bbb; border-radius: 6px; font-size: 13px; background: #fff; }
+  #roundsel { padding: 8px 10px; border: 1px solid #1d4ed8; border-radius: 6px; font-size: 13px;
+              background: #1d4ed8; color: #fff; font-weight: 600; cursor: pointer; width: 100%; }
   .paneltitle { font-size: 12px; font-weight: 600; color: #888; letter-spacing: .05em; margin: 4px 0 -2px; }
+  .navsep { border-top: 1px solid #e5e7eb; margin: 10px 0 2px; }
   .tabs { display: flex; flex-direction: column; gap: 6px; }
   .tabs button { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer;
                  font-size: 13px; text-align: left; line-height: 1.4; }
@@ -47,7 +49,8 @@
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
   .meta .bad { color: #dc2626; font-weight: 800; font-size: 16px; }
   .meta .q { color: #6b7280; font-weight: 800; font-size: 16px; }
-  .dock { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e2e4e9; padding: 10px 0 4px; border-radius: 0 0 10px 10px; }
+  .dock { position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid #ddd;
+           border-radius: 10px; padding: 10px 14px 8px; margin-bottom: 12px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
   .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; border-left-width: 5px; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
   .opts button .k { display: block; }
@@ -62,9 +65,19 @@
   .opts button.picked { background: var(--tone, #16a34a); color: #fff; border-color: var(--tone, #16a34a); }
   .opts button.picked .k, .opts button.picked .k b, .opts button.picked .d { color: #fff; }
   .nav { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-  .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; }
+  .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
-  .nav .note { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; min-width: 120px; }
+  .noterow { margin-top: 10px; }
+  .noterow .note { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
+  /* 裁决分布导航条：每格=一个样本，按结果语义色；未裁=浅灰；当前=黑框；点格跳转 */
+  .strip { flex: 1; display: flex; gap: 1.5px; height: 20px; min-width: 120px; cursor: pointer; }
+  .strip i { flex: 1; border-radius: 2px; background: #e5e7eb; min-width: 2px; }
+  .strip i:hover { filter: brightness(.8); }
+  .strip i.cur { outline: 2px solid #111; outline-offset: -1px; }
+  .strip i.ok { background: #16a34a; } .strip i.no { background: #dc2626; }
+  .strip i.mid { background: #6b7280; } .strip i.meta { background: #2563eb; } .strip i.out { background: #7c3aed; }
+  .badges { display: flex; gap: 4px; font-size: 12px; white-space: nowrap; }
+  .badges b { padding: 2px 7px; border-radius: 10px; cursor: pointer; font-weight: 600; }
   .done { text-align: center; padding: 60px 0; color: #16a34a; font-size: 18px; }
   .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
 </style>
@@ -72,19 +85,32 @@
 <body>
 <aside class="left">
   <h1>{{TITLE}}</h1>
+  <div class="paneltitle">◈ 轮次</div>
   <select id="roundsel"></select>
+  <div class="navsep"></div>
+  <div class="paneltitle">◈ 任务</div>
   <div class="tabs" id="tabs"></div>
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
 </aside>
 <main>
+  <div class="dock">
+    <div class="opts" id="opts"></div>
+    <div class="noterow"><input class="note" id="note" placeholder="备注（选选项时随裁决一起落盘）"></div>
+    <div class="nav">
+      <button id="prevbtn">← 上一张</button>
+      <div class="strip" id="strip" title="裁决分布：每格一个样本，颜色=已裁结果；点格跳转"></div>
+      <div class="badges" id="badges"></div>
+      <button id="nextbtn">下一张 →</button>
+    </div>
+  </div>
+  <div class="card" id="card"></div>
+  <div class="err" id="err"></div>
   <details class="taskinfo" id="taskinfo">
-    <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）</summary>
+    <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）</summary>
     <div class="intro" id="intro"></div>
     <ul id="optdesc"></ul>
     <div class="paths" id="datapaths"></div>
   </details>
-  <div class="card" id="card"></div>
-  <div class="err" id="err"></div>
 </main>
 <aside class="right">
   <div class="paneltitle">图片显示</div>
@@ -134,6 +160,13 @@ async function load() {
     applyToggle(); render();
   };
   applyToggle();
+  $("note").addEventListener("input", () => {
+    if (task && samples[idx]) {
+      try { localStorage.setItem(draftKey(samples[idx].id), $("note").value); } catch {}
+    }
+  });
+  $("prevbtn").onclick = () => { idx = Math.max(0, idx - 1); render(); };
+  $("nextbtn").onclick = () => { idx = Math.min(samples.length - 1, idx + 1); render(); };
   if (rounds.length) loadRound(rounds[rounds.length - 1].dir);  // 默认最新轮
 }
 
@@ -176,6 +209,26 @@ function render() {
   const total = samples.length, ndone = samples.filter(s => done(s.id)).length;
   $("ptext").textContent = `已完成 ${ndone}/${total}`;
   $("pbar").style.width = total ? (ndone / total * 100) + "%" : 0;
+
+  // 分布导航条 + 统计徽章（点击跳转：格子=指定样本，徽章=该类第一个）
+  const toneOf = {};
+  (task.options || []).forEach(o => toneOf[o.key] = o.tone || "meta");
+  const counts = {};
+  $("strip").innerHTML = samples.map((x, i) => {
+    const v = lastOf(x.id);
+    const t = v ? (toneOf[v.choice] || "meta") : null;
+    if (v) counts[v.choice] = (counts[v.choice] || 0) + 1;
+    return `<i data-i="${i}" class="${t ? t : ""}${i === idx ? " cur" : ""}" title="${i + 1}. ${esc(x.id)}${v ? " → " + esc(v.choice) : " 未裁"}"></i>`;
+  }).join("");
+  document.querySelectorAll("#strip i").forEach(el =>
+    el.onclick = () => { idx = Number(el.dataset.i); render(); });
+  const BADGE_BG = {ok: "#f0fdf4", no: "#fef2f2", mid: "#f4f4f5", meta: "#eff6ff", out: "#f5f3ff"};
+  $("badges").innerHTML = (task.options || []).filter(o => counts[o.key]).map(o =>
+    `<b data-k="${esc(o.key)}" style="background:${BADGE_BG[o.tone || "meta"]};color:${{ok:"#15803d",no:"#b91c1c",mid:"#4b5563",meta:"#1d4ed8",out:"#6d28d9"}[o.tone || "meta"]}">${esc(o.label || o.key)} ${counts[o.key]}</b>`).join("")
+    + `<span style="color:#888">｜ 第 ${Math.min(idx + 1, total)} / ${total} 张</span>`;
+  document.querySelectorAll("#badges b").forEach(el =>
+    el.onclick = () => { const j = samples.findIndex(x => lastOf(x.id) && lastOf(x.id).choice === el.dataset.k); if (j >= 0) { idx = j; render(); } });
+
   if (idx >= total) {
     $("card").innerHTML = `<div class="done">本任务已到末尾（${ndone}/${total} 张已裁）<br><br>
       <button onclick="idx=0;render()">回到开头</button></div>`;
@@ -184,7 +237,7 @@ function render() {
   const s = samples[idx];
   const last = lastOf(s.id);
   const draft = loadDraft(s.id);
-  const shownNote = draft !== "" ? draft : (last ? last.note : "");
+  $("note").value = draft !== "" ? draft : (last ? last.note : "");
   const lastLabel = last ? ((task.options.find(o => o.key === last.choice) || {}).label || last.choice) : "";
   // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 彩色符号
   const sym = (v) => v === "same" ? '<span class="ok">✓</span>'
@@ -201,27 +254,14 @@ function render() {
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const TONE_BG = {ok: "#16a34a", no: "#dc2626", mid: "#6b7280", meta: "#2563eb", out: "#7c3aed"};
-  const opts = task.options.map((o, i) => {
+  $("opts").innerHTML = task.options.map((o, i) => {
     const picked = last && last.choice === o.key;
     return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
   }).join("");
+  document.querySelectorAll("#opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
-    <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
-    <div class="dock">
-      <div class="opts">${opts}</div>
-      <div class="nav">
-        <button onclick="idx=Math.max(0,idx-1);render()">← 上一张</button>
-        <span class="pos">第 ${idx + 1} / ${total} 张</span>
-        <input class="note" id="note" value="${esc(shownNote)}" placeholder="备注（选选项时随裁决一起落盘）">
-        <button onclick="idx=Math.min(samples.length-1,idx+1);render()">下一张 →</button>
-      </div>
-    </div>`;
-  const noteEl = $("note");
-  noteEl.addEventListener("input", () => {
-    try { localStorage.setItem(draftKey(s.id), noteEl.value); } catch {}
-  });
-  document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
+    <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>`;
 }
 
 async function pick(key) {
