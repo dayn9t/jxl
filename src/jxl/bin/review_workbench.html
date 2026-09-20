@@ -63,6 +63,10 @@
   .opts button[data-tone=out] { border-color: #7c3aed; background: #f5f3ff; } .opts button[data-tone=out] .k, .opts button[data-tone=out] .k b { color: #6d28d9; }
   .opts button.picked { background: var(--tone, #16a34a); color: #fff; border-color: var(--tone, #16a34a); }
   .opts button.picked .k, .opts button.picked .k b, .opts button.picked .d { color: #fff; }
+  /* 分类器预测标记：虚线描边 + AI 角标——判对时直接点该键即可 */
+  .opts button.pred { border-style: dashed; border-width: 2px; border-left-width: 5px; }
+  .opts button .ai { position: relative; margin-left: 6px; font-size: 10px; font-weight: 700;
+                     color: #fff; background: #64748b; border-radius: 4px; padding: 1px 4px; vertical-align: 2px; }
   .nav { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
   .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
@@ -258,7 +262,7 @@ function render() {
     : v === "diff" ? '<span class="bad">✗</span>'
     : v === "unsure" ? '<span class="q">?</span>'
     : esc(String(v).replace(/^VERDICT=\w+，?\s*/, ""));  // 剥机器判定前缀（结论已在符号行）
-  const entries = Object.entries(s.meta || {}).filter(([k]) => k !== "src");
+  const entries = Object.entries(s.meta || {}).filter(([k]) => !["src", "pred_key"].includes(k));
   const shorts = [], longs = [];
   for (const [k, v] of entries) (String(v).length <= 14 ? shorts : longs).push(`${esc(k)}: ${sym(v)}`);
   const meta = [
@@ -268,10 +272,12 @@ function render() {
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const TONE_BG = {ok: "#16a34a", no: "#dc2626", mid: "#6b7280", meta: "#2563eb", out: "#7c3aed"};
+  const predKey = s.meta && s.meta.pred_key;
   const optsHtml = task.options.map((o, i) => {
     const picked = last && last.choice === o.key;
-    const tip = `${o.label || o.key}${o.desc ? "：" + o.desc : ""}`;
-    return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}" title="${esc(tip)}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span></button>`;
+    const isPred = predKey && o.key === predKey;
+    const tip = `${isPred ? "【分类器预测此类别——判对就点它】" : ""}${o.label || o.key}${o.desc ? "：" + o.desc : ""}`;
+    return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}" title="${esc(tip)}" class="${[picked ? "picked" : "", isPred ? "pred" : ""].join(" ").trim()}"${picked ? ` style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}${isPred ? '<span class="ai">AI</span>' : ""}</span></button>`;
   }).join("")
     + `<button data-k="__clear__" data-tone="clear"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
   $("card").innerHTML = `
@@ -314,8 +320,8 @@ document.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (k === "a" || e.key === "ArrowLeft") gotoPrev();
   else if (k === "d" || e.key === "ArrowRight") gotoNext();
-  else if (k === "w") gotoJump(-10);
-  else if (k === "s") gotoJump(10);
+  else if (k === "w") gotoJump(10);
+  else if (k === "s") gotoJump(-10);
   else if (k === "x") pick("__clear__");
   else if (/^[1-9]$/.test(e.key)) {
     const o = task.options[Number(e.key) - 1];
