@@ -24,9 +24,9 @@
   .imgs figure { text-align: center; }
   .imgs img { max-width: 46%; max-height: 420px; border: 1px solid #ccc; border-radius: 6px; }
   .imgs figcaption { font-size: 12px; color: #777; margin-top: 4px; }
-  /* 大图模式：等宽并排两格（单图自动占满），图撑满格宽、保持宽高比；中缝约 100px 便于对比 */
-  .imgs.big { display: grid; grid-template-columns: repeat(auto-fit, minmax(45%, 1fr)); column-gap: clamp(60px, 7vw, 110px); row-gap: 12px; align-items: start; }
-  .imgs.big figure { width: 100%; }
+  /* 大图模式：左右并排、每张约为初始视图的 2 倍（上限 440px，窄屏 46vw），中缝约 100px */
+  .imgs.big { display: flex; justify-content: center; align-items: flex-start; column-gap: clamp(60px, 7vw, 110px); row-gap: 12px; flex-wrap: wrap; }
+  .imgs.big figure { flex: 0 0 min(440px, 46vw); }
   .imgs.big img { width: 100%; max-width: 100%; max-height: none; height: auto; }
   .viewtoggle { padding: 6px 12px; margin-right: 6px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; white-space: pre-wrap; }
