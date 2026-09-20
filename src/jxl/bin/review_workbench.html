@@ -57,7 +57,8 @@
   .opts button .k { display: block; }
   .opts button .k b { margin-right: 6px; }
   .opts button .d { display: block; font-size: 11.5px; color: #777; margin-top: 3px; max-width: 300px; line-height: 1.45; }
-  /* 语义配色标准：ok 正向判定=绿 ｜ no 负向=红 ｜ mid 不可判定=灰（黑白难分） ｜ meta 元操作=蓝 ｜ out 域外剔除=紫 */
+  /* 语义配色标准：ok 正向判定=绿 ｜ no 负向=红 ｜ mid 不可判定=灰（黑白难分） ｜ meta 元操作=蓝 ｜ out 域外剔除=紫 ｜ clear 撤销操作=炭黑 */
+  .opts button[data-tone=clear] { border-color: #1f2937; background: #f9fafb; } .opts button[data-tone=clear] .k, .opts button[data-tone=clear] .k b { color: #111827; }
   .opts button[data-tone=ok]  { border-color: #16a34a; background: #f0fdf4; } .opts button[data-tone=ok] .k,  .opts button[data-tone=ok] .k b  { color: #15803d; }
   .opts button[data-tone=no]  { border-color: #dc2626; background: #fef2f2; } .opts button[data-tone=no] .k,  .opts button[data-tone=no] .k b  { color: #b91c1c; }
   .opts button[data-tone=mid] { border-color: #6b7280; background: #f4f4f5; } .opts button[data-tone=mid] .k, .opts button[data-tone=mid] .k b { color: #4b5563; }
@@ -266,7 +267,7 @@ function render() {
     const picked = last && last.choice === o.key;
     return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
   }).join("")
-    + `<button data-k="__clear__" data-tone="mid"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
+    + `<button data-k="__clear__" data-tone="clear"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
