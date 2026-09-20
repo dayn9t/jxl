@@ -94,8 +94,6 @@
 </aside>
 <main>
   <div class="dock">
-    <div class="opts" id="opts"></div>
-    <div class="noterow"><input class="note" id="note" placeholder="备注（选选项时随裁决一起落盘）"></div>
     <div class="nav">
       <button id="prevbtn">← 上一张</button>
       <div class="strip" id="strip" title="裁决分布：每格一个样本，颜色=已裁结果；点格跳转"></div>
@@ -160,11 +158,6 @@ async function load() {
     applyToggle(); render();
   };
   applyToggle();
-  $("note").addEventListener("input", () => {
-    if (task && samples[idx]) {
-      try { localStorage.setItem(draftKey(samples[idx].id), $("note").value); } catch {}
-    }
-  });
   $("prevbtn").onclick = () => { idx = Math.max(0, idx - 1); render(); };
   $("nextbtn").onclick = () => { idx = Math.min(samples.length - 1, idx + 1); render(); };
   if (rounds.length) loadRound(rounds[rounds.length - 1].dir);  // 默认最新轮
@@ -237,7 +230,6 @@ function render() {
   const s = samples[idx];
   const last = lastOf(s.id);
   const draft = loadDraft(s.id);
-  $("note").value = draft !== "" ? draft : (last ? last.note : "");
   const lastLabel = last ? ((task.options.find(o => o.key === last.choice) || {}).label || last.choice) : "";
   // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 彩色符号
   const sym = (v) => v === "same" ? '<span class="ok">✓</span>'
@@ -254,14 +246,19 @@ function render() {
   const imgs = s.images.map((p, i) =>
     `<figure><img src="${imgUrl(p)}" loading="lazy"><figcaption>${esc(s.captions ? s.captions[i] : p.split("/").pop())}</figcaption></figure>`).join("");
   const TONE_BG = {ok: "#16a34a", no: "#dc2626", mid: "#6b7280", meta: "#2563eb", out: "#7c3aed"};
-  $("opts").innerHTML = task.options.map((o, i) => {
+  const optsHtml = task.options.map((o, i) => {
     const picked = last && last.choice === o.key;
     return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
   }).join("");
-  document.querySelectorAll("#opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
+    <div class="opts">${optsHtml}</div>
+    <div class="noterow"><input class="note" id="note" value="${esc(draft !== "" ? draft : (last ? last.note : ""))}" placeholder="备注（选选项时随裁决一起落盘）"></div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>`;
+  document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
+  $("note").addEventListener("input", () => {
+    try { localStorage.setItem(draftKey(s.id), $("note").value); } catch {}
+  });
 }
 
 async function pick(key) {
