@@ -21,3 +21,4 @@ examples/oai/_runs/
 # 临时/演示输出（vdt demo 批量等）
 tmp/
 
+.playwright-mcp/

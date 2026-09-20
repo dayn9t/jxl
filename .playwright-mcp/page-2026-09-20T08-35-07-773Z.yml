@@ -1,8 +1,0 @@
-- generic [active] [ref=f10e1]:
-  - banner [ref=f10e2]:
-    - heading "裁决工作台" [level=1] [ref=f10e3]
-    - button "📐 大图：开" [ref=f10e4] [cursor=pointer]
-  - main [ref=f10e8]:
-    - group [ref=f10e9]:
-      - generic "任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义）" [ref=f10e10] [cursor=pointer]
-    - generic [ref=f10e12]: 快捷键：数字键 1-9 = 选对应选项并跳到下一张未裁样本 ｜ ←/→ = 前后翻页 ｜ Esc = 退出备注框（备注输入状态下数字键暂不生效，按 Esc 恢复）｜ 选完立即落盘；已裁样本重选即覆盖
