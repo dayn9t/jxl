@@ -17,7 +17,7 @@
   .navsep { border-top: 1px solid #e5e7eb; margin: 10px 0 2px; }
   .tabs { display: flex; flex-direction: column; gap: 6px; }
   .tabs button { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer;
-                 font-size: 13px; text-align: left; line-height: 1.4; }
+                 font-size: 13px; text-align: left; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
   .viewtoggle { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
   .progress { font-size: 13px; color: #555; }
@@ -53,10 +53,9 @@
   .dock { position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid #ddd;
            border-radius: 10px; padding: 10px 14px 8px; margin-bottom: 12px; }
   .opts { display: flex; gap: 10px; flex-wrap: wrap; }
-  .opts button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; border-left-width: 5px; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
-  .opts button .k { display: block; }
+  .opts button { padding: 10px 18px; font-size: 14px; border: 1px solid #bbb; border-left-width: 5px; background: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
+  .opts button .k { display: block; white-space: nowrap; }
   .opts button .k b { margin-right: 6px; }
-  .opts button .d { display: block; font-size: 11.5px; color: #777; margin-top: 3px; max-width: 300px; line-height: 1.45; }
   /* 语义配色标准：ok 正向判定=绿 ｜ no 负向=红 ｜ mid 不可判定=灰（黑白难分） ｜ meta 元操作=蓝 ｜ out 域外剔除=紫 ｜ clear 撤销操作=炭黑 */
   .opts button[data-tone=clear] { border-color: #1f2937; background: #f9fafb; } .opts button[data-tone=clear] .k, .opts button[data-tone=clear] .k b { color: #111827; }
   .opts button[data-tone=ok]  { border-color: #16a34a; background: #f0fdf4; } .opts button[data-tone=ok] .k,  .opts button[data-tone=ok] .k b  { color: #15803d; }
@@ -186,8 +185,8 @@ async function loadRound(dir) {
   const names = Object.keys(tasks);
   $("tabs").innerHTML = names.map(n => {
     const t = tasks[n];
-    const label = `${t.title || n}（${t.n_samples} 张）`;
-    return `<button data-n="${esc(n)}" title="${esc(n)}">${esc(label)}</button>`;
+    const label = `${t.short || t.title || n} ${t.n_samples}`;
+    return `<button data-n="${esc(n)}" title="${esc(t.title || n)}（${t.n_samples} 张）">${esc(label)}</button>`;
   }).join("");
   document.querySelectorAll("#tabs button").forEach(b =>
     b.onclick = () => switchTask(b.dataset.n));
@@ -265,7 +264,8 @@ function render() {
   const TONE_BG = {ok: "#16a34a", no: "#dc2626", mid: "#6b7280", meta: "#2563eb", out: "#7c3aed"};
   const optsHtml = task.options.map((o, i) => {
     const picked = last && last.choice === o.key;
-    return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`;
+    const tip = `${o.label || o.key}${o.desc ? "：" + o.desc : ""}`;
+    return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}" title="${esc(tip)}"${picked ? ` class="picked" style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span></button>`;
   }).join("")
     + `<button data-k="__clear__" data-tone="clear"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
   $("card").innerHTML = `

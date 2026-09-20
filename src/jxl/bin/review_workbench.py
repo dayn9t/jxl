@@ -136,7 +136,8 @@ class Handler(BaseHTTPRequestHandler):
                                            key=lambda kv: kv[1].no)])
         elif u.path == "/api/tasks":
             b = self.bench.get(self._q(u, "round"))
-            self._json({n: {"title": t.get("title", ""), "intro": t.get("intro", ""),
+            self._json({n: {"title": t.get("title", ""), "short": t.get("short", ""),
+                            "intro": t.get("intro", ""),
                             "hint": t.get("hint", ""), "options": t["options"],
                             "n_samples": len(t["samples"]), "file": t["_file"]}
                         for n, t in b.tasks.items()})
