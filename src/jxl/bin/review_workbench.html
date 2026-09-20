@@ -67,7 +67,8 @@
   .nav { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
   .nav button { padding: 8px 14px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .nav .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
-  .noterow { margin-top: 10px; }
+  .noterow { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+  .noterow .notelabel { font-size: 13px; font-weight: 600; color: #555; white-space: nowrap; }
   .noterow .note { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
   /* 裁决分布导航条：每格=一个样本，按结果语义色；未裁=浅灰；当前=黑框；点格跳转 */
   .strip { flex: 1; display: flex; gap: 1.5px; height: 20px; min-width: 120px; cursor: pointer; }
@@ -253,7 +254,7 @@ function render() {
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
     <div class="opts">${optsHtml}</div>
-    <div class="noterow"><input class="note" id="note" value="${esc(draft !== "" ? draft : (last ? last.note : ""))}" placeholder="备注（选选项时随裁决一起落盘）"></div>
+    <div class="noterow"><span class="notelabel">备注:</span><input class="note" id="note" value="${esc(draft !== "" ? draft : (last ? last.note : ""))}" placeholder="选选项时随裁决一起落盘"></div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>`;
   document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
   $("note").addEventListener("input", () => {
