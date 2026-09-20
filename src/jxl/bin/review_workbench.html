@@ -279,7 +279,7 @@ function render() {
     const tip = `${isPred ? "【分类器预测此类别——判对就点它】" : ""}${o.label || o.key}${o.desc ? "：" + o.desc : ""}`;
     return `<button data-k="${esc(o.key)}" data-tone="${esc(o.tone || "meta")}" title="${esc(tip)}" class="${[picked ? "picked" : "", isPred ? "pred" : ""].join(" ").trim()}"${picked ? ` style="--tone:${TONE_BG[o.tone || "meta"]}"` : ""}><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}${isPred ? '<span class="ai">AI</span>' : ""}</span></button>`;
   }).join("")
-    + `<button data-k="__clear__" data-tone="clear"><span class="k"><b>X</b>取消标注</span><span class="d">清除本张的裁决，恢复未标注状态</span></button>`;
+    + `<button data-k="__clear__" data-tone="clear" title="取消标注：清除本张的裁决，恢复未标注状态"><span class="k"><b>X</b>取消标注</span></button>`;
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
     <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
