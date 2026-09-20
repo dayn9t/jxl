@@ -11,6 +11,7 @@
           background: #fff; border-right: 1px solid #ddd; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
   aside.right { border-right: none; border-left: 1px solid #ddd; width: 220px; flex: 0 0 220px; }
   aside h1 { font-size: 16px; font-weight: 600; }
+  #roundsel { padding: 6px 8px; border: 1px solid #bbb; border-radius: 6px; font-size: 13px; background: #fff; }
   .paneltitle { font-size: 12px; font-weight: 600; color: #888; letter-spacing: .05em; margin: 4px 0 -2px; }
   .tabs { display: flex; flex-direction: column; gap: 6px; }
   .tabs button { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer;
@@ -63,6 +64,7 @@
 <body>
 <aside class="left">
   <h1>裁决工作台</h1>
+  <select id="roundsel"></select>
   <div class="tabs" id="tabs"></div>
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
 </aside>
@@ -86,7 +88,7 @@
 </aside>
 <script>
 "use strict";
-let tasks = {}, task = null, samples = [], verdicts = {}, idx = 0;
+let tasks = {}, task = null, samples = [], verdicts = {}, idx = 0, curRound = null;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -113,8 +115,24 @@ const applyImgSize = (v) => {
 }
 
 async function load() {
-  tasks = await (await fetch("/api/tasks")).json();
-  verdicts = await (await fetch("/api/progress")).json();
+  const rounds = await (await fetch("/api/rounds")).json();
+  $("roundsel").innerHTML = rounds.map(r =>
+    `<option value="${esc(r.dir)}">第 ${r.no} 轮 · ${esc(r.date)}${r.note ? " · " + esc(r.note) : ""}（${r.n_samples} 张）</option>`).join("");
+  $("roundsel").onchange = () => loadRound($("roundsel").value);
+  $("viewtoggle").onclick = () => {
+    bigMode = !bigMode;
+    try { localStorage.setItem("wb-bigmode", bigMode ? "1" : "0"); } catch {}
+    applyToggle(); render();
+  };
+  applyToggle();
+  if (rounds.length) loadRound(rounds[rounds.length - 1].dir);  // 默认最新轮
+}
+
+async function loadRound(dir) {
+  curRound = dir;
+  const q = "round=" + encodeURIComponent(dir);
+  tasks = await (await fetch("/api/tasks?" + q)).json();
+  verdicts = await (await fetch("/api/progress?" + q)).json();
   const names = Object.keys(tasks);
   $("tabs").innerHTML = names.map(n => {
     const t = tasks[n];
@@ -123,17 +141,11 @@ async function load() {
   }).join("");
   document.querySelectorAll("#tabs button").forEach(b =>
     b.onclick = () => switchTask(b.dataset.n));
-  $("viewtoggle").onclick = () => {
-    bigMode = !bigMode;
-    try { localStorage.setItem("wb-bigmode", bigMode ? "1" : "0"); } catch {}
-    applyToggle(); render();
-  };
-  applyToggle();
-  if (names.length) switchTask(names[0]);
+  if (names.length) switchTask(names[0]); else render();
 }
 
 async function switchTask(name) {
-  task = await (await fetch("/api/task?name=" + encodeURIComponent(name))).json();
+  task = await (await fetch(`/api/task?round=${encodeURIComponent(curRound)}&name=${encodeURIComponent(name)}`)).json();
   samples = task.samples; idx = 0;
   document.querySelectorAll("#tabs button").forEach(b =>
     b.classList.toggle("active", b.dataset.n === name));
@@ -201,7 +213,7 @@ async function pick(key) {
   const note = ($("note") && $("note").value.trim()) || "";
   try {
     const r = await fetch("/api/verdict", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({task: task.name, sample_id: s.id, choice: key, note})});
+      body: JSON.stringify({round: curRound, task: task.name, sample_id: s.id, choice: key, note})});
     if (!r.ok) throw new Error((await r.json()).error || r.status);
     verdicts[task.name] = verdicts[task.name] || {};
     verdicts[task.name][s.id] = {choice: key, note};
