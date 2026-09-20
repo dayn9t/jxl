@@ -25,6 +25,13 @@
 
 ## 飞轮例行
 
-- [ ] **rolepool/role_7 裁片方案修正（P1，2026-09-20 实证）**：训练/抽检输入误用 `target_crop.jpg`（480×320 固定窗口，延伸 0.94~3.2 倍随机、2/7 目标被切边）——应为 **bbox 各边 ±10% 自适应裁片**（session 内 `target_raw.jpg` 即贴框原尺寸可作起点）。修前先核对线上 role 分类器推理的裁切口径（防 train-serve skew）。规范已固化 skill `bbox-crop-expansion`。
+- [~] **role 分类器裁切口径统一（P1，2026-09-20 实证+定锚）**：
+  **线上口径已定锚**——`iap/rs/iap-detect/src/role_classifier.rs` 头注：输入=紧贴检测框 crop（无 margin，`crop_region` 契约）+imgsz 224。
+  判定：**v3.2 自洽免重训**（candidates/seeds/fullscan 均贴框，历史评估数字有效）；
+  **v3.3 rolepool 数据 skew 实锤**（target_crop 480×320 固定窗口）→ 已重出图
+  （`gencheck/rolepool_recrop_x10.py`，bbox±10%，57/57，旧图备份 `images_targetcrop_bak/`）。
+  待办：①线下 v3.3 重训（数据用新裁片）②线上推理口径同步升级 ±10%（`crop_region` 调用处加 margin，与 v3.3 交付一并走 train-and-accept）③切换决策重做（工作台 role_spotsample_50/role_7 已换新口径图，人工裁决即新真值）。
+  若线上暂不能切，fallback=v3.3 训练退回贴框口径（与线上一致优先于 10% 裁决）。
+  规范+函数已固化：skill `bbox-crop-expansion` + `jxl.det.box_utils.expand_xyxy/crop_expanded/save_expanded`。
 - [ ] 下批 iap 增量到 → 信号盘点+全模型沉淀（skill data-flywheel 自动触发路径，含第七步台账）
 - [ ] SHTM 下周解冻：r2 审核 1,246 帧（用户人工）→ hardcase → V2.2 重训
