@@ -46,6 +46,7 @@
   .imgs.big figure { flex: 0 0 min(var(--imgw, 300px), 30vw); }
   .imgs.big img { width: 100%; max-width: 100%; max-height: none; height: auto; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
+  .opts { margin-top: 12px; }
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
   .meta .bad { color: #dc2626; font-weight: 800; font-size: 16px; }
   .meta .q { color: #6b7280; font-weight: 800; font-size: 16px; }
@@ -253,9 +254,9 @@ function render() {
   }).join("");
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
+    <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
     <div class="opts">${optsHtml}</div>
-    <div class="noterow"><span class="notelabel">备注:</span><input class="note" id="note" value="${esc(draft !== "" ? draft : (last ? last.note : ""))}" placeholder="选选项时随裁决一起落盘"></div>
-    <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>`;
+    <div class="noterow"><span class="notelabel">备注:</span><input class="note" id="note" value="${esc(draft !== "" ? draft : (last ? last.note : ""))}" placeholder="选选项时随裁决一起落盘"></div>`;
   document.querySelectorAll(".opts button").forEach(b => b.onclick = () => pick(b.dataset.k));
   $("note").addEventListener("input", () => {
     try { localStorage.setItem(draftKey(s.id), $("note").value); } catch {}
