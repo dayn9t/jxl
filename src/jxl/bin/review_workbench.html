@@ -9,7 +9,9 @@
   body { font-family: system-ui, "Noto Sans CJK SC", sans-serif; background: #f4f5f7; color: #222; display: flex; min-height: 100vh; }
   aside { width: 240px; flex: 0 0 240px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
           background: #fff; border-right: 1px solid #ddd; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  aside.right { border-right: none; border-left: 1px solid #ddd; width: 220px; flex: 0 0 220px; }
   aside h1 { font-size: 16px; font-weight: 600; }
+  .paneltitle { font-size: 12px; font-weight: 600; color: #888; letter-spacing: .05em; margin: 4px 0 -2px; }
   .tabs { display: flex; flex-direction: column; gap: 6px; }
   .tabs button { padding: 8px 10px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer;
                  font-size: 13px; text-align: left; line-height: 1.4; }
@@ -18,7 +20,10 @@
   .progress { font-size: 13px; color: #555; }
   .bar { width: 100%; height: 8px; background: #e2e4e9; border-radius: 4px; overflow: hidden; display: block; margin-top: 5px; }
   .bar i { display: block; height: 100%; background: #22c55e; }
+  .sizerow { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #555; }
+  .sizerow input[type=range] { flex: 1; }
   .hint { font-size: 11.5px; color: #888; line-height: 1.7; margin-top: auto; border-top: 1px solid #eee; padding-top: 10px; }
+  @media (max-width: 1100px) { aside.right { display: none; } }
   main { flex: 1; min-width: 0; margin: 14px auto; padding: 0 16px; max-width: 1200px; }
   .taskinfo { background: #eef4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
   .taskinfo summary { cursor: pointer; font-weight: 600; color: #1d4ed8; font-size: 13px; }
@@ -30,9 +35,9 @@
   .imgs figure { text-align: center; }
   .imgs img { max-width: 46%; max-height: 420px; border: 1px solid #ccc; border-radius: 6px; }
   .imgs figcaption { font-size: 12px; color: #777; margin-top: 4px; }
-  /* 大图模式：左右并排、每张约为初始视图的 1.4 倍（上限 300px，窄屏 30vw），中缝约 100px */
+  /* 大图模式：左右并排，每张宽度 --imgw（右栏滑杆可调，默认 300px），中缝约 100px */
   .imgs.big { display: flex; justify-content: center; align-items: flex-start; column-gap: clamp(60px, 7vw, 110px); row-gap: 12px; flex-wrap: wrap; }
-  .imgs.big figure { flex: 0 0 min(300px, 30vw); }
+  .imgs.big figure { flex: 0 0 min(var(--imgw, 300px), 30vw); }
   .imgs.big img { width: 100%; max-width: 100%; max-height: none; height: auto; }
   .meta { font-size: 13px; color: #555; line-height: 1.7; background: #f8f9fb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; white-space: pre-wrap; }
   .meta .ok { color: #16a34a; font-weight: 800; font-size: 16px; }
@@ -56,12 +61,10 @@
 </style>
 </head>
 <body>
-<aside>
+<aside class="left">
   <h1>裁决工作台</h1>
   <div class="tabs" id="tabs"></div>
-  <button class="viewtoggle" id="viewtoggle">📐 大图：开</button>
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
-  <div class="hint">快捷键：数字键 1-9 = 选对应选项并跳下一张未裁样本<br>←/→ = 前后翻页<br>Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖</div>
 </aside>
 <main>
   <details class="taskinfo" id="taskinfo">
@@ -72,6 +75,15 @@
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
 </main>
+<aside class="right">
+  <div class="paneltitle">图片显示</div>
+  <button class="viewtoggle" id="viewtoggle">📐 大图：开</button>
+  <div class="sizerow">尺寸 <input type="range" id="imgsize" min="150" max="600" step="10"><span id="imgsizev">300</span>px</div>
+  <div class="paneltitle">快捷键</div>
+  <div class="hint" style="margin-top:0;border-top:none;padding-top:0">
+    数字键 1-9 = 选对应选项并跳下一张未裁样本<br>←/→ = 前后翻页<br>Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
+  </div>
+</aside>
 <script>
 "use strict";
 let tasks = {}, task = null, samples = [], verdicts = {}, idx = 0;
@@ -86,6 +98,19 @@ try { bigMode = localStorage.getItem("wb-bigmode") !== "0"; } catch {}
 const applyToggle = () => {
   $("viewtoggle").textContent = bigMode ? "📐 大图：开" : "📐 大图：关";
 };
+const applyImgSize = (v) => {
+  document.documentElement.style.setProperty("--imgw", v + "px");
+  $("imgsizev").textContent = v;
+};
+{ let v = 300; try { v = parseInt(localStorage.getItem("wb-imgsize")) || 300; } catch {}
+  document.addEventListener("DOMContentLoaded", () => {
+    $("imgsize").value = v; applyImgSize(v);
+    $("imgsize").addEventListener("input", (e) => {
+      applyImgSize(e.target.value);
+      try { localStorage.setItem("wb-imgsize", e.target.value); } catch {}
+    });
+  });
+}
 
 async function load() {
   tasks = await (await fetch("/api/tasks")).json();
@@ -153,7 +178,7 @@ function render() {
     `<button data-k="${esc(o.key)}" class="${last && last.choice === o.key ? "picked" : ""}"><span class="k"><b>${i + 1}</b>${esc(o.label || o.key)}</span>${o.desc ? `<span class="d">${esc(o.desc)}</span>` : ""}</button>`).join("");
   $("card").innerHTML = `
     <div class="imgs${bigMode ? " big" : ""}">${imgs}</div>
-    <div class="meta">第 ${idx + 1}/${total} 张 ｜ 样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
+    <div class="meta">样本号 ${esc(s.id)}${last ? ` ｜ ✅ 已裁：上次选「${esc(lastLabel)}」（重选即覆盖）` : ""}\n${meta}</div>
     <div class="dock">
       <div class="opts">${opts}</div>
       <div class="nav">
