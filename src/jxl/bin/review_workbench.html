@@ -71,17 +71,18 @@
   .noterow { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
   .noterow .notelabel { font-size: 13px; font-weight: 600; color: #555; white-space: nowrap; }
   .noterow .note { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 8px; }
-  /* 裁决分布导航条：每格=一个样本，按结果语义色；未裁=浅灰；当前=黑框；点格跳转 */
-  .strip { flex: 1; display: flex; gap: 1.5px; height: 20px; min-width: 120px; cursor: pointer; }
-  .strip i { flex: 1; border-radius: 2px; background: #e5e7eb; min-width: 2px; }
-  .strip i:hover { filter: brightness(.8); }
-  .strip i.cur { outline: 2px solid #111; outline-offset: -1px; }
-  .strip i.ok { background: #16a34a; } .strip i.no { background: #dc2626; }
-  .strip i.mid { background: #6b7280; } .strip i.meta { background: #2563eb; } .strip i.out { background: #7c3aed; }
-  .badges { display: flex; gap: 4px; font-size: 12px; white-space: nowrap; align-items: center; }
-  .badges b { padding: 2px 8px; border-radius: 10px; cursor: pointer; font-weight: 600; border: 1px solid transparent; }
-  .badges b.on { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; }
-  .badges .ftrinfo { color: #888; }
+  /* 顶部过滤器栏（电商式）与底部导航栏 */
+  .filterbar { position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid #ddd;
+               border-radius: 10px; padding: 8px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .filterbar .flabel { font-size: 13px; font-weight: 700; color: #374151; white-space: nowrap; }
+  .badges { display: flex; gap: 5px; font-size: 12px; white-space: nowrap; align-items: center; flex-wrap: wrap; }
+  .badges b { padding: 3px 10px; border-radius: 12px; cursor: pointer; font-weight: 600; border: 1px solid transparent; }
+  .badges b.on { border-color: currentColor; box-shadow: inset 0 0 0 1.5px currentColor; }
+  .dock { position: sticky; bottom: 0; z-index: 5; background: #fff; border: 1px solid #ddd;
+          border-radius: 10px; padding: 8px 14px; margin-top: 12px; display: flex; align-items: center; gap: 12px; justify-content: center; }
+  .dock .pos { font-size: 14px; font-weight: 600; color: #1d4ed8; white-space: nowrap; }
+  .dock .navhint { font-size: 11.5px; color: #999; white-space: nowrap; }
+  .dock button { padding: 8px 16px; font-size: 14px; border: 1px solid #bbb; background: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .done { text-align: center; padding: 60px 0; color: #16a34a; font-size: 18px; }
   .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
 </style>
@@ -97,16 +98,18 @@
   <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
 </aside>
 <main>
-  <div class="dock">
-    <div class="nav">
-      <button id="prevbtn">← 上一张</button>
-      <div class="strip" id="strip" title="裁决分布：每格一个样本，颜色=已裁结果；点格跳转"></div>
-      <div class="badges" id="badges"></div>
-      <button id="nextbtn">下一张 →</button>
-    </div>
+  <div class="filterbar">
+    <span class="flabel">过滤器:</span>
+    <div class="badges" id="badges"></div>
   </div>
   <div class="card" id="card"></div>
   <div class="err" id="err"></div>
+  <div class="dock">
+    <span class="pos" id="pos"></span>
+    <button id="prevbtn">← 上一张 (A)</button>
+    <button id="nextbtn">下一张 (D) →</button>
+    <span class="navhint">W/S = 上下滚动屏幕</span>
+  </div>
   <details class="taskinfo" id="taskinfo">
     <summary>任务说明（点开看：这批样本的来历、为什么要裁、每个选项的含义、数据位置）</summary>
     <div class="intro" id="intro"></div>
@@ -120,7 +123,7 @@
   <div class="sizerow">尺寸 <input type="range" id="imgsize" min="150" max="600" step="10"><span id="imgsizev">300</span>px</div>
   <div class="paneltitle">快捷键</div>
   <div class="hint" style="margin-top:0;border-top:none;padding-top:0">
-    数字键 1-9 = 选对应选项并跳下一张未裁样本<br>←/→ = 前后翻页<br>Esc = 退出备注框（备注输入时数字键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
+    A / D = 上一张 / 下一张<br>W / S = 向上 / 向下滚动屏幕<br>数字键 1-9 = 选对应选项并跳下一张未裁样本<br>Esc = 退出备注框（备注输入时快捷键暂不生效，按 Esc 恢复）<br>选完立即落盘；已裁样本重选即覆盖
   </div>
 </aside>
 <script>
@@ -214,33 +217,26 @@ function render() {
   $("ptext").textContent = `已完成 ${ndone}/${total}`;
   $("pbar").style.width = total ? (ndone / total * 100) + "%" : 0;
 
-  // 分布导航条 + 过滤器（全部/各选项；过滤态下翻页与自动跳转只在集内移动）
+  // 顶部过滤器（全部=默认 ｜ 未标注 ｜ 各选项）——过滤态下翻页与自动跳转只在集内移动
   const toneOf = {};
   (task.options || []).forEach(o => toneOf[o.key] = o.tone || "meta");
   const counts = {};
-  $("strip").innerHTML = samples.map((x, i) => {
-    const v = lastOf(x.id);
-    const t = v ? (toneOf[v.choice] || "meta") : null;
-    if (v) counts[v.choice] = (counts[v.choice] || 0) + 1;
-    const dim = filter === UNDONE ? !!v : (filter && (!v || v.choice !== filter));
-    return `<i data-i="${i}" class="${t ? t : ""}${i === idx ? " cur" : ""}"${dim ? ' style="opacity:.22"' : ""} title="${i + 1}. ${esc(x.id)}${v ? " → " + esc(v.choice) : " 未裁"}"></i>`;
-  }).join("");
-  document.querySelectorAll("#strip i").forEach(el =>
-    el.onclick = () => { idx = Number(el.dataset.i); render(); });
+  samples.forEach(x => { const v = lastOf(x.id); if (v) counts[v.choice] = (counts[v.choice] || 0) + 1; });
   const BADGE_C = {ok: "#15803d", no: "#b91c1c", mid: "#4b5563", meta: "#1d4ed8", out: "#6d28d9"};
   const BADGE_BG = {ok: "#f0fdf4", no: "#fef2f2", mid: "#f4f4f5", meta: "#eff6ff", out: "#f5f3ff"};
   $("badges").innerHTML =
+    `<b data-k="" class="${!filter ? "on" : ""}" style="background:#e5e7eb;color:#374151">全部 ${total}</b>` +
     `<b data-k="${UNDONE}" class="${filter === UNDONE ? "on" : ""}" style="background:#f8f9fb;color:#555">未标注 ${total - ndone}</b>` +
     (task.options || []).filter(o => counts[o.key]).map(o =>
-      `<b data-k="${esc(o.key)}" class="${filter === o.key ? "on" : ""}" style="background:${BADGE_BG[o.tone || "meta"]};color:${BADGE_C[o.tone || "meta"]}">${esc(o.label || o.key)} ${counts[o.key]}</b>`).join("")
-    + `<span class="ftrinfo">｜ 第 ${Math.min(idx + 1, total)} / ${total} 张</span>`;
+      `<b data-k="${esc(o.key)}" class="${filter === o.key ? "on" : ""}" style="background:${BADGE_BG[o.tone || "meta"]};color:${BADGE_C[o.tone || "meta"]}">${esc(o.label || o.key)} ${counts[o.key]}</b>`).join("");
   document.querySelectorAll("#badges b").forEach(el =>
     el.onclick = () => {
-      filter = (filter === el.dataset.k) ? null : el.dataset.k;  // 再点一次取消过滤
+      filter = el.dataset.k === "" ? null : el.dataset.k;  // 「全部」=无过滤
       const v = viewIdxs();
       idx = v.length ? v[0] : 0;
       render();
     });
+  $("pos").textContent = `第 ${Math.min(idx + 1, total)} / ${total} 张`;
 
   if (idx >= total) {
     $("card").innerHTML = `<div class="done">本任务已到末尾（${ndone}/${total} 张已裁）<br><br>
@@ -306,8 +302,11 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.target.tagName === "SUMMARY") return;
-  if (e.key === "ArrowLeft") gotoPrev();
-  else if (e.key === "ArrowRight") gotoNext();
+  const k = e.key.toLowerCase();
+  if (k === "a" || e.key === "ArrowLeft") gotoPrev();
+  else if (k === "d" || e.key === "ArrowRight") gotoNext();
+  else if (k === "w") window.scrollBy({top: -Math.round(innerHeight * 0.85), behavior: "smooth"});
+  else if (k === "s") window.scrollBy({top: Math.round(innerHeight * 0.85), behavior: "smooth"});
   else if (/^[1-9]$/.test(e.key)) {
     const o = task.options[Number(e.key) - 1];
     if (o) pick(o.key);
