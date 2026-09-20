@@ -164,7 +164,8 @@ function render() {
   // meta 压缩显示：剔除 src；短值并一行（｜分隔），长值（理由等）单独行；same/diff 彩色符号
   const sym = (v) => v === "same" ? '<span class="ok">✓</span>'
     : v === "diff" ? '<span class="bad">✗</span>'
-    : v === "unsure" ? '<span class="q">?</span>' : esc(v);
+    : v === "unsure" ? '<span class="q">?</span>'
+    : esc(String(v).replace(/^VERDICT=\w+，?\s*/, ""));  // 剥机器判定前缀（结论已在符号行）
   const entries = Object.entries(s.meta || {}).filter(([k]) => k !== "src");
   const shorts = [], longs = [];
   for (const [k, v] of entries) (String(v).length <= 14 ? shorts : longs).push(`${esc(k)}: ${sym(v)}`);
