@@ -6,7 +6,7 @@ from pandas import DataFrame
 from pandas.testing import assert_frame_equal
 
 from jxl.iqa.diag_extractor import sharpness
-from jxl.label.extractor import Extractor, mat_to_df, num_columns
+from jxl.cls.extractor import Extractor, mat_to_df, num_columns
 
 
 def test_num_columns() -> None:

@@ -9,7 +9,7 @@ from jxl.cls.classifier import (
     ClassifierResList,
     IClassifier,
 )
-from jxl.label.extractor import mat_to_df
+from jxl.cls.extractor import mat_to_df
 
 
 class ClassifierTab(IClassifier[list[float]]):

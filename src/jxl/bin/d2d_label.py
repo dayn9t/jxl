@@ -11,7 +11,7 @@ from jvi.image.image_nda import ImageNda
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.yolo.d2d_yolo import D2dYolo
-from jxl.label.d2d_converters import a2d_image_from_d2d
+from jxl.det.d2d_converters import a2d_image_from_d2d
 
 app = typer.Typer(help="Yolo检测器")
 
