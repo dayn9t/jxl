@@ -53,8 +53,6 @@ dev = [
 ]
 
 [project.scripts]
-jxl_label = "jxl.bin.jxl_label:main"
-jxl_prop = "jxl.bin.jxl_prop:main"
 jxl_sample = "jxl.bin.jxl_sample:app"
 d2d_label = "jxl.bin.d2d_label:main"
 sam_label = "jxl.bin.sam_label:app"
@@ -76,6 +74,7 @@ allow-direct-references = true
 # 无法 import。非静默降级 (依赖未安装, 无替代路径)。
 addopts = [
     "--ignore=src/jxl/cls/test/classifier_tch_test.py",
+    "--ignore=archive",  # 冻结归档区（2026-09-21 迁移）：被取代工具的测试不再收集
 ]
 # 内联单测发现: 下列模块按 Functional Core 约定把 test_* 单测写在模块尾部（docstring
 # 声明 "pytest 自动发现"）。pytest 默认只收集 test_*.py / *_test.py，不含生产模块名，
@@ -135,6 +134,7 @@ exclude = [
     "src/jxl/bin/",
     "src/jxl/det/locateanything/vendored/",
     "src/jxl/vdt/vendored/",
+    "archive/",
 ]
 
 # 第三方 ML/工具库无 py.typed stub，按模块豁免（精确到模块，不禁全局 missing-imports）。
@@ -176,7 +176,5 @@ module = [
     # 以下为未安装/可选第三方库（异常检测、AutoML）：
     "pyod.*",
     "autogluon.*",
-    # ias：dayn9t 架构外的历史采集系统包（label/hop.py 与 tests/label/ias_test.py 引用）。
-    "ias.*",
 ]
 ignore_missing_imports = true

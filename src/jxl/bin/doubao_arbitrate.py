@@ -37,7 +37,6 @@ from vlabel.crop import xyxy_iou
 
 from jxl.bin.det_mine import gather_images
 from jxl.bin.doubao_relabel import ground_one
-from jxl.bin.review_pack import ReviewEntry, find_manifests, parse_entry
 from jxl.bin.rmb_ground import Backend, Detection, load_backend
 from jxl.det.hardmine import (
     Box,
@@ -57,6 +56,52 @@ app = typer.Typer(
 PICK_PRIORITY: tuple[str, ...] = ("rfdetr", "gdino", "yoloe", "la")
 # 共识位置支持模型数下限(多数语义, 用户裁决)
 _CONSENSUS_K = 2
+
+# 以下 manifest 解析件自 review_pack 迁入（2026-09-21 review_pack 归档 archive/bin/，
+# 本模块是唯一存活消费者；冻结副本留在 archive 供参考）.
+
+
+class ReviewEntry(NamedTuple):
+    """manifest 单行解析结果(det_mine review/manifest.jsonl 行格式)."""
+
+    image: str
+    score: float
+    boxes_by_model: dict[str, list[Box]]
+
+
+def _coerce_boxes(raw: object) -> list[Box]:
+    """json 值 → Box 列表(边界校验: 每框 5 元数值)."""
+    if not isinstance(raw, list):
+        raise ValueError(f"manifest 框字段非数组: {raw!r}")
+    out: list[Box] = []
+    for b in raw:
+        if not isinstance(b, list) or len(b) != 5:
+            raise ValueError(f"manifest 框非 5 元组: {b!r}")
+        out.append((float(b[0]), float(b[1]), float(b[2]), float(b[3]), float(b[4])))
+    return out
+
+
+def parse_entry(line: str) -> ReviewEntry:
+    """manifest 单行(json) → ReviewEntry; target_boxes + validators 并入逐模型框."""
+    d: dict[str, object] = orjson.loads(line)
+    boxes: dict[str, list[Box]] = {"target": _coerce_boxes(d["target_boxes"])}
+    raw_vs = d["validators"]
+    if not isinstance(raw_vs, dict):
+        raise ValueError(f"manifest validators 非对象: {raw_vs!r}")
+    for name, raw in raw_vs.items():
+        boxes[str(name)] = _coerce_boxes(raw)
+    raw_score = d["score"]
+    if not isinstance(raw_score, (int, float)):
+        raise ValueError(f"manifest score 非数值: {raw_score!r}")
+    return ReviewEntry(str(d["image"]), float(raw_score), boxes)
+
+
+def find_manifests(consensus_dir: Path) -> list[Path]:
+    """manifest 定位: 优先 <dir>/review/manifest.jsonl, 否则递归 glob manifest*.jsonl."""
+    primary = consensus_dir / "review" / "manifest.jsonl"
+    if primary.is_file():
+        return [primary]
+    return sorted(consensus_dir.rglob("manifest*.jsonl"))
 
 
 class PositionVerdict(NamedTuple):

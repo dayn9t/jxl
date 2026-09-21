@@ -14,7 +14,12 @@
 #     repo, NVIDIA 文件头条款)
 #   - vdt/vendored: torchreid osnet.py (KaiyangZhou/deep-person-reid MIT；经 iapx
 #     中转移交，2026-09-19 P2-T7)
-extend-exclude = ["src/jxl/det/locateanything/vendored", "src/jxl/vdt/vendored"]
+extend-exclude = [
+    "src/jxl/det/locateanything/vendored",
+    "src/jxl/vdt/vendored",
+    # archive/: 冻结归档区（2026-09-21 标注层迁 vlabel 后的被取代工具），不按现行规则 lint
+    "archive",
+]
 
 [lint]
 select = [
