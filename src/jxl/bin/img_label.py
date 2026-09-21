@@ -22,8 +22,8 @@ from loguru import logger
 from vlabel.dataset import MetaDataset
 
 from jxl.det.d2d import D2dOpt
-from jxl.det.yolo.d2d_yoloe import D2dYoloE
 from jxl.det.d2d_converters import a2d_image_from_d2d
+from jxl.det.yolo.d2d_yoloe import D2dYoloE
 from jxl.yolo.util import yolo_set_weights_dir
 
 app = typer.Typer(help="图像目录自动标注工具 - 基于 YOLOE 开放词汇检测")

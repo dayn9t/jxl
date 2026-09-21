@@ -13,10 +13,9 @@ dayn9t 推理层的 Python 侧：模型训练 / 导出 / 标注工具 + `ModelCo
 | `seg/` | 分割（SAM、mask） |
 | `track/` | 跟踪（`IouTracker`） |
 | `cls/` | 分类（`IClassifier[T]`、`ClassifierRes` Protocol） |
-| `label/` | 标注工具与格式转换（COCO / Darknet / KITTI / labelme，含 `DataCoco`、tile、blend） |
 | `contract/` | **ModelContract 写入端**——`embed_contract` 把 schema 写入 ONNX metadata key `ml.model_contract`（schema 权威在 `ml-types::ModelContract` + schemars，见跨 repo spec） |
 | `model/` | 模型类型（`ModelInfo[OptT]` 泛型） |
-| `bin/` | CLI 入口（`jml_label` / `jml_prop` / `jml_sample` / 标注审核等，经 `uv run` 或 entry point 调用） |
+| `bin/` | CLI 入口（`jxl_sample` / `d2d_label` / `sam_label` / 检测与 VLM 流水线工具等；标注底层工具已迁 vlabel，见 `archive/`） |
 | `io/` `iqa/` `od/` `sam/` `util/` `yolo/` | I/O、图像质量、目标检测、SAM、工具、YOLO |
 
 `examples/oai/` 下为 LLM provider demo 脚本（不在可 import 包命名空间）。
