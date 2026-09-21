@@ -155,7 +155,6 @@ module = [
     "insightface.*",
     "mmcv.*",
     "mmengine.*",
-    "mmseg.*",
     "mmdet.*",
     "pycocotools.*",
     "dateutil.*",
