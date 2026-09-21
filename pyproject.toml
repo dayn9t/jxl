@@ -173,18 +173,10 @@ module = [
     "uvicorn",
     "uvicorn.*",
     "locateanything_worker",
-    # 以下为未安装/可选第三方库（异常检测、AutoML、标注转换、变化检测）：
+    # 以下为未安装/可选第三方库（异常检测、AutoML）：
     "pyod.*",
     "autogluon.*",
-    "labelme2coco",
-    "opencd",
-    # ias：dayn9t 架构外的历史采集系统包，仅遗留测试（tests/label/darknet）引用。
+    # ias：dayn9t 架构外的历史采集系统包（label/hop.py 与 tests/label/ias_test.py 引用）。
     "ias.*",
-    # jxl.det.idetector / jxl.det.detector / jxl.det.y5.io / jxl.coco.coco：
-    # 迁移中已删除/改名的内部模块，引用它们的 demo/test 函数已废弃，待整体清理。
-    "jxl.det.idetector",
-    "jxl.det.detector",
-    "jxl.det.y5.*",
-    "jxl.coco.coco",
 ]
 ignore_missing_imports = true
