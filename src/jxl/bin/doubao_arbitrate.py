@@ -359,6 +359,7 @@ def run(
     if n_manual:
         typer.echo(
             f"人工队列出网格: review_pack {out_dir}/manual <images_dir> {out_dir}/manual/pack"
+            "（review_pack 已归档 jxl archive/bin/；继任者 vlabel bin 入口）"
         )
 
 
