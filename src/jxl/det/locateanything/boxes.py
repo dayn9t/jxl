@@ -9,7 +9,8 @@ conf 恒 1.0 使 LA 框恒为种子, 各校验器框对 target 的 IoU 跨阈值
 会边缘性改变 fn(种子不同 → covered 参考框不同).
 """
 
-from jxl.det.box_utils import xyxy_iou
+from vlabel.crop import xyxy_iou
+
 from jxl.det.hardmine import Box
 
 type BoxPx = tuple[float, float, float, float]

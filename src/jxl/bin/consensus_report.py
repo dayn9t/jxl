@@ -15,8 +15,8 @@ from typing import Annotated
 
 import orjson
 import typer
+from vlabel.crop import xyxy_iou
 
-from jxl.det.box_utils import xyxy_iou
 from jxl.det.hardmine import Box, greedy_match
 
 app = typer.Typer(add_completion=False, help="共识标注分级与模型矩阵.")

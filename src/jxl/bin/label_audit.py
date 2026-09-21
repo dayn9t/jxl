@@ -25,8 +25,8 @@ import typer
 from jcx.sys.fs import files_in
 from loguru import logger
 from sklearn.cluster import DBSCAN
+from vlabel.crop import xyxy_iou
 
-from jxl.det.box_utils import xyxy_iou
 from jxl.det.hardmine import Box, parse_yolo_label
 
 app = typer.Typer(add_completion=False, help="标注质量位置审计: 静态物毒标注签名发现")

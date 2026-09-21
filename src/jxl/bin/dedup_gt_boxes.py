@@ -17,9 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from jxl.det.box_utils import xyxy_iou
-
 import typer
+from vlabel.crop import xyxy_iou
 
 NEAR_DUP_IOU = 0.95
 """帧内同类近重复判定阈（实证 dup 对全部 >=0.99；0.95 覆盖 iapx near 带）。"""
@@ -56,7 +55,7 @@ def boxes_to_text(boxes: list[YoloBox]) -> str:
 
 
 def iou(a: YoloBox, b: YoloBox) -> float:
-    """YoloBox IoU——委托规范实现 jxl.det.box_utils.xyxy_iou."""
+    """YoloBox IoU——委托规范实现 vlabel.crop.xyxy_iou."""
     return xyxy_iou(a.xyxy, b.xyxy)
 
 def find_dup_pairs(boxes: list[YoloBox], threshold: float = NEAR_DUP_IOU

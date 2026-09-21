@@ -11,8 +11,7 @@ import re
 from pathlib import Path
 
 import typer
-
-from jxl.det.box_utils import xyxy_iou
+from vlabel.crop import xyxy_iou
 
 app = typer.Typer(add_completion=False, help="评估 grounding vs GT：IoU/召回/精度/F1/面额准确率。")
 

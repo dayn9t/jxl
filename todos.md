@@ -39,6 +39,6 @@
   （`gencheck/rolepool_recrop_x10.py`，bbox±10%，57/57，旧图备份 `images_targetcrop_bak/`）。
   待办：①线下 v3.3 重训（数据用新裁片）②线上推理口径同步升级 ±10%（`crop_region` 调用处加 margin，与 v3.3 交付一并走 train-and-accept）③切换决策重做（工作台 role_spotsample_50/role_7 已换新口径图，人工裁决即新真值）。
   若线上暂不能切，fallback=v3.3 训练退回贴框口径（与线上一致优先于 10% 裁决）。
-  规范+函数已固化：skill `bbox-crop-expansion` + `jxl.det.box_utils.expand_xyxy/crop_expanded/save_expanded`。
+  规范+函数已固化：skill `bbox-crop-expansion` + `vlabel.crop.expand_xyxy/crop_expanded/save_expanded`（2026-09-21 迁自 jxl.det.box_utils）。
 - [ ] 下批 iap 增量到 → 信号盘点+全模型沉淀（skill data-flywheel 自动触发路径，含第七步台账）
 - [ ] SHTM 下周解冻：r2 审核 1,246 帧（用户人工）→ hardcase → V2.2 重训

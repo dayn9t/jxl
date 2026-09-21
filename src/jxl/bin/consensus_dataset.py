@@ -35,8 +35,8 @@ from typing import Annotated, NamedTuple, Self
 import orjson
 import typer
 import yaml
+from vlabel.crop import xyxy_iou
 
-from jxl.det.box_utils import xyxy_iou
 from jxl.det.hardmine import Box
 
 app = typer.Typer(add_completion=False, help="共识管线产物层 → 平铺集 + data.yaml")

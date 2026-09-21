@@ -33,12 +33,12 @@ from typing import Annotated, NamedTuple
 import httpx
 import orjson
 import typer
+from vlabel.crop import xyxy_iou
 
 from jxl.bin.det_mine import gather_images
 from jxl.bin.doubao_relabel import ground_one
 from jxl.bin.review_pack import ReviewEntry, find_manifests, parse_entry
 from jxl.bin.rmb_ground import Backend, Detection, load_backend
-from jxl.det.box_utils import xyxy_iou
 from jxl.det.hardmine import (
     Box,
     find_consensus_positions,

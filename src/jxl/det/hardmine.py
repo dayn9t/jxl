@@ -8,7 +8,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import NamedTuple
 
-from jxl.det.box_utils import xyxy_iou
+from vlabel.crop import xyxy_iou
 
 # 归一化 xyxy + 置信度: (x1, y1, x2, y2, conf), 坐标 ∈ [0,1]
 Box = tuple[float, float, float, float, float]
