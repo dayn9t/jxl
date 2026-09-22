@@ -154,7 +154,12 @@ def ensure_set(
         "POST",
         f"/api/projects/{PROJECT_SLUG}/sets",
         token,
-        {"slug": slug, "meta": meta.model_dump(exclude_none=True), "upstream": upstream},
+        {
+            "slug": slug,
+            "kind": "verdict",
+            "meta": meta.model_dump(exclude_none=True),
+            "upstream": upstream,
+        },
     )
     if status in (200, 201):
         print(f"set {slug!r}: created (empty — populates when its queue builder lands)")

@@ -163,7 +163,7 @@ class ServiceClient:
             "POST",
             f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets",
             token=token,
-            json_body={"slug": SET_SLUG, "meta": meta, "upstream": upstream},
+            json_body={"slug": SET_SLUG, "kind": "verdict", "meta": meta, "upstream": upstream},
         )
 
     def sample_request(self, token: str, stem: str, image_bytes: bytes) -> Request:
