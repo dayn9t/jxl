@@ -158,8 +158,9 @@ class ServiceClient:
             json_body={"name": name, "passphrase": None},
         )
 
-    def list_projects_request(self) -> Request:
-        return Request("GET", f"{self.base_url}/api/projects")
+    def list_projects_request(self, token: str) -> Request:
+        # reads are authenticated (#24): every /api/* GET carries Bearer
+        return Request("GET", f"{self.base_url}/api/projects", token=token)
 
     def create_project_request(self, token: str) -> Request:
         return Request(
@@ -169,8 +170,8 @@ class ServiceClient:
             json_body={"slug": PROJECT_SLUG, "id": PROJECT_ID, "name": PROJECT_NAME},
         )
 
-    def list_sets_request(self) -> Request:
-        return Request("GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets")
+    def list_sets_request(self, token: str) -> Request:
+        return Request("GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets", token=token)
 
     def create_set_request(
         self, token: str, meta: dict[str, object], upstream: dict[str, object]
@@ -494,7 +495,7 @@ def apply_flow(
     # built under the primary model's token.
     ensure_created(
         client,
-        client.list_projects_request(),
+        client.list_projects_request(role_token),
         client.create_project_request(role_token),
         "dir",
         PROJECT_SLUG,
@@ -502,7 +503,7 @@ def apply_flow(
     )
     ensure_created(
         client,
-        client.list_sets_request(),
+        client.list_sets_request(role_token),
         client.create_set_request(role_token, meta, upstream),
         "name",
         SET_SLUG,
@@ -527,9 +528,9 @@ def dry_run_flow(
     client = ServiceClient(base_url)
     for name in (MODEL_ROLE, MODEL_STEP5):
         print(describe(client.login_request(name)))
-    print(describe(client.list_projects_request()))
+    print(describe(client.list_projects_request('<token>')))
     print(f"{describe(client.create_project_request('<token>'))}  (only if {PROJECT_SLUG} absent)")
-    print(describe(client.list_sets_request()))
+    print(describe(client.list_sets_request('<token>')))
     print(
         f"{describe(client.create_set_request('<token>', meta, upstream))}"
         f"  (only if {SET_SLUG} absent)"

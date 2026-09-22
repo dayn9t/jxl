@@ -141,15 +141,39 @@ class Outcome:
 
 
 class ServiceClient:
-    """Minimal urllib GET client; returns (status, parsed JSON) for any status."""
+    """Minimal urllib client; reads are authenticated (#24 — Bearer on every GET)."""
 
-    def __init__(self, base_url: str) -> None:
+    def __init__(self, base_url: str, token: str) -> None:
         self.base_url = base_url.rstrip("/")
+        self.token = token
+
+    @staticmethod
+    def login(base_url: str, name: str) -> str:
+        """POST /api/login (the one public endpoint) → session token."""
+        url = f"{base_url.rstrip('/')}/api/login"
+        body = json.dumps({"name": name, "passphrase": None}).encode("utf-8")
+        request = urllib.request.Request(
+            url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(request) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            raise FatalError(
+                f"login as {name!r} refused: HTTP {error.code} "
+                f"{error.read().decode('utf-8', 'replace')[:200]}"
+            ) from error
+        token = payload.get("token")
+        if not isinstance(token, str) or not token:
+            raise FatalError(f"login as {name!r}: response carries no token: {payload}")
+        return token
 
     def get(self, path: str) -> tuple[int, object]:
         url = f"{self.base_url}{path}"
         request = urllib.request.Request(
-            url, headers={"Accept": "application/json"}, method="GET"
+            url,
+            headers={"Accept": "application/json", "Authorization": f"Bearer {self.token}"},
+            method="GET",
         )
         try:
             with urllib.request.urlopen(request) as response:
@@ -415,6 +439,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--service", default=DEFAULT_SERVICE, help="confirm service base URL")
     parser.add_argument("--excluded", required=True, type=Path, help="rolepool excluded jsonl")
     parser.add_argument(
+        "--as",
+        dest="identity",
+        required=True,
+        help="registry annotator name to log in as (backflow is operator-driven; "
+        "identity is explicit, never defaulted)",
+    )
+    parser.add_argument(
         "--apply", action="store_true", help="rewrite the excluded jsonl, not just report"
     )
     return parser.parse_args(argv)
@@ -435,7 +466,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not rows:
         print(f"no parsable rows in {excluded_path}")
         return EXIT_REFUSED
-    client = ServiceClient(str(args.service))
+    try:
+        token = ServiceClient.login(str(args.service), args.identity)
+    except (FatalError, urllib.error.URLError) as error:
+        print(f"FATAL: {error}")
+        return EXIT_REFUSED
+    client = ServiceClient(str(args.service), token)
     try:
         stored = stored_fingerprint(client)
         current_sha = hashlib.sha256(data).hexdigest()
