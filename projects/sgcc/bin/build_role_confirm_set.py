@@ -9,7 +9,9 @@ urllib, no third-party client) plus one import of ``vlabel.meta`` to build
 the LabelMeta payload exactly as the Rust side would serialize it.
 
 Flow:
-  1. login role_n_v32, then step5_llm (two tokens)
+  1. login role_n_v32, then step5_llm (two tokens; every write request
+     carries Bearer auth — set-lifecycle POSTs under the role_n_v32 token,
+     verdicts under each model's own)
   2. GET /api/projects -> POST project (slug sgcc_n001) if absent; 409 = exists
   3. GET sets -> POST set role_confirm_v1 (meta + upstream fingerprint) if absent
   4. per row POST samples?stem=<uid>_<track_id> with the row image bytes
@@ -159,28 +161,33 @@ class ServiceClient:
     def list_projects_request(self) -> Request:
         return Request("GET", f"{self.base_url}/api/projects")
 
-    def create_project_request(self) -> Request:
+    def create_project_request(self, token: str) -> Request:
         return Request(
             "POST",
             f"{self.base_url}/api/projects",
+            token=token,
             json_body={"slug": PROJECT_SLUG, "id": PROJECT_ID, "name": PROJECT_NAME},
         )
 
     def list_sets_request(self) -> Request:
         return Request("GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets")
 
-    def create_set_request(self, meta: dict[str, object], upstream: dict[str, object]) -> Request:
+    def create_set_request(
+        self, token: str, meta: dict[str, object], upstream: dict[str, object]
+    ) -> Request:
         return Request(
             "POST",
             f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets",
+            token=token,
             json_body={"slug": SET_SLUG, "meta": meta, "upstream": upstream},
         )
 
-    def sample_request(self, stem: str, image_bytes: bytes) -> Request:
+    def sample_request(self, token: str, stem: str, image_bytes: bytes) -> Request:
         return Request(
             "POST",
             f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}"
             f"/samples?stem={stem}",
+            token=token,
             raw_body=image_bytes,
         )
 
@@ -397,7 +404,11 @@ def resolve_image(image: str, excluded_path: Path) -> Path:
 
 
 def upload_samples(
-    client: ServiceClient, rows: list[ExcludedRow], excluded_path: Path, errors: list[str]
+    client: ServiceClient,
+    token: str,
+    rows: list[ExcludedRow],
+    excluded_path: Path,
+    errors: list[str],
 ) -> list[ExcludedRow]:
     """Upload every row image; row failures are collected, batch continues."""
     uploaded: list[ExcludedRow] = []
@@ -406,7 +417,9 @@ def upload_samples(
         if not image_path.is_file():
             errors.append(f"row image {row.image!r} (stem {row.stem}): file not found")
             continue
-        status, body = client.send(client.sample_request(row.stem, image_path.read_bytes()))
+        status, body = client.send(
+            client.sample_request(token, row.stem, image_path.read_bytes())
+        )
         if status in (200, 201):
             print(f"sample {row.stem}: uploaded")
             uploaded.append(row)
@@ -476,10 +489,13 @@ def apply_flow(
 ) -> tuple[int, int]:
     role_token = login(client, MODEL_ROLE)
     step5_token = login(client, MODEL_STEP5)
+    # Every write endpoint demands a logged-in identity (rs contract: all
+    # set-lifecycle POSTs are Bearer-authed like post_verdict); the set is
+    # built under the primary model's token.
     ensure_created(
         client,
         client.list_projects_request(),
-        client.create_project_request(),
+        client.create_project_request(role_token),
         "dir",
         PROJECT_SLUG,
         "project",
@@ -487,12 +503,12 @@ def apply_flow(
     ensure_created(
         client,
         client.list_sets_request(),
-        client.create_set_request(meta, upstream),
+        client.create_set_request(role_token, meta, upstream),
         "name",
         SET_SLUG,
         "set",
     )
-    uploaded = upload_samples(client, rows, excluded_path, errors)
+    uploaded = upload_samples(client, role_token, rows, excluded_path, errors)
     verdicts = post_initial_verdicts(
         client, role_token, step5_token, uploaded, errors
     )
@@ -512,9 +528,12 @@ def dry_run_flow(
     for name in (MODEL_ROLE, MODEL_STEP5):
         print(describe(client.login_request(name)))
     print(describe(client.list_projects_request()))
-    print(f"{describe(client.create_project_request())}  (only if {PROJECT_SLUG} absent)")
+    print(f"{describe(client.create_project_request('<token>'))}  (only if {PROJECT_SLUG} absent)")
     print(describe(client.list_sets_request()))
-    print(f"{describe(client.create_set_request(meta, upstream))}  (only if {SET_SLUG} absent)")
+    print(
+        f"{describe(client.create_set_request('<token>', meta, upstream))}"
+        f"  (only if {SET_SLUG} absent)"
+    )
     uploaded = 0
     verdicts = 0
     for row in rows:
@@ -524,7 +543,7 @@ def dry_run_flow(
             continue
         uploaded += 1
         print(
-            describe(client.sample_request(row.stem, image_path.read_bytes()))
+            describe(client.sample_request("<token>", row.stem, image_path.read_bytes()))
             + f"  (row image {row.image})"
         )
         if row.role_n is None or row.role_n not in ROLE_IDS:
