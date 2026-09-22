@@ -9,24 +9,30 @@ urllib, no third-party client) plus one import of ``vlabel.meta`` to build
 the LabelMeta payload exactly as the Rust side would serialize it.
 
 Flow:
-  1. login role_n_v32, then step5_llm (two tokens; every write request
-     carries Bearer auth — set-lifecycle POSTs under the role_n_v32 token,
-     verdicts under each model's own)
+  1. login role_n_v32, then step5_llm (two tokens; every request carries
+     Bearer auth — reads authenticated too, ledger #24; set-lifecycle POSTs
+     under the role_n_v32 token, verdicts under each model's own)
   2. GET /api/projects -> POST project (slug sgcc_n001) if absent; 409 = exists
   3. GET sets -> POST set role_confirm_v1 (meta + upstream fingerprint) if absent
-  4. per row POST samples?stem=<uid>_<track_id> with the row image bytes
-  5. initial verdicts: role_n_v32 on every stem (value = role dictionary id,
-     note "role_conf=<conf> deriv=<class>"); step5_llm only on deriv in
-     {A,B,C} (value = customer id 1, note = first 120 chars of step5_reason)
+  4. per row POST samples?stem=<uid>_<track_id>.jpg with image bytes resolved as
+     <excluded parent>/images/<uid>.jpg (the pool's materialized crop naming);
+     the upload name carries the extension — the service derives the logical
+     stem by stripping it (extension-less names are rejected 400)
+  5. initial verdicts: role_n_v32 on every stem (value = v3 dictionary id of
+     cache.role_label, note "role_conf=<conf> · X: <exclude_reason>");
+     step5_llm on every row with a non-empty step5_roles — every derivation
+     class in the rolepool README (A/B/C) concludes customer, so its signal
+     is value=customer whenever it speaks (note = step5_reason digest); rows
+     where step5 said nothing get no step5 verdict (unwritten = not reviewed)
 
-Row-level leniency (missing image field / unreadable image file / failed
-upload) collects errors and continues so one run covers the whole batch;
-the process exits non-zero if anything was collected. Connection-level
-failures abort immediately (nothing further can succeed).
+Row-level leniency (unreadable image file / failed upload) collects errors
+and continues so one run covers the whole batch; the process exits non-zero
+if anything was collected. Connection-level failures abort immediately
+(nothing further can succeed).
 
-Input rows (rolepool_excluded.jsonl, one JSON object per line): uid, track_id,
-image (path; relative resolves against the excluded file's directory), role_n
-(dictionary en name), role_conf (number), deriv (A/B/C/...), step5_reason.
+Input rows (rolepool_excluded.jsonl, one JSON object per line): uid,
+track_id, exclude_reason, step5_roles (dict), step5_reason,
+cache.role_label (v3 dictionary en name), cache.role_conf (number).
 
 Usage:
   python build_role_confirm_set.py --service http://127.0.0.1:8790 \
@@ -43,16 +49,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from vlabel.meta import (
-    CatDef,
-    CatProperty,
-    LabelMeta,
-    LocalizedNames,
-    PropDef,
-    RoiConfig,
-    ShapeConfig,
-    ValueDef,
-)
+from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
 
 DEFAULT_SERVICE = "http://127.0.0.1:8790"
 
@@ -60,8 +57,6 @@ PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1
 PROJECT_NAME = "sgcc-n001"
 SET_SLUG = "role_confirm_v1"
-META_ID = 1006
-META_NAME = "sgcc-n001-role-confirm"
 
 UPSTREAM_PARENT = "rolepool_20260919"
 UPSTREAM_RELATION = "attribute:role"
@@ -69,47 +64,35 @@ STEM_PATTERN = "<uid>_<track_id>"
 
 MODEL_ROLE = "role_n_v32"
 MODEL_STEP5 = "step5_llm"
-CUSTOMER_ID = 1
-STEP5_DERIVS = frozenset({"A", "B", "C"})
 NOTE_MAX_CHARS = 120
 
 EXIT_OK = 0
 EXIT_ROW_ERRORS = 1
 EXIT_FATAL = 2
 
-# Spec section 1.3: ids follow the v3 dictionary alphabetical order; hotkeys
-# 1-9; staff roles get distinguishable orange-yellow variants, customer green,
-# not_person gray, undecidable purple, detector_error red.
-ROLE_VALUES: tuple[tuple[int, str, str, str, str, str], ...] = (
-    # id, en, zh, hotkey, color, sign
-    (0, "cleaner", "保洁", "1", "#F5C542", "CL"),
-    (1, "customer", "客户", "2", "#2CA02C", "CU"),
-    (2, "leader", "负责人", "3", "#F0A202", "LD"),
-    (3, "manager", "经理", "4", "#E07B00", "MG"),
-    (4, "not_person", "非人员", "5", "#808080", "NP"),
-    (5, "security", "安保", "6", "#C46A10", "SC"),
-    (6, "teller", "柜员", "7", "#FFDA7A", "TL"),
-    (7, "undecidable", "不可判定", "8", "#9467BD", "UD"),
-    (8, "detector_error", "检测出错", "9", "#D62728", "DE"),
-)
-ROLE_IDS: dict[str, int] = {en: value_id for value_id, en, *_ in ROLE_VALUES}
-
 
 @dataclass(frozen=True, slots=True)
 class ExcludedRow:
-    """One rolepool_excluded.jsonl row (only the fields this client needs)."""
+    """One rolepool_excluded.jsonl row (only the fields this client needs).
+
+    The crop image is not a row field: the pool materializes it as
+    ``images/<uid>.jpg`` next to the jsonl (one crop per session target).
+    """
 
     uid: str
     track_id: str
-    image: str
-    role_n: str | None
+    role_label: str
     role_conf: str | None
-    deriv: str | None
+    exclude_reason: str | None
+    step5_roles: str | None
     step5_reason: str | None
 
     @property
     def stem(self) -> str:
         return f"{self.uid}_{self.track_id}"
+
+    def image_path(self, excluded_path: Path) -> Path:
+        return excluded_path.parent / "images" / f"{self.uid}.jpg"
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,10 +167,12 @@ class ServiceClient:
         )
 
     def sample_request(self, token: str, stem: str, image_bytes: bytes) -> Request:
+        # upload name = logical stem + extension (the service strips the last
+        # extension to recover the identity; dotted uids require it)
         return Request(
             "POST",
             f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}"
-            f"/samples?stem={stem}",
+            f"/samples?stem={stem}.jpg",
             token=token,
             raw_body=image_bytes,
         )
@@ -214,49 +199,9 @@ def describe(request: Request) -> str:
 
 
 def build_meta() -> dict[str, object]:
-    """Spec section 1.3 LabelMeta; serialized exactly as rs serde expects."""
-    meta = LabelMeta(
-        id=META_ID,
-        name=META_NAME,
-        description="sgcc-n001 人员 role 属性复审确认集（field trial）",
-        shape=ShapeConfig(title_style=1, thickness=2),
-        roi=RoiConfig(color="#800080"),
-        categories=[
-            CatDef(
-                id=0,
-                names=LocalizedNames(en="person", zh="人员"),
-                description="人员",
-                hotkey="1",
-                color="#FF0000",
-                properties=[
-                    CatProperty(
-                        id=0,
-                        names=LocalizedNames(en="role", zh="人员角色"),
-                        property_type="role",
-                    )
-                ],
-            )
-        ],
-        property_types=[
-            PropDef(
-                id=0,
-                names=LocalizedNames(en="role", zh="人员角色"),
-                description="人员角色",
-                values=[
-                    ValueDef(
-                        id=value_id,
-                        names=LocalizedNames(en=en, zh=zh),
-                        description=zh,
-                        hotkey=hotkey,
-                        color=color,
-                        sign=sign,
-                    )
-                    for value_id, en, zh, hotkey, color, sign in ROLE_VALUES
-                ],
-            )
-        ],
-    )
-    return meta.model_dump(exclude_none=True)
+    """Spec section 1.3 LabelMeta from the shared sgcc_confirm_metas module
+    (single source — never hand-roll a confirm meta in a bin script)."""
+    return role_meta().model_dump(exclude_none=True)
 
 
 def build_upstream(excluded_path: Path, sha256_hex: str) -> dict[str, object]:
@@ -270,7 +215,7 @@ def build_upstream(excluded_path: Path, sha256_hex: str) -> dict[str, object]:
 
 
 def scalar_text(value: object) -> str:
-    """Render a JSON scalar for note text (strings as-is, rest JSON-faithful)."""
+    """Render a JSON scalar as text (strings as-is, rest JSON-faithful)."""
     if isinstance(value, str):
         return value
     return json.dumps(value)
@@ -310,14 +255,25 @@ def parse_row(raw: object, line_no: int) -> ExcludedRow:
     """Parse and validate one jsonl line; raises RowError on schema violation."""
     if not isinstance(raw, dict):
         raise RowError(f"row {line_no}: not a JSON object")
+    cache = raw.get("cache")
+    if not isinstance(cache, dict):
+        raise RowError(f"row {line_no}: field 'cache' must be an object (role_n cache)")
+    role_label = cache.get("role_label")
+    if not isinstance(role_label, str) or not role_label:
+        raise RowError(f"row {line_no}: cache.role_label must be a non-empty string")
+    step5_roles = raw.get("step5_roles")
+    if step5_roles is not None and not isinstance(step5_roles, dict):
+        raise RowError(f"row {line_no}: step5_roles must be an object")
     return ExcludedRow(
         uid=require_str(raw, "uid", line_no),
-        track_id=require_str(raw, "track_id", line_no),
-        image=require_str(raw, "image", line_no),
-        role_n=opt_str(raw, "role_n", line_no),
-        deriv=opt_str(raw, "deriv", line_no),
+        track_id=scalar_text(raw.get("track_id")),
+        role_label=role_label,
+        role_conf=opt_scalar_text(cache, "role_conf", line_no),
+        exclude_reason=opt_str(raw, "exclude_reason", line_no),
+        step5_roles=json.dumps(step5_roles, ensure_ascii=False)
+        if isinstance(step5_roles, dict) and step5_roles
+        else None,
         step5_reason=opt_str(raw, "step5_reason", line_no),
-        role_conf=opt_scalar_text(raw, "role_conf", line_no),
     )
 
 
@@ -343,9 +299,9 @@ def role_note(row: ExcludedRow) -> str | None:
     parts = []
     if row.role_conf is not None:
         parts.append(f"role_conf={row.role_conf}")
-    if row.deriv is not None:
-        parts.append(f"deriv={row.deriv}")
-    return " ".join(parts) or None
+    if row.exclude_reason is not None:
+        parts.append(f"X: {row.exclude_reason}")
+    return " · ".join(parts) or None
 
 
 def step5_note(row: ExcludedRow) -> str | None:
@@ -399,11 +355,6 @@ def ensure_created(
         raise FatalError(f"create {what} failed: HTTP {status} {body}")
 
 
-def resolve_image(image: str, excluded_path: Path) -> Path:
-    path = Path(image)
-    return path if path.is_absolute() else excluded_path.parent / path
-
-
 def upload_samples(
     client: ServiceClient,
     token: str,
@@ -414,9 +365,9 @@ def upload_samples(
     """Upload every row image; row failures are collected, batch continues."""
     uploaded: list[ExcludedRow] = []
     for row in rows:
-        image_path = resolve_image(row.image, excluded_path)
+        image_path = row.image_path(excluded_path)
         if not image_path.is_file():
-            errors.append(f"row image {row.image!r} (stem {row.stem}): file not found")
+            errors.append(f"row image {image_path} (stem {row.stem}): file not found")
             continue
         status, body = client.send(
             client.sample_request(token, row.stem, image_path.read_bytes())
@@ -458,20 +409,20 @@ def post_initial_verdicts(
     """Post both models' initial verdicts; returns the request attempt count."""
     attempts = 0
     for row in uploaded:
-        if row.role_n is None:
-            errors.append(f"verdict {row.stem} as {MODEL_ROLE}: row has no role_n field")
-        elif row.role_n not in ROLE_IDS:
+        if row.role_label not in ROLE_IDS:
             errors.append(
-                f"verdict {row.stem} as {MODEL_ROLE}: role_n {row.role_n!r} "
+                f"verdict {row.stem} as {MODEL_ROLE}: role_label {row.role_label!r} "
                 f"not in dictionary {sorted(ROLE_IDS)}"
             )
         else:
             post_verdict(
                 client, row.stem, role_token, MODEL_ROLE,
-                ROLE_IDS[row.role_n], role_note(row), errors,
+                ROLE_IDS[row.role_label], role_note(row), errors,
             )
             attempts += 1
-        if row.deriv in STEP5_DERIVS:
+        # step5 speaks only when it has speaker roles; every derivation class
+        # (A/B/C, rolepool README) concludes customer — its signal is binary.
+        if row.step5_roles is not None:
             post_verdict(
                 client, row.stem, step5_token, MODEL_STEP5,
                 CUSTOMER_ID, step5_note(row), errors,
@@ -538,25 +489,27 @@ def dry_run_flow(
     uploaded = 0
     verdicts = 0
     for row in rows:
-        image_path = resolve_image(row.image, excluded_path)
+        image_path = row.image_path(excluded_path)
         if not image_path.is_file():
-            errors.append(f"row image {row.image!r} (stem {row.stem}): file not found")
+            errors.append(f"row image {image_path} (stem {row.stem}): file not found")
             continue
         uploaded += 1
         print(
             describe(client.sample_request("<token>", row.stem, image_path.read_bytes()))
-            + f"  (row image {row.image})"
+            + f"  (row image {image_path.name})"
         )
-        if row.role_n is None or row.role_n not in ROLE_IDS:
-            problem = "no role_n field" if row.role_n is None else "unknown role_n"
-            errors.append(f"verdict {row.stem} as {MODEL_ROLE}: {problem} {row.role_n!r}")
+        if row.role_label not in ROLE_IDS:
+            errors.append(
+                f"verdict {row.stem} as {MODEL_ROLE}: "
+                f"role_label {row.role_label!r} not in dictionary"
+            )
         else:
             request = client.verdict_request(
-                row.stem, "<token>", ROLE_IDS[row.role_n], role_note(row)
+                row.stem, "<token>", ROLE_IDS[row.role_label], role_note(row)
             )
             print(f"{describe(request)}  (as {MODEL_ROLE})")
             verdicts += 1
-        if row.deriv in STEP5_DERIVS:
+        if row.step5_roles is not None:
             request = client.verdict_request(
                 row.stem, "<token>", CUSTOMER_ID, step5_note(row)
             )
