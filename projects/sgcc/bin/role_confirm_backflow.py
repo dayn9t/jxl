@@ -18,13 +18,14 @@ Flow:
      (each with the server-resolved truth); stems without a truth verdict
      report as 未审
   4. per-stem disposition report (truth en -> disposition):
-       detector_error -> upstream_error   (upstream detection fault)
+       detector_error -> upstream_error   (upstream fault: report-only)
        undecidable    -> undecidable      (stays excluded, undecided)
        not_person     -> maintained       (exclusion confirmed correct)
        any other role -> recycled         (candidate for recycling)
-  5. --apply rewrites the excluded jsonl, adding to every dispositioned row
+  5. --apply rewrites the excluded jsonl, adding to every written row
      "confirm": {"truth": <en>, "disposition": <mapped>, "ts": <local ISO>};
-     rows left unchanged: 未审, unparsable, or without a matching sample.
+     rows left unchanged: 未审, upstream_error (report-only per spec 2.2
+     step 4), unparsable, or without a matching sample.
      Write to <file>.tmp then os.replace (atomic rename).
 
 Exit codes:
@@ -56,10 +57,15 @@ DEFAULT_SERVICE = "http://127.0.0.1:8790"
 PROJECT_SLUG = "sgcc_n001"
 SET_SLUG = "role_confirm_v1"
 
+# Spec section 2.2 step 4: upstream detector fault feedback is report-only —
+# printed in the disposition report, never written back into the excluded
+# jsonl (it is not a row disposition).
+REPORT_ONLY_DISPOSITION = "upstream_error"
+
 # Spec section 2.2 step 4: truth en -> disposition; unmapped role values
 # (staff roles, customer) mean the exclusion was wrong -> recycle candidate.
 DISPOSITIONS: dict[str, str] = {
-    "detector_error": "upstream_error",
+    "detector_error": REPORT_ONLY_DISPOSITION,
     "undecidable": "undecidable",
     "not_person": "maintained",
 }
@@ -126,7 +132,12 @@ class Outcome:
     truth: str  # en truth name, "" when not dispositioned
     by: str  # truth annotator, "" when not dispositioned
     status: str  # report token: disposition value / 未审 / finding tag
-    confirm: dict[str, object] | None  # written on --apply when set
+    confirm: dict[str, object] | None  # --apply payload; None = not written
+
+    @property
+    def dispositioned(self) -> bool:
+        """A truth verdict resolved a disposition (report-only counts too)."""
+        return self.truth != ""
 
 
 class ServiceClient:
@@ -328,11 +339,13 @@ def evaluate(
             outcomes.append(Outcome(row, "", "", "unknown_truth", None))
             continue
         disposition = DISPOSITIONS.get(truth_en, DEFAULT_DISPOSITION)
-        confirm: dict[str, object] = {
-            "truth": truth_en,
-            "disposition": disposition,
-            "ts": ts,
-        }
+        # Spec 2.2 step 4: upstream_error 仅列出 — fault feedback goes to the
+        # report only, the excluded row stays unchanged.
+        confirm: dict[str, object] | None = (
+            None
+            if disposition == REPORT_ONLY_DISPOSITION
+            else {"truth": truth_en, "disposition": disposition, "ts": ts}
+        )
         outcomes.append(Outcome(row, truth_en, view.truth.annotator, disposition, confirm))
     for (uid, track_id), view in samples.items():
         if (uid, track_id) not in seen:
@@ -344,7 +357,7 @@ def print_report(outcomes: list[Outcome]) -> None:
     counts: dict[str, int] = {}
     print("== per-stem report ==")
     for outcome in outcomes:
-        if outcome.confirm is not None:
+        if outcome.dispositioned:
             print(
                 f"{outcome.row.stem}  truth={outcome.truth} by={outcome.by}"
                 f"  disposition={outcome.status}"
@@ -359,14 +372,17 @@ def print_report(outcomes: list[Outcome]) -> None:
 
 def has_findings(outcomes: list[Outcome], anomalies: list[str]) -> bool:
     """Findings = any row not dispositioned, or any cross-check anomaly."""
-    return bool(anomalies) or any(outcome.confirm is None for outcome in outcomes)
+    return bool(anomalies) or any(not outcome.dispositioned for outcome in outcomes)
 
 
 def apply_rewrite(
     path: Path, text: str, entries: list[tuple[str, ExcludedRow | None]],
     outcomes: list[Outcome],
 ) -> int:
-    """Rewrite the jsonl adding confirm to dispositioned rows; returns count."""
+    """Rewrite the jsonl adding confirm to writable rows; returns the count.
+
+    Report-only upstream_error rows stay byte-identical (spec 2.2 step 4).
+    """
     confirm_by_line = {
         outcome.row.line_no: outcome.confirm
         for outcome in outcomes
