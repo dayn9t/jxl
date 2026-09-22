@@ -52,6 +52,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+# Identity rendering shared with the write-side client: both scripts read the
+# same upstream jsonl, so track_id coercion must come from one definition
+# (real rows carry numeric track_id; string-only parsing rejected every row).
+from build_role_confirm_set import scalar_text
+
 DEFAULT_SERVICE = "http://127.0.0.1:8790"
 
 PROJECT_SLUG = "sgcc_n001"
@@ -310,14 +315,14 @@ def load_entries(
             entries.append((line, None))
             continue
         uid = raw.get("uid")
-        track_id = raw.get("track_id")
         if not isinstance(uid, str) or not uid:
             anomalies.append(f"row {line_no}: field 'uid' must be a non-empty string")
             entries.append((line, None))
             continue
-        if not isinstance(track_id, str) or not track_id:
+        track_id = scalar_text(raw.get("track_id"))
+        if not track_id:
             anomalies.append(
-                f"row {line_no}: field 'track_id' must be a non-empty string"
+                f"row {line_no}: field 'track_id' must be a non-empty scalar"
             )
             entries.append((line, None))
             continue
