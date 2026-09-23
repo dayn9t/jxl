@@ -50,6 +50,8 @@ from pathlib import Path
 
 from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
 from vlabel.meta import LabelMeta
+import httpx
+
 from vlabel.service import (
     ConfirmClient,
     Fingerprint,
@@ -226,7 +228,7 @@ def ensure_created(what: str, expected: str, listed: bool, create: Callable[[], 
         return
     try:
         create()
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         if error.status != 409:
             raise
         print(f"{what} {expected!r}: exists (409), continue")
@@ -257,7 +259,7 @@ def upload_samples(
                 stem=f"{row.stem}.jpg",
                 image=image_path.read_bytes(),
             )
-        except ServiceError as error:
+        except (ServiceError, httpx.TransportError) as error:
             if error.status == 409:
                 print(f"sample {row.stem}: already exists (409), skip upload")
                 uploaded.append(row)
@@ -285,7 +287,7 @@ def post_verdict(
             stem,
             payload=VerdictPost(value=value, note=note),
         )
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         errors.append(f"verdict {stem} as {actor}: {error}")
         return
     print(f"verdict {stem} as {actor}: value={value} posted")
@@ -496,7 +498,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             uploaded, verdicts = apply_flow(
                 str(args.service), rows, excluded_path, meta, upstream, errors
             )
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         print(f"FATAL: {error}")
         print_summary(rows, uploaded, verdicts, errors)
         return EXIT_FATAL

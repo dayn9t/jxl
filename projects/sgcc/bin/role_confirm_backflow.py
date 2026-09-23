@@ -55,6 +55,8 @@ from pathlib import Path
 # same upstream jsonl, so track_id coercion must come from one definition
 # (real rows carry numeric track_id; string-only parsing rejected every row).
 from build_role_confirm_set import scalar_text
+import httpx
+
 from vlabel.service import (
     AnnotationSampleOut,
     ConfirmClient,
@@ -366,7 +368,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_REFUSED
     try:
         client = ConfirmClient.login(str(args.service), args.identity)
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         print(f"FATAL: {error}")
         return EXIT_REFUSED
     try:
@@ -384,7 +386,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"fingerprint gate passed: {stored.file} sha256={current_sha}")
         role_names = role_value_names(client)
         samples = sample_index(client)
-    except (FatalError, ServiceError) as error:
+    except (FatalError, ServiceError, httpx.TransportError) as error:
         print(f"FATAL: {error}")
         return EXIT_REFUSED
     ts = datetime.now().astimezone().isoformat(timespec="seconds")

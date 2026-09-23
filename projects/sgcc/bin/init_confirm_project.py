@@ -26,6 +26,8 @@ from sgcc_confirm_metas import (
     upper_visibility_meta,
 )
 from vlabel.meta import LabelMeta
+import httpx
+
 from vlabel.service import ConfirmClient, ServiceError, SetOut, UpstreamRef
 
 PROJECT_SLUG = "sgcc_n001"
@@ -89,7 +91,7 @@ def ensure_project(client: ConfirmClient) -> None:
         return
     try:
         client.create_project(slug=PROJECT_SLUG, id=PROJECT_ID, name=PROJECT_NAME)
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         if error.status != 409:
             raise
         print(f"project {PROJECT_SLUG!r}: exists (409), continue")
@@ -106,7 +108,7 @@ def ensure_group(client: ConfirmClient) -> None:
         client.create_group(
             PROJECT_SLUG, slug=GROUP_SLUG, id=GROUP_ID, name=GROUP_NAME
         )
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         if error.status != 409:
             raise
         print(f"group {GROUP_SLUG!r}: exists (409), continue")
@@ -133,7 +135,7 @@ def ensure_set(
             meta=meta,
             upstream=upstream,
         )
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         if error.status != 409:
             raise
         print(f"set {slug!r}: exists (409), continue")
@@ -159,7 +161,7 @@ def main() -> int:
         sets = client.sets(PROJECT_SLUG, GROUP_SLUG)
         for slug, meta_builder, upstream in FUTURE_SETS:
             ensure_set(client, sets, slug, meta_builder(), upstream)
-    except ServiceError as error:
+    except (ServiceError, httpx.TransportError) as error:
         print(f"FATAL: {error}")
         return 2
     print("done: project + group r01 + future confirm sets initialized")
