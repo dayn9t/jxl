@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Initialize the sgcc confirm project directory via the confirm-service API.
 
-Creates the sgcc_n001 project plus the confirm sets whose review queues are
+Creates the sgcc_n001 project, its group r01 (three-level organization:
+project → group → set), plus the confirm sets whose review queues are
 already known (metas from sgcc_confirm_metas — the single source; relations
-edges declared per set). role_confirm_v1 is NOT created here: its builder
+edges declared per set). role_confirm is NOT created here: its builder
 (build_role_confirm_set.py) owns it end-to-end, fingerprint included (the
 sha256 snapshot belongs to the sample-population moment, not to init).
 
@@ -33,12 +34,19 @@ PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1
 PROJECT_NAME = "sgcc-n001"
 
+# Three-level organization (project → group → set): every confirm set lives
+# under the round group r01 (spec: 2026-09-23-confirm-data-organization-design).
+GROUP_SLUG = "r01"
+GROUP_ID = 1
+GROUP_NAME = "2026-09 首轮"
+
 # Future confirm sets: slug, meta builder, relations edge (fingerprint lands
 # when the set's builder populates it — until then upstream_fingerprint is
-# absent, so backflow for that set must refuse).
+# absent, so backflow for that set must refuse). Slugs carry no generation
+# suffix under the round axis — generations live in the group namespace.
 FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], dict[str, object]]] = [
     (
-        "bad_fit_review_v1",
+        "bad_fit_review",
         bad_fit_meta,
         {
             "parent": "pospool_20260919",
@@ -47,7 +55,7 @@ FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], dict[str, object]]] = [
         },
     ),
     (
-        "person_verify_v1",
+        "person_verify",
         person_verify_meta,
         {
             "parent": "pospool_20260919",
@@ -56,7 +64,7 @@ FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], dict[str, object]]] = [
         },
     ),
     (
-        "upper_visibility_v1",
+        "upper_visibility",
         upper_visibility_meta,
         {
             "parent": "upperpool_20260919",
@@ -65,7 +73,7 @@ FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], dict[str, object]]] = [
         },
     ),
     (
-        "reid_pair_v1",
+        "reid_pair",
         reid_pair_meta,
         {
             "parent": "osnet_ft",
@@ -143,16 +151,39 @@ def ensure_project(client: Client, token: str) -> None:
         raise FatalError(f"create project failed: HTTP {status} {payload}")
 
 
+def ensure_group(client: Client, token: str) -> None:
+    status, groups = client.request(
+        "GET", f"/api/projects/{PROJECT_SLUG}/groups", token
+    )
+    if status != 200 or not isinstance(groups, list):
+        raise FatalError(f"GET groups failed: HTTP {status} {groups}")
+    if any(isinstance(g, dict) and g.get("slug") == GROUP_SLUG for g in groups):
+        print(f"group {GROUP_SLUG!r}: already exists, skip create")
+        return
+    status, payload = client.request(
+        "POST",
+        f"/api/projects/{PROJECT_SLUG}/groups",
+        token,
+        {"slug": GROUP_SLUG, "id": GROUP_ID, "name": GROUP_NAME},
+    )
+    if status in (200, 201):
+        print(f"group {GROUP_SLUG!r}: created")
+    elif status == 409:
+        print(f"group {GROUP_SLUG!r}: exists (409), continue")
+    else:
+        raise FatalError(f"create group failed: HTTP {status} {payload}")
+
+
 def ensure_set(
     client: Client, token: str, existing: list[object], slug: str, meta: LabelMeta,
     upstream: dict[str, object],
 ) -> None:
-    if any(isinstance(s, dict) and s.get("name") == slug for s in existing):
+    if any(isinstance(s, dict) and s.get("slug") == slug for s in existing):
         print(f"set {slug!r}: already exists, skip create")
         return
     status, payload = client.request(
         "POST",
-        f"/api/projects/{PROJECT_SLUG}/sets",
+        f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
         token,
         {
             "slug": slug,
@@ -184,8 +215,9 @@ def main() -> int:
     try:
         token = client.login(str(args.identity))
         ensure_project(client, token)
+        ensure_group(client, token)
         status, sets = client.request(
-            "GET", f"/api/projects/{PROJECT_SLUG}/sets", token
+            "GET", f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets", token
         )
         if status != 200 or not isinstance(sets, list):
             raise FatalError(f"GET sets failed: HTTP {status} {sets}")
@@ -194,7 +226,7 @@ def main() -> int:
     except (FatalError, urllib.error.URLError) as error:
         print(f"FATAL: {error}")
         return 2
-    print("done: project + future confirm sets initialized")
+    print("done: project + group r01 + future confirm sets initialized")
     return 0
 
 

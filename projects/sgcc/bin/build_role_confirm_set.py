@@ -13,7 +13,8 @@ Flow:
      Bearer auth — reads authenticated too, ledger #24; set-lifecycle POSTs
      under the role_n_v32 token, verdicts under each model's own)
   2. GET /api/projects -> POST project (slug sgcc_n001) if absent; 409 = exists
-  3. GET sets -> POST set role_confirm_v1 (meta + upstream fingerprint) if absent
+  3. ensure group r01 (three-level organization) -> GET group sets ->
+     POST set role_confirm (meta + upstream fingerprint) if absent
   4. per row POST samples?stem=<uid>_<track_id>.jpg with image bytes resolved as
      <excluded parent>/images/<uid>.jpg (the pool's materialized crop naming);
      the upload name carries the extension — the service derives the logical
@@ -56,7 +57,12 @@ DEFAULT_SERVICE = "http://127.0.0.1:8790"
 PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1
 PROJECT_NAME = "sgcc-n001"
-SET_SLUG = "role_confirm_v1"
+# Three-level organization (project → group → set): the set lives under the
+# round group r01; slugs carry no generation suffix under the round axis.
+GROUP_SLUG = "r01"
+GROUP_ID = 1
+GROUP_NAME = "2026-09 首轮"
+SET_SLUG = "role_confirm"
 
 UPSTREAM_PARENT = "rolepool_20260919"
 UPSTREAM_RELATION = "attribute:role"
@@ -153,15 +159,32 @@ class ServiceClient:
             json_body={"slug": PROJECT_SLUG, "id": PROJECT_ID, "name": PROJECT_NAME},
         )
 
+    def list_groups_request(self, token: str) -> Request:
+        return Request(
+            "GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups", token=token
+        )
+
+    def create_group_request(self, token: str) -> Request:
+        return Request(
+            "POST",
+            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups",
+            token=token,
+            json_body={"slug": GROUP_SLUG, "id": GROUP_ID, "name": GROUP_NAME},
+        )
+
     def list_sets_request(self, token: str) -> Request:
-        return Request("GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets", token=token)
+        return Request(
+            "GET",
+            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
+            token=token,
+        )
 
     def create_set_request(
         self, token: str, meta: dict[str, object], upstream: dict[str, object]
     ) -> Request:
         return Request(
             "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets",
+            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
             token=token,
             json_body={"slug": SET_SLUG, "kind": "verdict", "meta": meta, "upstream": upstream},
         )
@@ -171,8 +194,8 @@ class ServiceClient:
         # extension to recover the identity; dotted uids require it)
         return Request(
             "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}"
-            f"/samples?stem={stem}.jpg",
+            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}"
+            f"/sets/{SET_SLUG}/samples?stem={stem}.jpg",
             token=token,
             raw_body=image_bytes,
         )
@@ -180,8 +203,8 @@ class ServiceClient:
     def verdict_request(self, stem: str, token: str, value: int, note: str | None) -> Request:
         return Request(
             "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}"
-            f"/verdicts/{stem}",
+            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}"
+            f"/sets/{SET_SLUG}/verdicts/{stem}",
             token=token,
             json_body={"value": value, "note": note},
         )
@@ -454,9 +477,17 @@ def apply_flow(
     )
     ensure_created(
         client,
+        client.list_groups_request(role_token),
+        client.create_group_request(role_token),
+        "slug",
+        GROUP_SLUG,
+        "group",
+    )
+    ensure_created(
+        client,
         client.list_sets_request(role_token),
         client.create_set_request(role_token, meta, upstream),
-        "name",
+        "slug",
         SET_SLUG,
         "set",
     )
@@ -481,6 +512,8 @@ def dry_run_flow(
         print(describe(client.login_request(name)))
     print(describe(client.list_projects_request('<token>')))
     print(f"{describe(client.create_project_request('<token>'))}  (only if {PROJECT_SLUG} absent)")
+    print(describe(client.list_groups_request('<token>')))
+    print(f"{describe(client.create_group_request('<token>'))}  (only if {GROUP_SLUG} absent)")
     print(describe(client.list_sets_request('<token>')))
     print(
         f"{describe(client.create_set_request('<token>', meta, upstream))}"

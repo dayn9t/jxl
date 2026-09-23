@@ -11,6 +11,7 @@ excluded jsonl the set was built from.
 
 Flow:
   1. GET /api/projects/sgcc_n001/relations -> stored upstream fingerprint
+     (relations key is the three-level composite "r01/role_confirm")
   2. sha256 of the CURRENT excluded file vs the stored fingerprint; mismatch
      prints a refusal and exits 2 (fingerprint gate: truth resolved against
      a different upstream snapshot must not flow back)
@@ -60,7 +61,11 @@ from build_role_confirm_set import scalar_text
 DEFAULT_SERVICE = "http://127.0.0.1:8790"
 
 PROJECT_SLUG = "sgcc_n001"
-SET_SLUG = "role_confirm_v1"
+# Three-level organization (project → group → set): the set lives under the
+# round group r01; relations keys are the composite "<group>/<set>".
+GROUP_SLUG = "r01"
+SET_SLUG = "role_confirm"
+RELATIONS_KEY = f"{GROUP_SLUG}/{SET_SLUG}"
 
 # Spec section 2.2 step 4: upstream detector fault feedback is report-only —
 # printed in the disposition report, never written back into the excluded
@@ -200,10 +205,10 @@ class ServiceClient:
         return f"/api/projects/{PROJECT_SLUG}/relations"
 
     def meta_path(self) -> str:
-        return f"/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}/meta"
+        return f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets/{SET_SLUG}/meta"
 
     def samples_path(self) -> str:
-        return f"/api/projects/{PROJECT_SLUG}/sets/{SET_SLUG}/samples"
+        return f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets/{SET_SLUG}/samples"
 
 
 def expect_ok(path: str, status: int, payload: object) -> None:
@@ -220,12 +225,12 @@ def stored_fingerprint(client: ServiceClient) -> Fingerprint:
     if not isinstance(payload, dict):
         raise FatalError(f"GET {path}: expected a JSON object")
     sets = payload.get("sets")
-    entry = sets.get(SET_SLUG) if isinstance(sets, dict) else None
+    entry = sets.get(RELATIONS_KEY) if isinstance(sets, dict) else None
     if not isinstance(entry, dict):
-        raise FatalError(f"relations: no entry for set {SET_SLUG!r}")
+        raise FatalError(f"relations: no entry for set {RELATIONS_KEY!r}")
     stored = entry.get("upstream_fingerprint")
     if not isinstance(stored, dict):
-        raise FatalError(f"relations: set {SET_SLUG!r} has no upstream_fingerprint")
+        raise FatalError(f"relations: set {RELATIONS_KEY!r} has no upstream_fingerprint")
     sha256_hex = stored.get("sha256")
     file_name = stored.get("file")
     if not isinstance(sha256_hex, str) or not isinstance(file_name, str):
