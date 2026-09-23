@@ -17,9 +17,6 @@ Usage:
 """
 
 import argparse
-import json
-import urllib.error
-import urllib.request
 from collections.abc import Callable
 
 from sgcc_confirm_metas import (
@@ -29,6 +26,7 @@ from sgcc_confirm_metas import (
     upper_visibility_meta,
 )
 from vlabel.meta import LabelMeta
+from vlabel.service import ConfirmClient, ServiceError, SetOut, UpstreamRef
 
 PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1
@@ -44,160 +42,103 @@ GROUP_NAME = "2026-09 首轮"
 # when the set's builder populates it — until then upstream_fingerprint is
 # absent, so backflow for that set must refuse). Slugs carry no generation
 # suffix under the round axis — generations live in the group namespace.
-FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], dict[str, object]]] = [
+FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], UpstreamRef]] = [
     (
         "bad_fit_review",
         bad_fit_meta,
-        {
-            "parent": "pospool_20260919",
-            "relation": "attribute:box_quality",
-            "stem_pattern": "<uid>_<track_id>",
-        },
+        UpstreamRef(
+            parent="pospool_20260919",
+            relation="attribute:box_quality",
+            stem_pattern="<uid>_<track_id>",
+        ),
     ),
     (
         "person_verify",
         person_verify_meta,
-        {
-            "parent": "pospool_20260919",
-            "relation": "attribute:is_person",
-            "stem_pattern": "<uid>_<track_id>",
-        },
+        UpstreamRef(
+            parent="pospool_20260919",
+            relation="attribute:is_person",
+            stem_pattern="<uid>_<track_id>",
+        ),
     ),
     (
         "upper_visibility",
         upper_visibility_meta,
-        {
-            "parent": "upperpool_20260919",
-            "relation": "attribute:upper_body_visible",
-            "stem_pattern": "<uid>_<track_id>",
-        },
+        UpstreamRef(
+            parent="upperpool_20260919",
+            relation="attribute:upper_body_visible",
+            stem_pattern="<uid>_<track_id>",
+        ),
     ),
     (
         "reid_pair",
         reid_pair_meta,
-        {
-            "parent": "osnet_ft",
-            "relation": "pair:same_person",
-            "stem_pattern": "<uid_a>_<track_a>__<uid_b>_<track_b>",
-        },
+        UpstreamRef(
+            parent="osnet_ft",
+            relation="pair:same_person",
+            stem_pattern="<uid_a>_<track_a>__<uid_b>_<track_b>",
+        ),
     ),
 ]
 
 
-class FatalError(RuntimeError):
-    """Unrecoverable failure (auth/connection); aborts the run."""
-
-
-class Client:
-    """Minimal authed urllib client (reads authenticated too, ledger #24)."""
-
-    def __init__(self, base_url: str) -> None:
-        self.base_url = base_url.rstrip("/")
-
-    def request(
-        self,
-        method: str,
-        path: str,
-        token: str | None = None,
-        body: dict[str, object] | None = None,
-    ) -> tuple[int, object]:
-        data = None if body is None else json.dumps(body).encode("utf-8")
-        headers = {"Accept": "application/json"}
-        if data is not None:
-            headers["Content-Type"] = "application/json"
-        if token is not None:
-            headers["Authorization"] = f"Bearer {token}"
-        req = urllib.request.Request(
-            f"{self.base_url}{path}", data=data, headers=headers, method=method
-        )
-        try:
-            with urllib.request.urlopen(req) as response:
-                text = response.read().decode("utf-8", "replace")
-                return response.status, json.loads(text) if text else None
-        except urllib.error.HTTPError as error:
-            text = error.read().decode("utf-8", "replace")
-            try:
-                return error.code, json.loads(text)
-            except json.JSONDecodeError:
-                return error.code, {"error": text[:200]}
-
-    def login(self, name: str) -> str:
-        status, payload = self.request(
-            "POST", "/api/login", body={"name": name, "passphrase": None}
-        )
-        if status != 200 or not isinstance(payload, dict) or not payload.get("token"):
-            raise FatalError(f"login as {name!r} failed: HTTP {status} {payload}")
-        return str(payload["token"])
-
-
-def ensure_project(client: Client, token: str) -> None:
-    status, projects = client.request("GET", "/api/projects", token)
-    if status != 200 or not isinstance(projects, list):
-        raise FatalError(f"GET /api/projects failed: HTTP {status} {projects}")
-    if any(isinstance(p, dict) and p.get("dir") == PROJECT_SLUG for p in projects):
+def ensure_project(client: ConfirmClient) -> None:
+    projects = client.projects()
+    if any(project.dir == PROJECT_SLUG for project in projects):
         print(f"project {PROJECT_SLUG!r}: already exists, skip create")
         return
-    status, payload = client.request(
-        "POST",
-        "/api/projects",
-        token,
-        {"slug": PROJECT_SLUG, "id": PROJECT_ID, "name": PROJECT_NAME},
-    )
-    if status in (200, 201):
-        print(f"project {PROJECT_SLUG!r}: created")
-    elif status == 409:
+    try:
+        client.create_project(slug=PROJECT_SLUG, id=PROJECT_ID, name=PROJECT_NAME)
+    except ServiceError as error:
+        if error.status != 409:
+            raise
         print(f"project {PROJECT_SLUG!r}: exists (409), continue")
-    else:
-        raise FatalError(f"create project failed: HTTP {status} {payload}")
+        return
+    print(f"project {PROJECT_SLUG!r}: created")
 
 
-def ensure_group(client: Client, token: str) -> None:
-    status, groups = client.request(
-        "GET", f"/api/projects/{PROJECT_SLUG}/groups", token
-    )
-    if status != 200 or not isinstance(groups, list):
-        raise FatalError(f"GET groups failed: HTTP {status} {groups}")
-    if any(isinstance(g, dict) and g.get("slug") == GROUP_SLUG for g in groups):
+def ensure_group(client: ConfirmClient) -> None:
+    groups = client.groups(PROJECT_SLUG)
+    if any(group.slug == GROUP_SLUG for group in groups):
         print(f"group {GROUP_SLUG!r}: already exists, skip create")
         return
-    status, payload = client.request(
-        "POST",
-        f"/api/projects/{PROJECT_SLUG}/groups",
-        token,
-        {"slug": GROUP_SLUG, "id": GROUP_ID, "name": GROUP_NAME},
-    )
-    if status in (200, 201):
-        print(f"group {GROUP_SLUG!r}: created")
-    elif status == 409:
+    try:
+        client.create_group(
+            PROJECT_SLUG, slug=GROUP_SLUG, id=GROUP_ID, name=GROUP_NAME
+        )
+    except ServiceError as error:
+        if error.status != 409:
+            raise
         print(f"group {GROUP_SLUG!r}: exists (409), continue")
-    else:
-        raise FatalError(f"create group failed: HTTP {status} {payload}")
+        return
+    print(f"group {GROUP_SLUG!r}: created")
 
 
 def ensure_set(
-    client: Client, token: str, existing: list[object], slug: str, meta: LabelMeta,
-    upstream: dict[str, object],
+    client: ConfirmClient,
+    existing: list[SetOut],
+    slug: str,
+    meta: LabelMeta,
+    upstream: UpstreamRef,
 ) -> None:
-    if any(isinstance(s, dict) and s.get("slug") == slug for s in existing):
+    if any(placed.slug == slug for placed in existing):
         print(f"set {slug!r}: already exists, skip create")
         return
-    status, payload = client.request(
-        "POST",
-        f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
-        token,
-        {
-            "slug": slug,
-            "kind": "verdict",
-            "meta": meta.model_dump(exclude_none=True),
-            "upstream": upstream,
-        },
-    )
-    if status in (200, 201):
-        print(f"set {slug!r}: created (empty — populates when its queue builder lands)")
-    elif status == 409:
+    try:
+        client.create_set(
+            PROJECT_SLUG,
+            GROUP_SLUG,
+            slug=slug,
+            kind="verdict",
+            meta=meta,
+            upstream=upstream,
+        )
+    except ServiceError as error:
+        if error.status != 409:
+            raise
         print(f"set {slug!r}: exists (409), continue")
-    else:
-        raise FatalError(f"create set {slug!r} failed: HTTP {status} {payload}")
+        return
+    print(f"set {slug!r}: created (empty — populates when its queue builder lands)")
 
 
 def main() -> int:
@@ -211,19 +152,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    client = Client(str(args.service))
     try:
-        token = client.login(str(args.identity))
-        ensure_project(client, token)
-        ensure_group(client, token)
-        status, sets = client.request(
-            "GET", f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets", token
-        )
-        if status != 200 or not isinstance(sets, list):
-            raise FatalError(f"GET sets failed: HTTP {status} {sets}")
+        client = ConfirmClient.login(str(args.service), str(args.identity))
+        ensure_project(client)
+        ensure_group(client)
+        sets = client.sets(PROJECT_SLUG, GROUP_SLUG)
         for slug, meta_builder, upstream in FUTURE_SETS:
-            ensure_set(client, token, sets, slug, meta_builder(), upstream)
-    except (FatalError, urllib.error.URLError) as error:
+            ensure_set(client, sets, slug, meta_builder(), upstream)
+    except ServiceError as error:
         print(f"FATAL: {error}")
         return 2
     print("done: project + group r01 + future confirm sets initialized")

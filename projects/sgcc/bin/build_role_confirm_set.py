@@ -4,14 +4,14 @@
 Thin HTTP client for the confirm-service field trial (spec: vlabel repo
 docs/superpowers/specs/2026-09-22-confirm-field-trial-design.md, section 2.2;
 ledger #22 single-writer / #23 interface parity). The service is the only
-writer of confirm-set directories; this script only speaks HTTP (stdlib
-urllib, no third-party client) plus one import of ``vlabel.meta`` to build
-the LabelMeta payload exactly as the Rust side would serialize it.
+writer of confirm-set directories; this script only speaks HTTP (vlabel.service
+client) plus one import of ``vlabel.meta`` to build the LabelMeta payload
+exactly as the Rust side would serialize it.
 
 Flow:
-  1. login role_n_v32, then step5_llm (two tokens; every request carries
+  1. login role_n_v32, then step5_llm (two logins; every request carries
      Bearer auth — reads authenticated too, ledger #24; set-lifecycle POSTs
-     under the role_n_v32 token, verdicts under each model's own)
+     under the role_n_v32 login, verdicts under each model's own)
   2. GET /api/projects -> POST project (slug sgcc_n001) if absent; 409 = exists
   3. ensure group r01 (three-level organization) -> GET group sets ->
      POST set role_confirm (meta + upstream fingerprint) if absent
@@ -44,13 +44,19 @@ Usage:
 import argparse
 import hashlib
 import json
-import urllib.error
-import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
+from vlabel.meta import LabelMeta
+from vlabel.service import (
+    ConfirmClient,
+    Fingerprint,
+    ServiceError,
+    UpstreamRef,
+    VerdictPost,
+)
 
 DEFAULT_SERVICE = "http://127.0.0.1:8790"
 
@@ -101,140 +107,20 @@ class ExcludedRow:
         return excluded_path.parent / "images" / f"{self.uid}.jpg"
 
 
-@dataclass(frozen=True, slots=True)
-class Request:
-    """One HTTP request to the confirm service (body shape single-sourced)."""
-
-    method: str
-    url: str
-    token: str | None = None
-    json_body: dict[str, object] | None = None
-    raw_body: bytes | None = None
-
-
-class ServiceClient:
-    """Minimal urllib client; returns (status, body-text) for any status."""
-
-    def __init__(self, base_url: str) -> None:
-        self.base_url = base_url.rstrip("/")
-
-    def send(self, request: Request) -> tuple[int, str]:
-        headers = {"Accept": "application/json"}
-        if request.token is not None:
-            headers["Authorization"] = f"Bearer {request.token}"
-        data: bytes | None = None
-        if request.json_body is not None:
-            data = json.dumps(request.json_body, ensure_ascii=False).encode("utf-8")
-            headers["Content-Type"] = "application/json"
-        elif request.raw_body is not None:
-            data = request.raw_body
-            headers["Content-Type"] = "application/octet-stream"
-        http_request = urllib.request.Request(
-            request.url, data=data, headers=headers, method=request.method
-        )
-        try:
-            with urllib.request.urlopen(http_request) as response:
-                return response.status, response.read().decode("utf-8", "replace")
-        except urllib.error.HTTPError as error:
-            return error.code, error.read().decode("utf-8", "replace")
-
-    # ---- endpoint builders (single source of URL + body shapes) -----------
-
-    def login_request(self, name: str) -> Request:
-        return Request(
-            "POST",
-            f"{self.base_url}/api/login",
-            json_body={"name": name, "passphrase": None},
-        )
-
-    def list_projects_request(self, token: str) -> Request:
-        # reads are authenticated (#24): every /api/* GET carries Bearer
-        return Request("GET", f"{self.base_url}/api/projects", token=token)
-
-    def create_project_request(self, token: str) -> Request:
-        return Request(
-            "POST",
-            f"{self.base_url}/api/projects",
-            token=token,
-            json_body={"slug": PROJECT_SLUG, "id": PROJECT_ID, "name": PROJECT_NAME},
-        )
-
-    def list_groups_request(self, token: str) -> Request:
-        return Request(
-            "GET", f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups", token=token
-        )
-
-    def create_group_request(self, token: str) -> Request:
-        return Request(
-            "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups",
-            token=token,
-            json_body={"slug": GROUP_SLUG, "id": GROUP_ID, "name": GROUP_NAME},
-        )
-
-    def list_sets_request(self, token: str) -> Request:
-        return Request(
-            "GET",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
-            token=token,
-        )
-
-    def create_set_request(
-        self, token: str, meta: dict[str, object], upstream: dict[str, object]
-    ) -> Request:
-        return Request(
-            "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets",
-            token=token,
-            json_body={"slug": SET_SLUG, "kind": "verdict", "meta": meta, "upstream": upstream},
-        )
-
-    def sample_request(self, token: str, stem: str, image_bytes: bytes) -> Request:
-        # upload name = logical stem + extension (the service strips the last
-        # extension to recover the identity; dotted uids require it)
-        return Request(
-            "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}"
-            f"/sets/{SET_SLUG}/samples?stem={stem}.jpg",
-            token=token,
-            raw_body=image_bytes,
-        )
-
-    def verdict_request(self, stem: str, token: str, value: int, note: str | None) -> Request:
-        return Request(
-            "POST",
-            f"{self.base_url}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}"
-            f"/sets/{SET_SLUG}/verdicts/{stem}",
-            token=token,
-            json_body={"value": value, "note": note},
-        )
-
-
-def describe(request: Request) -> str:
-    """One-line body shape for --dry-run (never prints image bytes)."""
-    if request.json_body is not None:
-        body = json.dumps(request.json_body, ensure_ascii=False)
-    elif request.raw_body is not None:
-        body = f"<image: {len(request.raw_body)} bytes>"
-    else:
-        body = ""
-    return f"{request.method} {request.url} {body}".rstrip()
-
-
-def build_meta() -> dict[str, object]:
+def build_meta() -> LabelMeta:
     """Spec section 1.3 LabelMeta from the shared sgcc_confirm_metas module
     (single source — never hand-roll a confirm meta in a bin script)."""
-    return role_meta().model_dump(exclude_none=True)
+    return role_meta()
 
 
-def build_upstream(excluded_path: Path, sha256_hex: str) -> dict[str, object]:
+def build_upstream(excluded_path: Path, sha256_hex: str) -> UpstreamRef:
     """Spec section 1.4 relation edge: parent + attribute + stem + fingerprint."""
-    return {
-        "parent": UPSTREAM_PARENT,
-        "relation": UPSTREAM_RELATION,
-        "stem_pattern": STEM_PATTERN,
-        "fingerprint": {"file": excluded_path.name, "sha256": sha256_hex},
-    }
+    return UpstreamRef(
+        parent=UPSTREAM_PARENT,
+        relation=UPSTREAM_RELATION,
+        stem_pattern=STEM_PATTERN,
+        fingerprint=Fingerprint(file=excluded_path.name, sha256=sha256_hex),
+    )
 
 
 def scalar_text(value: object) -> str:
@@ -333,54 +219,23 @@ def step5_note(row: ExcludedRow) -> str | None:
     return row.step5_reason[:NOTE_MAX_CHARS] or None
 
 
-class FatalError(RuntimeError):
-    """Unrecoverable failure (auth/connection/creation); aborts the run."""
-
-
-def login(client: ServiceClient, name: str) -> str:
-    status, body = client.send(client.login_request(name))
-    if status != 200:
-        raise FatalError(f"login {name!r} failed: HTTP {status} {body}")
-    payload: object = json.loads(body)
-    token = payload.get("token") if isinstance(payload, dict) else None
-    if not isinstance(token, str):
-        raise FatalError(f"login {name!r}: unexpected response body: {body}")
-    return token
-
-
-def id_exists(items: object, key: str, expected: str) -> bool:
-    return isinstance(items, list) and any(
-        isinstance(item, dict) and item.get(key) == expected for item in items
-    )
-
-
-def ensure_created(
-    client: ServiceClient,
-    list_request: Request,
-    create_request: Request,
-    list_key: str,
-    expected_value: str,
-    what: str,
-) -> None:
+def ensure_created(what: str, expected: str, listed: bool, create: Callable[[], None]) -> None:
     """Idempotent create: skip when listed; 409 counts as exists; rest fatal."""
-    status, body = client.send(list_request)
-    if status != 200:
-        raise FatalError(f"GET listing for {what} failed: HTTP {status} {body}")
-    if id_exists(json.loads(body), list_key, expected_value):
-        print(f"{what} {expected_value!r}: already exists, skip create")
+    if listed:
+        print(f"{what} {expected!r}: already exists, skip create")
         return
-    status, body = client.send(create_request)
-    if status in (200, 201):
-        print(f"{what} {expected_value!r}: created")
-    elif status == 409:
-        print(f"{what} {expected_value!r}: exists (409), continue")
-    else:
-        raise FatalError(f"create {what} failed: HTTP {status} {body}")
+    try:
+        create()
+    except ServiceError as error:
+        if error.status != 409:
+            raise
+        print(f"{what} {expected!r}: exists (409), continue")
+        return
+    print(f"{what} {expected!r}: created")
 
 
 def upload_samples(
-    client: ServiceClient,
-    token: str,
+    client: ConfirmClient,
     rows: list[ExcludedRow],
     excluded_path: Path,
     errors: list[str],
@@ -392,40 +247,53 @@ def upload_samples(
         if not image_path.is_file():
             errors.append(f"row image {image_path} (stem {row.stem}): file not found")
             continue
-        status, body = client.send(
-            client.sample_request(token, row.stem, image_path.read_bytes())
-        )
-        if status in (200, 201):
-            print(f"sample {row.stem}: uploaded")
-            uploaded.append(row)
-        elif status == 409:
-            print(f"sample {row.stem}: already exists (409), skip upload")
-            uploaded.append(row)
-        else:
-            errors.append(f"sample {row.stem}: HTTP {status} {body}")
+        # upload name = logical stem + extension (the service strips the last
+        # extension to recover the identity; dotted uids require it)
+        try:
+            client.add_sample(
+                PROJECT_SLUG,
+                GROUP_SLUG,
+                SET_SLUG,
+                stem=f"{row.stem}.jpg",
+                image=image_path.read_bytes(),
+            )
+        except ServiceError as error:
+            if error.status == 409:
+                print(f"sample {row.stem}: already exists (409), skip upload")
+                uploaded.append(row)
+            else:
+                errors.append(f"sample {row.stem}: {error}")
+            continue
+        print(f"sample {row.stem}: uploaded")
+        uploaded.append(row)
     return uploaded
 
 
 def post_verdict(
-    client: ServiceClient,
+    client: ConfirmClient,
     stem: str,
-    token: str,
     actor: str,
     value: int,
     note: str | None,
     errors: list[str],
 ) -> None:
-    status, body = client.send(client.verdict_request(stem, token, value, note))
-    if status in (200, 201):
-        print(f"verdict {stem} as {actor}: value={value} posted")
-    else:
-        errors.append(f"verdict {stem} as {actor}: HTTP {status} {body}")
+    try:
+        client.verdict(
+            PROJECT_SLUG,
+            GROUP_SLUG,
+            SET_SLUG,
+            stem,
+            payload=VerdictPost(value=value, note=note),
+        )
+    except ServiceError as error:
+        errors.append(f"verdict {stem} as {actor}: {error}")
+        return
+    print(f"verdict {stem} as {actor}: value={value} posted")
 
 
 def post_initial_verdicts(
-    client: ServiceClient,
-    role_token: str,
-    step5_token: str,
+    client: ConfirmClient,
+    step5_client: ConfirmClient,
     uploaded: list[ExcludedRow],
     errors: list[str],
 ) -> int:
@@ -439,7 +307,7 @@ def post_initial_verdicts(
             )
         else:
             post_verdict(
-                client, row.stem, role_token, MODEL_ROLE,
+                client, row.stem, MODEL_ROLE,
                 ROLE_IDS[row.role_label], role_note(row), errors,
             )
             attempts += 1
@@ -447,7 +315,7 @@ def post_initial_verdicts(
         # (A/B/C, rolepool README) concludes customer — its signal is binary.
         if row.step5_roles is not None:
             post_verdict(
-                client, row.stem, step5_token, MODEL_STEP5,
+                step5_client, row.stem, MODEL_STEP5,
                 CUSTOMER_ID, step5_note(row), errors,
             )
             attempts += 1
@@ -455,70 +323,90 @@ def post_initial_verdicts(
 
 
 def apply_flow(
-    client: ServiceClient,
+    service: str,
     rows: list[ExcludedRow],
     excluded_path: Path,
-    meta: dict[str, object],
-    upstream: dict[str, object],
+    meta: LabelMeta,
+    upstream: UpstreamRef,
     errors: list[str],
 ) -> tuple[int, int]:
-    role_token = login(client, MODEL_ROLE)
-    step5_token = login(client, MODEL_STEP5)
+    role_client = ConfirmClient.login(service, MODEL_ROLE)
+    step5_client = ConfirmClient.login(service, MODEL_STEP5)
     # Every write endpoint demands a logged-in identity (rs contract: all
-    # set-lifecycle POSTs are Bearer-authed like post_verdict); the set is
-    # built under the primary model's token.
+    # set-lifecycle POSTs are Bearer-authed like verdicts); the set is built
+    # under the primary model's login.
     ensure_created(
-        client,
-        client.list_projects_request(role_token),
-        client.create_project_request(role_token),
-        "dir",
-        PROJECT_SLUG,
         "project",
+        PROJECT_SLUG,
+        any(project.dir == PROJECT_SLUG for project in role_client.projects()),
+        lambda: role_client.create_project(slug=PROJECT_SLUG, id=PROJECT_ID, name=PROJECT_NAME),
     )
     ensure_created(
-        client,
-        client.list_groups_request(role_token),
-        client.create_group_request(role_token),
-        "slug",
-        GROUP_SLUG,
         "group",
+        GROUP_SLUG,
+        any(group.slug == GROUP_SLUG for group in role_client.groups(PROJECT_SLUG)),
+        lambda: role_client.create_group(
+            PROJECT_SLUG, slug=GROUP_SLUG, id=GROUP_ID, name=GROUP_NAME
+        ),
     )
     ensure_created(
-        client,
-        client.list_sets_request(role_token),
-        client.create_set_request(role_token, meta, upstream),
-        "slug",
-        SET_SLUG,
         "set",
+        SET_SLUG,
+        any(placed.slug == SET_SLUG for placed in role_client.sets(PROJECT_SLUG, GROUP_SLUG)),
+        lambda: role_client.create_set(
+            PROJECT_SLUG,
+            GROUP_SLUG,
+            slug=SET_SLUG,
+            kind="verdict",
+            meta=meta,
+            upstream=upstream,
+        ),
     )
-    uploaded = upload_samples(client, role_token, rows, excluded_path, errors)
-    verdicts = post_initial_verdicts(
-        client, role_token, step5_token, uploaded, errors
-    )
+    uploaded = upload_samples(role_client, rows, excluded_path, errors)
+    verdicts = post_initial_verdicts(role_client, step5_client, uploaded, errors)
     return len(uploaded), verdicts
 
 
 def dry_run_flow(
-    base_url: str,
+    service: str,
     rows: list[ExcludedRow],
     excluded_path: Path,
-    meta: dict[str, object],
-    upstream: dict[str, object],
+    meta: LabelMeta,
+    upstream: UpstreamRef,
     errors: list[str],
 ) -> tuple[int, int]:
-    """Print every request that --apply would send; send nothing."""
-    client = ServiceClient(base_url)
+    """Print every request that --apply would send; send nothing.
+
+    Request lines mirror the ConfirmClient calls apply_flow makes: URL
+    shapes' single source lives in vlabel.service; bodies are the same
+    model dumps the client sends (exclude_none, JSON mode).
+    """
     for name in (MODEL_ROLE, MODEL_STEP5):
-        print(describe(client.login_request(name)))
-    print(describe(client.list_projects_request('<token>')))
-    print(f"{describe(client.create_project_request('<token>'))}  (only if {PROJECT_SLUG} absent)")
-    print(describe(client.list_groups_request('<token>')))
-    print(f"{describe(client.create_group_request('<token>'))}  (only if {GROUP_SLUG} absent)")
-    print(describe(client.list_sets_request('<token>')))
+        print(f"POST {service}/api/login {json.dumps({'name': name, 'passphrase': None})}")
+    base = f"{service}/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}"
+    print(f"GET {service}/api/projects")
     print(
-        f"{describe(client.create_set_request('<token>', meta, upstream))}"
-        f"  (only if {SET_SLUG} absent)"
+        f"POST {service}/api/projects"
+        f" {json.dumps({'slug': PROJECT_SLUG, 'id': PROJECT_ID, 'name': PROJECT_NAME})}"
+        f"  (only if {PROJECT_SLUG} absent)"
     )
+    print(f"GET {service}/api/projects/{PROJECT_SLUG}/groups")
+    print(
+        f"POST {service}/api/projects/{PROJECT_SLUG}/groups"
+        f" {json.dumps({'slug': GROUP_SLUG, 'id': GROUP_ID, 'name': GROUP_NAME})}"
+        f"  (only if {GROUP_SLUG} absent)"
+    )
+    print(f"GET {base}/sets")
+    set_body = json.dumps(
+        {
+            "slug": SET_SLUG,
+            "kind": "verdict",
+            "meta": meta.model_dump(mode="json", exclude_none=True),
+            "upstream": upstream.model_dump(mode="json", exclude_none=True),
+        },
+        ensure_ascii=False,
+    )
+    print(f"POST {base}/sets {set_body}  (only if {SET_SLUG} absent)")
     uploaded = 0
     verdicts = 0
     for row in rows:
@@ -528,8 +416,8 @@ def dry_run_flow(
             continue
         uploaded += 1
         print(
-            describe(client.sample_request("<token>", row.stem, image_path.read_bytes()))
-            + f"  (row image {image_path.name})"
+            f"POST {base}/sets/{SET_SLUG}/samples?stem={row.stem}.jpg"
+            f" <image: {image_path.stat().st_size} bytes>  (row image {image_path.name})"
         )
         if row.role_label not in ROLE_IDS:
             errors.append(
@@ -537,16 +425,24 @@ def dry_run_flow(
                 f"role_label {row.role_label!r} not in dictionary"
             )
         else:
-            request = client.verdict_request(
-                row.stem, "<token>", ROLE_IDS[row.role_label], role_note(row)
+            role_body = VerdictPost(
+                value=ROLE_IDS[row.role_label], note=role_note(row)
+            ).model_dump_json(exclude_none=True)
+            print(
+                f"POST {base}/sets/{SET_SLUG}/verdicts/{row.stem} {role_body}"
+                f"  (as {MODEL_ROLE})"
             )
-            print(f"{describe(request)}  (as {MODEL_ROLE})")
             verdicts += 1
+        # step5 speaks only when it has speaker roles; every derivation class
+        # (A/B/C, rolepool README) concludes customer — its signal is binary.
         if row.step5_roles is not None:
-            request = client.verdict_request(
-                row.stem, "<token>", CUSTOMER_ID, step5_note(row)
+            step5_body = VerdictPost(
+                value=CUSTOMER_ID, note=step5_note(row)
+            ).model_dump_json(exclude_none=True)
+            print(
+                f"POST {base}/sets/{SET_SLUG}/verdicts/{row.stem} {step5_body}"
+                f"  (as {MODEL_STEP5})"
             )
-            print(f"{describe(request)}  (as {MODEL_STEP5})")
             verdicts += 1
     return uploaded, verdicts
 
@@ -597,11 +493,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 str(args.service), rows, excluded_path, meta, upstream, errors
             )
         else:
-            client = ServiceClient(str(args.service))
             uploaded, verdicts = apply_flow(
-                client, rows, excluded_path, meta, upstream, errors
+                str(args.service), rows, excluded_path, meta, upstream, errors
             )
-    except (FatalError, urllib.error.URLError) as error:
+    except ServiceError as error:
         print(f"FATAL: {error}")
         print_summary(rows, uploaded, verdicts, errors)
         return EXIT_FATAL

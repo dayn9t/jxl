@@ -2242,6 +2242,7 @@ name = "vlabel"
 version = "0.1.0"
 source = { directory = "/home/jiang/cc/next/vlabel/py" }
 dependencies = [
+    { name = "httpx" },
     { name = "jcx" },
     { name = "json5" },
     { name = "jvi" },
@@ -2255,6 +2256,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "jcx", directory = "/home/jiang/cc/py/jcx" },
     { name = "json5", specifier = ">=0.9" },
     { name = "jvi", directory = "/home/jiang/cc/py/jvi" },

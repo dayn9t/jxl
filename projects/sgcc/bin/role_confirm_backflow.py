@@ -6,7 +6,7 @@ Read-side counterpart of ``build_role_confirm_set.py`` (confirm-service field
 trial; spec: vlabel repo docs/superpowers/specs/2026-09-22-confirm-field-trial-design.md
 section 2.2 step 4; ledger #22 single-writer / #23 interface parity). The
 service is the only writer of confirm-set directories; this script speaks
-HTTP (stdlib urllib) and rewrites exactly one local file it owns: the
+HTTP (vlabel.service client) and rewrites exactly one local file it owns: the
 excluded jsonl the set was built from.
 
 Flow:
@@ -46,8 +46,6 @@ import argparse
 import hashlib
 import json
 import os
-import urllib.error
-import urllib.request
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -57,6 +55,14 @@ from pathlib import Path
 # same upstream jsonl, so track_id coercion must come from one definition
 # (real rows carry numeric track_id; string-only parsing rejected every row).
 from build_role_confirm_set import scalar_text
+from vlabel.service import (
+    AnnotationSampleOut,
+    ConfirmClient,
+    Fingerprint,
+    ServiceError,
+    TruthOut,
+    VerdictSampleOut,
+)
 
 DEFAULT_SERVICE = "http://127.0.0.1:8790"
 
@@ -92,14 +98,6 @@ class FatalError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
-class Fingerprint:
-    """Stored upstream snapshot identity (relations.upstream_fingerprint)."""
-
-    file: str
-    sha256: str
-
-
-@dataclass(frozen=True, slots=True)
 class ExcludedRow:
     """One excluded-jsonl row: identity fields plus the raw parsed object."""
 
@@ -114,20 +112,12 @@ class ExcludedRow:
 
 
 @dataclass(frozen=True, slots=True)
-class SampleTruth:
-    """Server-resolved truth (TruthOut DTO shape: annotator + value id)."""
-
-    annotator: str
-    value: int
-
-
-@dataclass(frozen=True, slots=True)
 class SampleView:
     """One GET-samples item: stem identity (rightmost-'_' parse) + truth."""
 
     uid: str
     track_id: str
-    truth: SampleTruth | None
+    truth: TruthOut | None
 
     @property
     def stem(self) -> str:
@@ -150,152 +140,50 @@ class Outcome:
         return self.truth != ""
 
 
-class ServiceClient:
-    """Minimal urllib client; reads are authenticated (#24 — Bearer on every GET)."""
-
-    def __init__(self, base_url: str, token: str) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.token = token
-
-    @staticmethod
-    def login(base_url: str, name: str) -> str:
-        """POST /api/login (the one public endpoint) → session token."""
-        url = f"{base_url.rstrip('/')}/api/login"
-        body = json.dumps({"name": name, "passphrase": None}).encode("utf-8")
-        request = urllib.request.Request(
-            url, data=body, headers={"Content-Type": "application/json"}, method="POST"
-        )
-        try:
-            with urllib.request.urlopen(request) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as error:
-            raise FatalError(
-                f"login as {name!r} refused: HTTP {error.code} "
-                f"{error.read().decode('utf-8', 'replace')[:200]}"
-            ) from error
-        token = payload.get("token")
-        if not isinstance(token, str) or not token:
-            raise FatalError(f"login as {name!r}: response carries no token: {payload}")
-        return token
-
-    def get(self, path: str) -> tuple[int, object]:
-        url = f"{self.base_url}{path}"
-        request = urllib.request.Request(
-            url,
-            headers={"Accept": "application/json", "Authorization": f"Bearer {self.token}"},
-            method="GET",
-        )
-        try:
-            with urllib.request.urlopen(request) as response:
-                status = response.status
-                body = response.read().decode("utf-8", "replace")
-        except urllib.error.HTTPError as error:
-            status = error.code
-            body = error.read().decode("utf-8", "replace")
-        try:
-            return status, json.loads(body)
-        except json.JSONDecodeError:
-            raise FatalError(
-                f"GET {url}: HTTP {status} non-JSON body: {body[:200]}"
-            ) from None
-
-    # ---- endpoint paths (single source of the URL shapes) ------------------
-
-    def relations_path(self) -> str:
-        return f"/api/projects/{PROJECT_SLUG}/relations"
-
-    def meta_path(self) -> str:
-        return f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets/{SET_SLUG}/meta"
-
-    def samples_path(self) -> str:
-        return f"/api/projects/{PROJECT_SLUG}/groups/{GROUP_SLUG}/sets/{SET_SLUG}/samples"
-
-
-def expect_ok(path: str, status: int, payload: object) -> None:
-    if status != 200:
-        body = json.dumps(payload, ensure_ascii=False)[:200]
-        raise FatalError(f"GET {path}: HTTP {status} {body}")
-
-
-def stored_fingerprint(client: ServiceClient) -> Fingerprint:
+def stored_fingerprint(client: ConfirmClient) -> Fingerprint:
     """Fetch relations and locate the set's upstream fingerprint entry."""
-    path = client.relations_path()
-    status, payload = client.get(path)
-    expect_ok(path, status, payload)
-    if not isinstance(payload, dict):
-        raise FatalError(f"GET {path}: expected a JSON object")
-    sets = payload.get("sets")
-    entry = sets.get(RELATIONS_KEY) if isinstance(sets, dict) else None
-    if not isinstance(entry, dict):
+    entry = client.relations(PROJECT_SLUG).sets.get(RELATIONS_KEY)
+    if entry is None:
         raise FatalError(f"relations: no entry for set {RELATIONS_KEY!r}")
-    stored = entry.get("upstream_fingerprint")
-    if not isinstance(stored, dict):
+    if entry.upstream_fingerprint is None:
         raise FatalError(f"relations: set {RELATIONS_KEY!r} has no upstream_fingerprint")
-    sha256_hex = stored.get("sha256")
-    file_name = stored.get("file")
-    if not isinstance(sha256_hex, str) or not isinstance(file_name, str):
-        raise FatalError(f"relations: malformed upstream_fingerprint: {stored!r}")
-    return Fingerprint(file=file_name, sha256=sha256_hex)
+    return entry.upstream_fingerprint
 
 
-def role_value_names(client: ServiceClient) -> dict[int, str]:
+def role_value_names(client: ConfirmClient) -> dict[int, str]:
     """{value id: en name} from the set meta property_types dictionary."""
-    path = client.meta_path()
-    status, payload = client.get(path)
-    expect_ok(path, status, payload)
-    if not isinstance(payload, dict):
-        raise FatalError(f"GET {path}: expected a JSON object")
-    names: dict[int, str] = {}
-    prop_types = payload.get("property_types")
-    for prop_type in prop_types if isinstance(prop_types, list) else []:
-        if not isinstance(prop_type, dict):
-            continue
-        values = prop_type.get("values")
-        for value in values if isinstance(values, list) else []:
-            if not isinstance(value, dict):
-                continue
-            value_id = value.get("id")
-            value_names = value.get("names")
-            en = value_names.get("en") if isinstance(value_names, dict) else None
-            if isinstance(value_id, int) and isinstance(en, str):
-                names[value_id] = en
+    names = {
+        value.id: value.names.en
+        for prop_type in client.meta(PROJECT_SLUG, GROUP_SLUG, SET_SLUG).property_types
+        for value in prop_type.values
+    }
     if not names:
-        raise FatalError(f"GET {path}: no property value dictionary found")
+        raise FatalError("set meta: no property value dictionary found")
     return names
 
 
-def parse_sample(path: str, sample: object) -> SampleView:
-    """Validate one sample view (server DTO); strict shape, no tolerant parse."""
-    if not isinstance(sample, dict):
-        raise FatalError(f"GET {path}: list item is not a JSON object")
-    stem = sample.get("stem")
-    if not isinstance(stem, str) or "_" not in stem:
-        raise FatalError(f"GET {path}: stem {stem!r} is not <uid>_<track_id>")
-    uid, track_id = stem.rsplit("_", 1)
-    raw_truth = sample.get("truth")
-    if raw_truth is None:
-        return SampleView(uid=uid, track_id=track_id, truth=None)
-    if not isinstance(raw_truth, dict):
-        raise FatalError(f"GET {path}: stem {stem!r} truth must be an object or null")
-    annotator = raw_truth.get("annotator")
-    value = raw_truth.get("value")
-    if not isinstance(annotator, str) or not isinstance(value, int) or isinstance(value, bool):
-        raise FatalError(f"GET {path}: stem {stem!r} malformed truth: {raw_truth!r}")
-    return SampleView(uid=uid, track_id=track_id, truth=SampleTruth(annotator, value))
+def sample_view(sample: VerdictSampleOut | AnnotationSampleOut) -> SampleView:
+    """Narrow one GET-samples item to the verdict shape; parse the stem.
+
+    role_confirm is a verdict set: an annotation-shaped entry violates the
+    contract (strict shape, no tolerant parse). The stem must be
+    <uid>_<track_id> (rightmost '_' splits).
+    """
+    if not isinstance(sample, VerdictSampleOut):
+        raise FatalError(f"samples: stem {sample.stem!r} is not a verdict-sample entry")
+    if "_" not in sample.stem:
+        raise FatalError(f"samples: stem {sample.stem!r} is not <uid>_<track_id>")
+    uid, track_id = sample.stem.rsplit("_", 1)
+    return SampleView(uid=uid, track_id=track_id, truth=sample.truth)
 
 
-def sample_index(client: ServiceClient) -> dict[tuple[str, str], SampleView]:
+def sample_index(client: ConfirmClient) -> dict[tuple[str, str], SampleView]:
     """Samples keyed by (uid, track_id); stem parses from the rightmost '_'."""
-    path = client.samples_path()
-    status, payload = client.get(path)
-    expect_ok(path, status, payload)
-    if not isinstance(payload, list):
-        raise FatalError(f"GET {path}: expected a JSON list")
     index: dict[tuple[str, str], SampleView] = {}
-    for item in payload:
-        view = parse_sample(path, item)
+    for sample in client.samples(PROJECT_SLUG, GROUP_SLUG, SET_SLUG):
+        view = sample_view(sample)
         if (view.uid, view.track_id) in index:
-            raise FatalError(f"GET {path}: duplicate stem {view.stem!r}")
+            raise FatalError(f"samples: duplicate stem {view.stem!r}")
         index[(view.uid, view.track_id)] = view
     return index
 
@@ -477,11 +365,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"no parsable rows in {excluded_path}")
         return EXIT_REFUSED
     try:
-        token = ServiceClient.login(str(args.service), args.identity)
-    except (FatalError, urllib.error.URLError) as error:
+        client = ConfirmClient.login(str(args.service), args.identity)
+    except ServiceError as error:
         print(f"FATAL: {error}")
         return EXIT_REFUSED
-    client = ServiceClient(str(args.service), token)
     try:
         stored = stored_fingerprint(client)
         current_sha = hashlib.sha256(data).hexdigest()
@@ -497,7 +384,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"fingerprint gate passed: {stored.file} sha256={current_sha}")
         role_names = role_value_names(client)
         samples = sample_index(client)
-    except (FatalError, urllib.error.URLError) as error:
+    except (FatalError, ServiceError) as error:
         print(f"FATAL: {error}")
         return EXIT_REFUSED
     ts = datetime.now().astimezone().isoformat(timespec="seconds")
