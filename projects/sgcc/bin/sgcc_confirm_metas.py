@@ -97,7 +97,7 @@ CUSTOMER_ID = ROLE_IDS["customer"]
 def role_meta() -> LabelMeta:
     return _meta(
         1006,
-        "sgcc-n001-role-confirm",
+        "角色确认",
         "sgcc-n001 人员 role 属性复审确认集（field trial）",
         "role",
         _prop(
@@ -116,7 +116,7 @@ def role_meta() -> LabelMeta:
 def bad_fit_meta() -> LabelMeta:
     return _meta(
         1007,
-        "sgcc-n001-badfit-review",
+        "框质量复核",
         "sgcc-n001 person bad_fit 弃帧复审：分离可回收边缘截断与真不可信框",
         "box_quality",
         _prop(
@@ -139,7 +139,7 @@ def bad_fit_meta() -> LabelMeta:
 def person_verify_meta() -> LabelMeta:
     return _meta(
         1008,
-        "sgcc-n001-person-verify",
+        "人物核验",
         "sgcc-n001 not_person 检出复审：框内是否真人",
         "is_person",
         _prop(
@@ -162,7 +162,7 @@ def person_verify_meta() -> LabelMeta:
 def upper_visibility_meta() -> LabelMeta:
     return _meta(
         1009,
-        "sgcc-n001-upper-visibility",
+        "上半身可见性",
         "sgcc-n001 upper_body_visible 双门不一致复审",
         "upper_body_visible",
         _prop(
@@ -186,7 +186,7 @@ def upper_visibility_meta() -> LabelMeta:
 def reid_pair_meta() -> LabelMeta:
     return _meta(
         1010,
-        "sgcc-n001-reid-pair",
+        "再识别配对",
         "sgcc-n001 osnet 重连分歧对复审：两裁片是否同一人",
         "pair_same",
         _prop(
