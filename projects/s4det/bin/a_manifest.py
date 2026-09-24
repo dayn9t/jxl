@@ -24,6 +24,7 @@ from a_common import (
     BATCH_ID,
     ET_NAMES,
     FAMILY_SPECS,
+    LEDGER,
     EventRec,
     FamilySpec,
     LlmPair,
@@ -505,7 +506,7 @@ def main(
     ] = False,
 ) -> None:
     """扫描 + 抽样 + 落盘(manifest / 索引 / 统计 / 批指纹); 已有索引时直接复用."""
-    ledger = Path(__file__).resolve().parents[1] / "data" / "quarantine-ledger.jsonl"
+    ledger = LEDGER
     index_path = out_dir / "event_index.jsonl"
     quar: list[QuarantineEntry] = []
     llm_fail = 0

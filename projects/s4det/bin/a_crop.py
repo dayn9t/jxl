@@ -20,6 +20,7 @@ import orjson
 import typer
 from a_common import (
     BATCH_ID,
+    LEDGER,
     ManifestRow,
     QuarantineEntry,
     append_quarantine,
@@ -33,9 +34,6 @@ app = typer.Typer(add_completion=False, help="任务书 A: manifest → crops.")
 
 EXPAND_RATIO = 0.10
 """bbox 各边外延比例(skill bbox-crop-expansion 裁决值)."""
-
-LEDGER = Path(__file__).resolve().parents[1] / "data" / "quarantine-ledger.jsonl"
-"""隔离台账(项目仓 data/, j-quarantine-ledger)."""
 
 
 def _check_fingerprint(fam_dir: Path, force: bool) -> list[ManifestRow]:

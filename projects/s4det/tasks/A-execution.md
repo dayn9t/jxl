@@ -37,7 +37,7 @@
 
 ## 异常与弃置
 
-- 隔离台账 579 条（`projects/s4det/data/quarantine-ledger.jsonl`）：event.json 缺失/解析失败 578、原图缺失 1。crop 阶段零弃置、零缺失。达 j-quarantine-ledger 阈值（50），按规需记 j-todo 待人工批量处理——本批为「源目录结构性缺失」（date/{id} 目录无 event.json），非模型门拒绝，建议人工批量确认为「确认丢弃」类。
+- 隔离台账 579 条（后迁 `/mnt/data/s4det/quarantine/quarantine-ledger.jsonl`，B④ 单一数据源）：event.json 缺失/解析失败 578、原图缺失 1。crop 阶段零弃置、零缺失。已过 j-quarantine-ledger 阈值（50）→ s4 会话裁决（盘点 §8.3）：全量「确认丢弃」（legacy 无 event.json 结构性缺失），resolution 已回写台账，j-todo 已闭环。
 
 ## 复跑指引
 

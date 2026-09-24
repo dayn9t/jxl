@@ -19,6 +19,12 @@ from pydantic import BaseModel
 BATCH_ID = "2026-09-25-p0-cluster"
 """本次跑批批次号(隔离台账 batch 字段与产物目录对齐)."""
 
+DATA_ROOT = Path("/mnt/data/s4det")
+"""s4det 数据根(B④ 建仓; README 在根目录, j-dir-readme 规范)."""
+
+LEDGER = DATA_ROOT / "quarantine" / "quarantine-ledger.jsonl"
+"""隔离台账(数据根 quarantine/, j-quarantine-ledger; 2026-09-25 自项目仓 data/ 迁入)."""
+
 ET_NAMES: dict[int, str] = {
     1: "机动车乱停",
     2: "非机动车乱停",
