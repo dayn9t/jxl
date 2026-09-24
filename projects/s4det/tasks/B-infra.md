@@ -16,6 +16,7 @@
 ```
 
 **组装规则**（CODEBOOK 已定）：
+- **同 Id 重复对象去重**（任务书 A 实证：965/32,469 事件 3% 存在平台 Objects[] 内同 Id 重复下发，超额 1,079 个、抽验逐字节雷同=管线重复下发非真碰撞）：按 (rid, object_id) 去重——内容全等→丢弃重复并计数；内容冲突→双保留加 `#n` 后缀（A 实测冲突=0，规则仍须在）。join llm_entries 前先去重。
 - 位置=平台 Polygon 外接矩形（归一化，已实测 [0,1] 口径）；语义=`agree=true` 行的粗类（doubao∧qwen 一致）；不一致行 `agree=false` 入仲裁队列不入种子。
 - 码分档：`11` 高优先（code_verif=ebike_single）；`12` 降权（code_verif=ambig_g12，单独标记供聚类网格列示与后续 VLM 核验）；其余按 CODEBOOK 码表填。
 - conf_band：≥80 hi / 50-79 mid / <50 lo（lo 只入候选，不入种子直通）。
