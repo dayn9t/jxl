@@ -1,0 +1,12 @@
+# s4det 叶类 profile(B② 方案 a; v1-草案: garbage_bag=袋装/编织袋垃圾)
+name = "garbage_bag"
+yolo_text = "garbage bag"
+# rfdetr_cls_id 省略 → None → det_mine 自动剔除 rfdetr(闭集类表无垃圾袋, 开放词表栈)
+vlm_prompt = """检测图中所有袋装垃圾(塑料袋/编织袋盛装垃圾)的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"garbage_bag","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 密集成堆时框整体垃圾堆, 可辨个体袋逐个框
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/models/yolov8m.pt"  # SMOKE 替身(COCO, 无垃圾类→低语义相关); 生产路径 rfdetr_cls_id=None + 专项权重
+output_cls_id = 1  # 多类合并 classes 表位次(garbage_bag=1)

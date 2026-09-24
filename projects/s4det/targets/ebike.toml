@@ -1,0 +1,13 @@
+# s4det 叶类 profile(B② 方案 a: 每类一 toml, det_mine 类独立链, 数据集层多类合并)
+# 类语义源: projects/s4det/taxonomy.md(冻结后以此为准; v1-草案: ebike=两轮电动车/摩托)
+name = "ebike"
+yolo_text = "electric bike"
+rfdetr_cls_id = 3  # COCO: motorcycle=3(冒烟替身口径; 闭集类表无 ebike 原生类)
+vlm_prompt = """检测图中所有两轮电动车/电动自行车的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"ebike","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 只框车辆本体(不含骑乘者), 部分遮挡按可见框
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/models/yolov8m.pt"  # SMOKE 替身(COCO motorcycle/bicycle); s4det v0 就绪后换专项权重
+output_cls_id = 0  # 多类合并 classes 表位次(ebike=0)
