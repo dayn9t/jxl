@@ -6,7 +6,7 @@
 #   script/n001-pipeline.sh stage2 [root]               前景感知去重(伪标桥接 + 四步链)
 #   script/n001-pipeline.sh stage3 <src_dir> <out_dir>  分批 det_mine 共识标注
 #   script/n001-pipeline.sh merge [root]                各批产物合并 + pipeline_report.json
-#   script/n001-pipeline.sh report [root]               consensus_report + review_pack
+#   script/n001-pipeline.sh report [root]               consensus_report + review_pack(vlabel 入口)
 #   script/n001-pipeline.sh phaseA                      随机 8 mkv 全链路(数据根 $ROOT/phaseA*)
 #   全量(分时单机): stage1 → stage2 → stage3a(la dump 独占) →
 #                    stage3 <frames_dedup/images> <root>/consensus <root> → merge → report
@@ -324,12 +324,14 @@ PY
 }
 
 # report: 可信度分级 + 模型能力矩阵 + 人工审核材料.
+# 2026-09-25 断链修复: consensus_report/review_pack 已迁 vlabel(2026-09-21 Task 13),
+# 改走 vlabel 入口; --no-sync 防误触依赖同步.
 report() {
   local root="${1:-$ROOT}"
   local con="$root/consensus"
   [[ -f "$con/validators_all.jsonl" ]] || die "先跑 merge: $con/validators_all.jsonl 不存在"
-  uv run python "$REPO/src/jxl/bin/consensus_report.py" "$con" "$root"
-  uv run python "$REPO/src/jxl/bin/review_pack.py" \
+  uv run --no-sync vlabel-consensus-report "$con" "$root"
+  uv run --no-sync vlabel-review-pack \
     "$con" "$root/frames_dedup/images" "$root/review_pack"
 }
 
