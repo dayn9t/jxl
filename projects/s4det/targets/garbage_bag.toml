@@ -8,5 +8,5 @@ vlm_prompt = """检测图中所有袋装垃圾(塑料袋/编织袋盛装垃圾)�
 - 密集成堆时框整体垃圾堆, 可辨个体袋逐个框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/models/yolov8m.pt"  # SMOKE 替身(COCO, 无垃圾类→低语义相关); 生产路径 rfdetr_cls_id=None + 专项权重
+weights = "/mnt/data/s4det/weights/s4det-v0mini.pt"  # s4det 专项(D0 v0-mini, 批 1 种子集训成)
 output_cls_id = 1  # 多类合并 classes 表位次(garbage_bag=1)

@@ -47,3 +47,11 @@
 2. doubao 池成员恢复（控制台开通替代模型）
 3. agree=false 对象级类别投票工具（vlm 分类票，批 2 建）
 4. 垃圾族弱（303 框）：批 2 扩池或专项权重后重挖
+
+## D0 v0-mini 训练（2026-09-25，干线验证 + 专项权重）✅
+
+- 训练：yolo26n 官方 COCO 底座，100 epochs，batch auto（`p3-seedset/batch1/train/v0mini/`，exit 0）
+- val（弱标签共识切分，**WARNING-1 未解除不得当质量结论**）：all mAP50 0.438 / mAP50-95 0.293；ebike 0.496/0.313；garbage_bag 0.380/0.273
+- 规模适配检查（skill ⑨ 双向）：末段 val 仍小幅上升（epoch91 0.269 → best 0.293）+ train/val 无过拟合分叉 → nano 容量当前足够，瓶颈在数据量而非参数规模（无需升级；待数据扩批后复判）
+- 产物换装：`/mnt/data/s4det/weights/s4det-v0mini.pt` → targets/{ebike,garbage_bag}.toml weights ✓（garbage_bag 复壮重挖留批 2）
+- 指标已入 `docs/EVAL-BENCHMARKS.md` §2（❌ 级 + WARNING-1 标注）
