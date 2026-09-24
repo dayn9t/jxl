@@ -33,8 +33,9 @@ Exit codes:
   0  every row dispositioned (and applied, with --apply)
   1  report produced but findings exist (未审 / missing sample / unknown
      truth value / duplicate stem / unparsable row / set-only sample)
-  2  fingerprint gate refusal, or fatal error (service unreachable,
-     malformed response, excluded file unreadable/empty)
+  2  fingerprint gate refusal, fatal error (service unreachable,
+     malformed response, excluded file unreadable/empty), or a failed
+     --apply rewrite (target not writable — nothing was applied)
 
 Usage:
   python role_confirm_backflow.py --service http://127.0.0.1:8790 \
@@ -51,12 +52,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+import httpx
+
 # Identity rendering shared with the write-side client: both scripts read the
 # same upstream jsonl, so track_id coercion must come from one definition
 # (real rows carry numeric track_id; string-only parsing rejected every row).
 from build_role_confirm_set import scalar_text
-import httpx
-
 from vlabel.service import (
     AnnotationSampleOut,
     ConfirmClient,
@@ -397,7 +398,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         for anomaly in anomalies:
             print(f"  - {anomaly}")
     if args.apply:
-        applied = apply_rewrite(excluded_path, text, entries, outcomes)
+        try:
+            applied = apply_rewrite(excluded_path, text, entries, outcomes)
+        except OSError as error:
+            print(f"FATAL: cannot rewrite {excluded_path}: {error}")
+            return EXIT_REFUSED
         print(f"apply: {applied} rows updated in {excluded_path}")
     else:
         print("report only (no --apply): excluded file unchanged")

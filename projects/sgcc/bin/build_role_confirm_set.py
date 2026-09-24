@@ -48,10 +48,9 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
 from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
 from vlabel.meta import LabelMeta
-import httpx
-
 from vlabel.service import (
     ConfirmClient,
     Fingerprint,
@@ -188,21 +187,20 @@ def parse_row(raw: object, line_no: int) -> ExcludedRow:
     )
 
 
-def read_rows(excluded_path: Path, errors: list[str]) -> list[ExcludedRow]:
+def read_rows(text: str, errors: list[str]) -> list[ExcludedRow]:
     """Read all rows; malformed lines are collected and skipped (leniency)."""
     rows: list[ExcludedRow] = []
-    with excluded_path.open("r", encoding="utf-8") as handle:
-        for line_no, line in enumerate(handle, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                raw: object = json.loads(line)
-                rows.append(parse_row(raw, line_no))
-            except json.JSONDecodeError as error:
-                errors.append(f"row {line_no}: invalid JSON ({error})")
-            except RowError as error:
-                errors.append(str(error))
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            raw: object = json.loads(line)
+            rows.append(parse_row(raw, line_no))
+        except json.JSONDecodeError as error:
+            errors.append(f"row {line_no}: invalid JSON ({error})")
+        except RowError as error:
+            errors.append(str(error))
     return rows
 
 
@@ -228,7 +226,9 @@ def ensure_created(what: str, expected: str, listed: bool, create: Callable[[], 
         return
     try:
         create()
-    except (ServiceError, httpx.TransportError) as error:
+    except httpx.TransportError:
+        raise  # connection-level failure aborts immediately (EXIT_FATAL)
+    except ServiceError as error:
         if error.status != 409:
             raise
         print(f"{what} {expected!r}: exists (409), continue")
@@ -259,7 +259,9 @@ def upload_samples(
                 stem=f"{row.stem}.jpg",
                 image=image_path.read_bytes(),
             )
-        except (ServiceError, httpx.TransportError) as error:
+        except httpx.TransportError:
+            raise  # connection-level failure aborts immediately (EXIT_FATAL)
+        except ServiceError as error:
             if error.status == 409:
                 print(f"sample {row.stem}: already exists (409), skip upload")
                 uploaded.append(row)
@@ -287,7 +289,9 @@ def post_verdict(
             stem,
             payload=VerdictPost(value=value, note=note),
         )
-    except (ServiceError, httpx.TransportError) as error:
+    except httpx.TransportError:
+        raise  # connection-level failure aborts immediately (EXIT_FATAL)
+    except ServiceError as error:
         errors.append(f"verdict {stem} as {actor}: {error}")
         return
     print(f"verdict {stem} as {actor}: value={value} posted")
@@ -482,9 +486,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not excluded_path.is_file():
         print(f"excluded file not found: {excluded_path}")
         return EXIT_FATAL
-    sha256_hex = hashlib.sha256(excluded_path.read_bytes()).hexdigest()
+    try:
+        data = excluded_path.read_bytes()
+        text = data.decode("utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"cannot read excluded file {excluded_path}: {error}")
+        return EXIT_FATAL
+    sha256_hex = hashlib.sha256(data).hexdigest()
     errors: list[str] = []
-    rows = read_rows(excluded_path, errors)
+    rows = read_rows(text, errors)
     meta = build_meta()
     upstream = build_upstream(excluded_path, sha256_hex)
     verdicts = 0

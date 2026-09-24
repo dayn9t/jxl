@@ -1,13 +1,19 @@
-"""SGCC 确认集 meta 单一数据源——每种确认标注类型的 LabelMeta 构造器.
+"""SGCC 确认集 meta 单一数据源——每种确认标注类型的 LabelMeta 构造器 + 上游指纹源.
 
 每个确认集自包含 meta.json5（服务/前端/UI 全部由它驱动），本模块是这些 meta
 的唯一定义处：建集脚本（build_role_confirm_set.py）与项目初始化
 （init_confirm_project.py）都从这里取，禁止各自手搓。
 
+本模块同时承载四个 gencheck 确认集的上游指纹源（FINGERPRINT_SOURCES）：
+指纹 = 各集样本所派生的上游 jsonl 的 sha256，由建集方在 create_set 时提交
+（服务端指纹唯一落点是 create_set，事后无补录端点），回流闸以它比对现算值。
+
 值域统一遵循台账 #17 通用原则：标准选项 + 排除类（undecidable 不可判定）
 + 出错类（detector_error 上级检测器错误通道——仅在被审属性与框/类别正交时设，
 框质量本身就是审查对象的类型（bad_fit）不重复设）。
 """
+
+from pathlib import Path
 
 from vlabel.meta import (
     CatDef,
@@ -23,6 +29,21 @@ from vlabel.meta import (
 # ---- 共用构造件 -------------------------------------------------------------
 
 PERSON_CAT_ID = 0
+
+
+# ---- gencheck 各确认集的上游指纹源（create_set 时提交，回流闸比对基准） --------
+# bad_fit/person_verify 选样读 cands_person.jsonl，upper_visibility 读
+# removed.jsonl，reid_pair 读 cos.jsonl（与 build_confirm_samples 同源）。
+
+GENCHECK = Path(
+    "/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/gencheck"
+)
+FINGERPRINT_SOURCES: dict[str, Path] = {
+    "bad_fit_review": GENCHECK / "pospool_20260919/cands_person.jsonl",
+    "person_verify": GENCHECK / "pospool_20260919/cands_person.jsonl",
+    "upper_visibility": GENCHECK / "upperpool_20260919/removed.jsonl",
+    "reid_pair": GENCHECK / "osnet_calib_20260921/cos.jsonl",
+}
 
 
 def _value(value_id: int, en: str, zh: str, hotkey: str, color: str, sign: str) -> ValueDef:

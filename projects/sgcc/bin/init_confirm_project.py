@@ -17,18 +17,20 @@ Usage:
 """
 
 import argparse
+import hashlib
 from collections.abc import Callable
+from pathlib import Path
 
+import httpx
 from sgcc_confirm_metas import (
+    FINGERPRINT_SOURCES,
     bad_fit_meta,
     person_verify_meta,
     reid_pair_meta,
     upper_visibility_meta,
 )
 from vlabel.meta import LabelMeta
-import httpx
-
-from vlabel.service import ConfirmClient, ServiceError, SetOut, UpstreamRef
+from vlabel.service import ConfirmClient, Fingerprint, ServiceError, SetOut, UpstreamRef
 
 PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1
@@ -40,10 +42,14 @@ GROUP_SLUG = "r01"
 GROUP_ID = 1
 GROUP_NAME = "2026-09 首轮"
 
-# Future confirm sets: slug, meta builder, relations edge (fingerprint lands
-# when the set's builder populates it — until then upstream_fingerprint is
-# absent, so backflow for that set must refuse). Slugs carry no generation
-# suffix under the round axis — generations live in the group namespace.
+# Future confirm sets: slug, meta builder, relations edge. The upstream
+# fingerprint is submitted HERE at create_set time (the service's only
+# fingerprint write point — no backfill endpoint exists): sha256 of the
+# source jsonl each set's samples derive from (sgcc_confirm_metas.
+# FINGERPRINT_SOURCES, the same pools build_confirm_samples imports from).
+# A set created without its fingerprint can never backflow (the gate
+# refuses; audit finding #25). Slugs carry no generation suffix under the
+# round axis — generations live in the group namespace.
 FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], UpstreamRef]] = [
     (
         "bad_fit_review",
@@ -84,6 +90,30 @@ FUTURE_SETS: list[tuple[str, Callable[[], LabelMeta], UpstreamRef]] = [
 ]
 
 
+class FatalError(RuntimeError):
+    """Unrecoverable local failure (unreadable fingerprint source); aborts."""
+
+
+def set_upstream(slug: str, upstream: UpstreamRef) -> UpstreamRef:
+    """Attach the upstream fingerprint: sha256 of the set's source jsonl.
+
+    The service's only fingerprint write point is create_set (no backfill
+    endpoint) and the backflow gate refuses sets without one — so the
+    creator must submit it here, or the set is structurally broken for
+    backflow (audit finding #25).
+    """
+    source: Path = FINGERPRINT_SOURCES[slug]
+    try:
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    except OSError as error:
+        raise FatalError(
+            f"cannot read fingerprint source {source}: {error}"
+        ) from error
+    return upstream.model_copy(
+        update={"fingerprint": Fingerprint(file=source.name, sha256=digest)}
+    )
+
+
 def ensure_project(client: ConfirmClient) -> None:
     projects = client.projects()
     if any(project.dir == PROJECT_SLUG for project in projects):
@@ -91,7 +121,9 @@ def ensure_project(client: ConfirmClient) -> None:
         return
     try:
         client.create_project(slug=PROJECT_SLUG, id=PROJECT_ID, name=PROJECT_NAME)
-    except (ServiceError, httpx.TransportError) as error:
+    except httpx.TransportError:
+        raise  # connection-level failure: fatal for the whole run (main returns 2)
+    except ServiceError as error:
         if error.status != 409:
             raise
         print(f"project {PROJECT_SLUG!r}: exists (409), continue")
@@ -108,7 +140,9 @@ def ensure_group(client: ConfirmClient) -> None:
         client.create_group(
             PROJECT_SLUG, slug=GROUP_SLUG, id=GROUP_ID, name=GROUP_NAME
         )
-    except (ServiceError, httpx.TransportError) as error:
+    except httpx.TransportError:
+        raise  # connection-level failure: fatal for the whole run (main returns 2)
+    except ServiceError as error:
         if error.status != 409:
             raise
         print(f"group {GROUP_SLUG!r}: exists (409), continue")
@@ -126,6 +160,7 @@ def ensure_set(
     if any(placed.slug == slug for placed in existing):
         print(f"set {slug!r}: already exists, skip create")
         return
+    upstream_ref = set_upstream(slug, upstream)
     try:
         client.create_set(
             PROJECT_SLUG,
@@ -133,9 +168,11 @@ def ensure_set(
             slug=slug,
             kind="verdict",
             meta=meta,
-            upstream=upstream,
+            upstream=upstream_ref,
         )
-    except (ServiceError, httpx.TransportError) as error:
+    except httpx.TransportError:
+        raise  # connection-level failure: fatal for the whole run (main returns 2)
+    except ServiceError as error:
         if error.status != 409:
             raise
         print(f"set {slug!r}: exists (409), continue")
@@ -161,7 +198,7 @@ def main() -> int:
         sets = client.sets(PROJECT_SLUG, GROUP_SLUG)
         for slug, meta_builder, upstream in FUTURE_SETS:
             ensure_set(client, sets, slug, meta_builder(), upstream)
-    except (ServiceError, httpx.TransportError) as error:
+    except (FatalError, ServiceError, httpx.TransportError) as error:
         print(f"FATAL: {error}")
         return 2
     print("done: project + group r01 + future confirm sets initialized")
