@@ -43,4 +43,4 @@
 - `data/platform-codes/` — 平台码表逆向（CODEBOOK.md 结论 + 原始计数，脚本在 s4 仓 py/tools/reveng_platform_codes.py）
 - `taxonomy.md` — 两级类目表（**v0 草案骨架**，未冻结禁作标注依据；等任务书 A 网格回来看图命名→用户审批冻结）
 - `lexicon.md` — 形态词典 v0（文本源草案：各叶类形态要点/203 词频直证/TEXT 直证；图证待聚类网格回填）
-- （待建）`docs/EVAL-BENCHMARKS.md` — 检测器参照集盘点（六要素规范，P4 建仓时生成）
+- `docs/EVAL-BENCHMARKS.md` — 评估参照集盘点（早期骨架：❌ 缺口警告区/逐组件分级/待建 T4-T8；**人工 GT 建成前内部指标不得当质量结论**）
