@@ -56,23 +56,33 @@ from jxl.bin.vlm_pool import (  # noqa: E402
 )
 
 PROMPT = (
-    "Detect all persons in the image. For each person output its bounding box. "
+    "Detect all {target} in the image. For each {target} output its bounding box. "
     "Coordinates are normalized to 0-1000 relative to image width and height, "
     "top-left origin, format [x1,y1,x2,y2]. "
-    'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
+    'Respond ONLY with JSON: {{"{key}": [{{"bbox_2d": [x1,y1,x2,y2]}}]}}'
 )
+
+# 2026-09-25 s4det: PROMPT 由 person 常量泛化为 --target-text 参数(默认 person,
+# 行为不变); JSON 键固定 persons(解析按 \w+_2d 泛化, 键名不影响)。
+JSON_KEY = "persons"
+
+
+def build_prompt(target: str) -> str:
+    """目标词 → grounding prompt(target 词内空格保留, JSON 键恒 persons)."""
+    return PROMPT.format(target=target, key=JSON_KEY)
 
 
 async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,
-                     image_url: str) -> tuple[str, str]:
+                     image_url: str, prompt: str | None = None) -> tuple[str, str]:
     """返回 (raw_text | '' , error | '')。调用失败上抛语义由调用方计为弃权。"""
+    prompt = prompt or build_prompt("person")
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 1500,
                **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
-                   {"type": "text", "text": PROMPT}]}]}
+                   {"type": "text", "text": prompt}]}]}
     try:
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()
@@ -88,8 +98,10 @@ def run(
                                help="逗号分隔候选别名（见模块 docstring）"),
     out: Path = typer.Option(Path("gt_calib_report.json"), help="报告输出路径"),
     limit: int = typer.Option(0, help=">0 只跑前 N 张（冒烟）"),
+    target_text: str = typer.Option("person", help="grounding 目标词(默认 person 兼容旧行为)"),
 ) -> None:
     """跑标定：每模型×每图 grounding → 刻度反推 → IoU 匹配 → per-model F1 报告。"""
+    prompt = build_prompt(target_text)
     rows = [orjson.loads(l) for l in gt_jsonl.open() if l.strip()]
     if limit > 0:
         rows = rows[:limit]
@@ -113,7 +125,7 @@ def run(
                 W, H = float(r["width"]), float(r["height"])
                 gt = r["boxes"]
                 res = await asyncio.gather(
-                    *[call_model(client, a, CANDIDATES[a], url) for a in aliases])
+                    *[call_model(client, a, CANDIDATES[a], url, prompt) for a in aliases])
                 for a, (text, err) in zip(aliases, res):
                     rec: dict = {"image": r["image"], "n_gt": len(gt)}
                     if err:

@@ -68,11 +68,18 @@ CANDIDATES: dict[str, dict] = {
 }
 
 PERSON_PROMPT = (
-    "Detect all persons in the image. For each person output its bounding box. "
+    "Detect all {target} in the image. For each {target} output its bounding box. "
     "Coordinates are normalized to 0-1000 relative to image width and height, "
     "top-left origin, format [x1,y1,x2,y2]. "
-    'Respond ONLY with JSON: {"persons": [{"bbox_2d": [x1,y1,x2,y2]}]}'
+    'Respond ONLY with JSON: {{"persons": [{{"bbox_2d": [x1,y1,x2,y2]}}]}}'
 )
+# 2026-09-25 s4det: prompt 由 person 常量泛化为 target 词参数(默认 person 行为不变);
+# JSON 键恒 persons(解析按协议泛化, 键名不影响)。
+
+
+def build_target_prompt(target: str) -> str:
+    """目标词 → 池标准 grounding prompt(JSON 键恒 persons, 解析层无感)."""
+    return PERSON_PROMPT.format(target=target)
 
 ROLE_VALID = {"leader", "cleaner", "teller", "manager", "security",
               "customer", "not_person", "uncertain"}
@@ -218,7 +225,8 @@ def greedy_iou_match(pred: list[list[float]], gt: list[list[float]], iou_th: flo
     return len(used_p), len(pred), len(gt), ious
 
 
-async def call_person(client: httpx.AsyncClient, alias: str, image_url: str) -> Vote:
+async def call_person(client: httpx.AsyncClient, alias: str, image_url: str,
+                      prompt: str | None = None) -> Vote:
     """单模型 person grounding；失败=弃权票（ok=False，KB 教训 9：失败不当空票）。"""
     spec = CANDIDATES[alias]
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
@@ -227,7 +235,7 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str) -> 
                **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
-                   {"type": "text", "text": PERSON_PROMPT}]}]}
+                   {"type": "text", "text": prompt or build_target_prompt("person")}]}]}
     try:
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()

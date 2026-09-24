@@ -30,6 +30,7 @@ import typer
 
 from jxl.bin.vlm_pool import (
     CANDIDATES,
+    build_target_prompt,
     consensus_boxes,
     image_data_url,
     call_person,
@@ -61,6 +62,7 @@ def run(
     from_manifest: bool = typer.Option(False, "--from-manifest", help="输入是 iapx manifest，配合 --date/--top-minutes"),
     date: str = typer.Option("", help="--from-manifest：日期"),
     top_minutes: int = typer.Option(3, help="--from-manifest：取含人帧最多的 N 个分钟窗"),
+    target_text: str = typer.Option("person", help="grounding 目标词(默认 person 兼容旧行为; 2026-09-25 s4det)"),
 ) -> None:
     """跑共识：四模型逐帧投票 → 分级聚类 → GT/人工池/报告三件套。"""
     aliases = [m.strip() for m in models.split(",") if m.strip()]
@@ -85,8 +87,9 @@ def run(
 
     async def one(client: httpx.AsyncClient, r: dict) -> dict:
         url = image_data_url(Path(r["image"]))
+        prompt = build_target_prompt(target_text)
         async with sem:
-            votes = await asyncio.gather(*[call_person(client, a, url) for a in aliases])
+            votes = await asyncio.gather(*[call_person(client, a, url, prompt) for a in aliases])
         boxes = consensus_boxes(list(votes))
         return {"row": r,
                 "votes": [{"alias": v.alias, "ok": v.ok, "n": len(v.boxes), "err": v.error}
