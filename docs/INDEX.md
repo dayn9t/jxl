@@ -19,6 +19,7 @@
 |---|---|---|
 | **SGCC**（n001 person 检测+属性） | `projects/sgcc/` | 毒标注手术闭环 v3 待部署；属性库+分类器族进行中 |
 | **SHTM**（垃圾桶检测+属性） | `projects/shtm/` | 复活 4 年项目：S0 体检+去重+zero-trust 重标 spec |
+| **s4det**（s4 事件域全目标检测器） | `projects/s4det/` | 2026-09-25 启动：两级类目表 + mobile 弱标签种子集 + YOLO 训练；**跨仓协作项目**（s4 会话↔jxl 会话，交接面=该项目 README；数据源 /var/howell/s4/v0.4/event/） |
 
 项目内文档见各自 `README.md` 的文档地图；历史存档在 `projects/<项目>/archive/`，
 调研在 `projects/<项目>/research/`。
