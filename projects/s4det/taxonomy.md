@@ -1,63 +1,75 @@
-# s4det 两级类目表（taxonomy）— 草案骨架 v0（2026-09-25）
+# s4det 两级类目表（taxonomy）v1-草案（2026-09-25，聚类网格人审后，待用户审批冻结）
 
-> **状态：草案——未冻结，禁止作为标注依据**。冻结流程：任务书 A 聚类网格 → s4 会话看图命名/合并/剪枝（词典同步转正）→ 用户审批 → 状态改「v1 冻结」。
-> 叶类 = 检测器标签（EN 短名）；粗类 = 事件域消费语义。**映射锚点两族并存**（盘点 §8.2）：① EventType 码（大多数叶类）；② llm_entries 类别串（ET15/16/19 在 event.json 无事件级存在——charging_bike 锚 "违规充电"、shop_display 锚 "占道经营"、scattered_garbage_zone 锚 "散落垃圾"）。细分硬条件：视觉可辨 ∧ 样本 ≥50-100；纯语义不可视区分不拆（红线）。
+> **状态：v1-草案——已经任务书 A 网格人审修订（图证簇 id 标注），待用户审批后冻结**。
+> 流程：任务书 A 聚类网格 → s4 会话看图命名/合并/剪枝（本版）→ **用户审批** → 状态改「v1 冻结」。
+> 叶类 = 检测器标签（EN 短名）；粗类 = 事件域消费语义。**映射锚点两族并存**（盘点 §8.2）：① EventType 码；② llm_entries 类别串（ET15/16/19 无事件级存在）。
+> 细分硬条件：视觉可辨 ∧ 样本 ≥50-100；纯语义不可视区分不拆（红线）。
+> **网格人审总发现**：vehicle 码 11 簇质量高；garbage 码 1/2/4 噪声率高（16 簇中约 9 簇为石球/栅栏/路缘/单车等误框）；码 5 实为「城市杂项」大杂烩（摊位/单车群/行人/工程车混框）——**平台框仅作位置先验、必须共识仲裁**（CODEBOOK 已更新）。
 
-## vehicle（→ ET1/2/12、scene202 违停）
+## vehicle（→ ET1/2、parking 判定）
 
-| 叶类 | 粗类映射 | 样本预期 | 状态 |
+| 叶类 | 粗类锚 | 图证 | 决定 | 备注 |
+|---|---|---|---|---|
+| ebike | ET2 + llm"非机动车乱停" | ✅c01 并排停放/c03/c08、c04+c15 骑乘中、c16 载货、c13 低质 | **保留（含 motorbike 并入）** | 摩托与电动外观难区分（红线不拆）；骑行/停放是状态不入检测类；成排停放每辆一框（规范 §7） |
+| shared_bike | ET2 | ✅vehicle c09 美团黄、vendor c11 蓝/c12 青桔 | **保留** | 统一涂装视觉可辨 |
+| bicycle | ET2 | 聚类未见独立簇 | 保留（待 P3 验证样本） | parking 判定语义需要 |
+| tricycle | ET2/ET12 | ✅vendor c08 回收三轮（载废品+招牌） | **保留** | 载货斗/封闭棚形态 |
+| car | ET1 | ET1 65 样本未成独立簇（k=16 被并） | **保留；truck 并回 car** | 面包车/货车为 car 内形态；判定层需卡车区分时 P5 再拆 |
+| ~~motorbike~~ | — | — | **并入 ebike** | 视觉不可辨（红线） |
+| ~~truck~~ | — | — | **并入 car** | 样本 <50 硬条件 |
+
+## garbage（→ ET3/11、llm"丢弃垃圾/占道堆物/散落垃圾"）
+
+| 叶类 | 粗类锚 | 图证 | 决定 | 备注 |
+|---|---|---|---|---|
+| garbage_bag | ET3 | ✅c01 吨袋/编织袋 n156、c04 白袋堆 n118 | **保留** | 黑/白/橙袋+编织袋+吨袋；最高频形态 |
+| carton | ET3/ET11 | ✅c02 纸箱堆 n139、c05 柜台纸箱 n116 | **保留** | |
+| foam_box | ET3 | ✅c06/c07 | **保留** | |
+| garbage_pile | ET3/ET11 | ✅c03 混合不可数堆 n131 | **保留** | aggregate 类（规范 §6 口诀） |
+| tarp_covered | 待定 | ⚠️c14 篷布覆盖**车**（TEXT 样本为覆盖**堆放物**） | **观察类→hardcase** | 覆盖物歧义（车 vs 堆），粗类锚不定 → 人工核实后定 |
+| plastic_loose | ET11 | 203 词频 240 佐证，聚类未见 | 保留（待 P3） | |
+| leaves_pile / dead_animal | ET3 | 未见 | **降为观察类** | 样本不足硬条件；dead_animal 预期极小 |
+| debris_misc | 兜底 | 未见 | 保留兜底 | 聚类后仍散不归者入此 |
+
+## vendor/occupy（→ ET6/7/12/16、llm"占道经营"）
+
+| 叶类 | 粗类锚 | 图证 | 决定 | 备注 |
+|---|---|---|---|---|
+| construction_fence | ET6 | ✅c01 黄围挡「正在施工」n113 | **保留** | |
+| scaffolding | ET6/ET7 | ✅c03 脚手架+防护网 n96 | **保留** | |
+| vendor_booth | ET12 | ✅c02 棚/货架摊 n107 | **保留** | 固定/半固定结构摊位 |
+| stall_cart | ET12 | ✅c04 遮阳伞+流动摊 n87 | **保留** | 伞摊/售卖车/地摊布 |
+| piled_goods | ET11 | ✅c06 纸箱编织袋堆地 n67 | **保留** | 整齐度区分垃圾（misc.md） |
+| shop_display | ET16（llm 锚"占道经营"） | 未见独立簇（补样 121 散） | 保留（待 P3 验证） | |
+
+## facility（第二批 road 数据，第二轮聚类；本轮无图证）
+
+trash_can / fire_hydrant / bus_station / phone_booth / barrier_fence / manhole_cover（phenomenon 网格多簇可见井盖，间接佐证高频）/ road_mirror / mailbox / power_station / sculpture / billboard —— 状态：草案（road VLM 打框批启用）。
+
+## phenomenon（区域类；phenomenon 网格为原图级聚类，按场景组织非目标组织——预期内）
+
+| 叶类 | 粗类锚 | 图证 | 决定 |
 |---|---|---|---|
-| ebike | ET2/EmergencyType2 | 大（13.6k 事件源） | 草案 |
-| bicycle | ET2 | 中 | 草案（与 shared_bike 边界待聚类） |
-| shared_bike | ET2 | 中 | 草案 |
-| tricycle | ET2/ET12 | 中 | 草案 |
-| car | ET1 | 小（467） | 草案 |
-| truck | ET1 | 极小 | 草案（可能并回 car） |
-| motorbike | ET2 | 中 | 草案（与 ebike 边界待聚类） |
+| water_puddle | ET14 | ✅c04 停车场积水洼（16 簇仅此 1 簇显见） | 保留（区域框需 VLM/人工打，训练批二） |
+| manhole_damage | ET17 | ✅井盖在 10+ 簇显见（615 样本主导） | 保留（叶类名 manhole_damage：只标破损/异常井盖，完好井盖不入——防负类洪泛，P3 细化） |
+| oil_stain | ET13 | 未见（12 样本全库） | **观察类** |
+| road_damage | ET18 | c02 疑似修补痕迹，弱 | 保留（样本 83，观察边缘） |
+| scattered_garbage_zone | ET19（llm 锚"散落垃圾"） | 未见 | 保留（llm 补样 30，待 P3） |
+| construction_zone | ET6 | c14 围挡远景 | 保留（与 construction_fence 关系：区域 vs 实体，规范 §4/实体双标） |
 
-## garbage（→ ET3/11/19、scene203）
+## state-carrier（观察类，n=2 形态确证）
 
-| 叶类 | 粗类映射 | 样本预期 | 状态 |
+| 叶类 | 锚 | 图证 | 决定 |
 |---|---|---|---|
-| garbage_bag | ET3/ET19 | 大（12k 事件源；203 词频 5505） | 草案 |
-| foam_box | ET3/ET11 | 大 | 草案 |
-| carton | ET3/ET11 | 大 | 草案 |
-| furniture_fallback | ET3 | 中 | 草案 |
-| tarp_pile | ET11/ET3 | 大（词频 537） | 草案（命名待聚类定性） |
-| plastic_loose | ET11 | 中 | 草案 |
-| leaves_pile | ET3 | 小 | 草案 |
-| dead_animal | ET3 | 极小 | 草案（<50 样本则并回+隔离台账） |
-| garbage_pile | ET3/ET11/ET19 | 大 | 草案（aggregate 类，规范 §6） |
-| debris_misc | ET3 兜底 | 中 | 草案（聚类后可能拆散并回） |
+| charging_bike | llm"违规充电" | ✅c01 车棚飞线 + c02 插线板/充电器特写 | **观察类**（ET15 全库 1 事件；形态两型已记词典；样本到达前不入训练） |
 
-## vendor/occupy（→ ET6/7/12/16）
+## v1 叶类计数
 
-| 叶类 | 粗类映射 | 样本预期 | 状态 |
-|---|---|---|---|
-| stall_cart | ET12 | 中（1.1k） | 草案 |
-| vendor_booth | ET12 | 中 | 草案（与 stall_cart 边界待聚类） |
-| shop_display | ET16/ET7 | 中 | 草案 |
-| construction_fence | ET6 | 小（64 事件，预期不够则与 scaffolding 并组观察） | 草案 |
-| scaffolding | ET6/ET7 | 极小 | 草案 |
-| piled_goods | ET11 | 中（497） | 草案 |
-
-## facility（→ road 部件 + scene202；第二批数据，road VLM 打框时启用）
-
-trash_can / fire_hydrant / bus_station / phone_booth / barrier_fence / manhole_cover / road_mirror / mailbox / power_station / sculpture / billboard —— 样本预期见盘点 §3.1 road 分布（trash_can 2978 大 / billboard 92 极小）。状态：草案（第二批）。
-
-## phenomenon（→ ET13/14/18/19、road3）
-
-water_puddle（3300 大）/ oil_stain（12 极小，观察类）/ road_damage（83 小）/ scattered_garbage_zone / construction_zone。状态：草案。
-
-## state-carrier（→ ET15）
-
-charging_bike —— ET15 仅 1 事件，**观察类**（数据极缺，词典先收形态，样本到达前不入训练）。状态：草案（观察）。
-
-## 明确不入 v1
-
-ET4（=road 部件类覆盖）/ ET5/8/9（店招=shop 域 sign.pt 检测线覆盖）/ ET10（无封闭类集，判定层兜底）——口径见 design §0。
+保留入训：vehicle 5（ebike/shared_bike/bicycle/tricycle/car）+ garbage 6（bag/carton/foam_box/pile/plastic_loose/debris_misc）+ vendor 6（fence/scaffolding/booth/stall/piled_goods/shop_display）+ facility 11（第二批）+ phenomenon 5（puddle/manhole_damage/road_damage/scattered_zone/construction_zone）= **33 叶类**（mobile 首批 17 类先行，facility 11 类第二批，phenomenon 区域框随批二）。
+观察类（不入训，等样本）：tarp_covered / leaves_pile / dead_animal / oil_stain / charging_bike。
 
 ---
 ## 修订日志
 
-- v0（2026-09-25）：桌面草案骨架（自 research §7 细化 + 203 词频/TEXT 佐证），待聚类网格看图修订。
+- v1-草案（2026-09-25）：任务书 A 六页网格人审后修订——truck→car、motorbike→ebike 合并；tarp_covered/leaves/dead_animal/oil_stain/charging_bike 转观察类；manhole_damage 明确「只标异常井盖」；各叶类补图证簇 id。
+- v0（2026-09-25）：桌面草案骨架。
