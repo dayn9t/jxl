@@ -41,5 +41,6 @@
 - `research/2026-09-25-目标分类学与数据源盘点.md` — 三路调研汇总 + 用户需求存档 + 外部实践 + 细分权衡 + 候选类目草案
 - `tasks/` — s4→jxl 任务书（A 聚类跑批 🔄执行中 / B 基建：弱标签抽取器+多类 profile+断链修复+数据根建仓）
 - `data/platform-codes/` — 平台码表逆向（CODEBOOK.md 结论 + 原始计数，脚本在 s4 仓 py/tools/reveng_platform_codes.py）
-- （待建）`taxonomy.md` — 两级类目表单一数据源（叶类 EN 名 → 事件粗类 many-to-one 映射；等任务书 A 网格回来看图命名）
+- `taxonomy.md` — 两级类目表（**v0 草案骨架**，未冻结禁作标注依据；等任务书 A 网格回来看图命名→用户审批冻结）
+- `lexicon.md` — 形态词典 v0（文本源草案：各叶类形态要点/203 词频直证/TEXT 直证；图证待聚类网格回填）
 - （待建）`docs/EVAL-BENCHMARKS.md` — 检测器参照集盘点（六要素规范，P4 建仓时生成）
