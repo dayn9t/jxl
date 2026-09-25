@@ -43,9 +43,9 @@
 
 ## 批 1 遗留（批 2 前处理）
 
-1. 人工兜底 119 帧（低共识 contact sheet）——用户/s4 裁决后回填
+1. 人工兜底 119 帧（低共识 contact sheet）——**已裁定（2026-09-25 晚）：并入批 2 人工窗口**
 2. doubao 池成员恢复（控制台开通替代模型）
-3. agree=false 对象级类别投票工具（vlm 分类票，批 2 建）
+3. ~~agree=false 对象级类别投票工具~~ ✅ 已建（`c_vote.py`，见「项目恢复」节）
 4. 垃圾族弱（303 框）：批 2 扩池或专项权重后重挖
 
 ## D0 v0-mini 训练（2026-09-25，干线验证 + 专项权重）✅
@@ -67,3 +67,18 @@
 ## 项目暂停状态（2026-09-25 用户指令）
 
 值守循环已停、两会话队列清空待命。恢复触发（任一）：① 人工窗口（119 兜底 + T4-b1）② doubao 控制台开通 ③ taxonomy 终态批准 → 批 2 开工（种子集已就绪）④ EXEMPT-S 确认。
+
+> → **已恢复（2026-09-25 晚）**：③④ 落地（taxonomy 冻结 + EXEMPT-S 确认），批 2 开工；② doubao 仍待控制台开通（池三成员运行）。
+
+## 项目恢复与三裁定（2026-09-25 晚，用户 brainstorming 菜单裁决）
+
+- **taxonomy v1 冻结**（批准定版）→ 批 2 解锁开工
+- **EXEMPT-S 同意豁免**（EVAL-BENCHMARKS 转确认态；v1 质量口径=中大型目标）
+- **Q1 = 最小先行**：T4-b1 225 帧先行开窗（解锁 v0.1 质量结论）；119 兜底并入批 2 人工窗口
+
+### 批 2 前置：agree=false 类别投票（批 1 遗留 #3）✅
+
+- 工具：`bin/c_vote.py`（bbox±10% crop → vlm_pool 菜单分类投票 → role_consensus；split 入隔离台账 priority=high，断点重入按行键）；`vlm_pool.call_role_vote/parse_verdict` 参数化 prompt/valid（role 默认行为不变）；菜单导出件 `projects/s4det/taxonomy_leaves.json`（taxonomy 附录 A 46 类，taxonomy 演进时重导出）
+- 结果（872 行）：**auto 633（trusted 607 / arbited 26）/ split 239 入隔离台账 / abstain 0**；sidecar `preannot/votes_agree_false.jsonl`（不改写 manifest，训练框仍以共识挖掘为准）
+- 分布要点：garbage_bag 196 / tarp_covered 135 / carton 100 / garbage_pile 26 / construction_fence 25 / foam_box 22 / water_puddle 22 / person 19 / piled_goods 15——苫布覆盖硬类大量路由浮现；批 2 挖掘装配按 verdict 回填类别先验
+- 坑：parse_verdict 参数化时**签名加了 valid 参数但函数体仍比较旧常量 ROLE_VALID**（冒烟 6/6 全 abstain 暴露）→ 已修；教训=参数化改造必须 grep 函数体内全部旧引用点，冒烟必须真跑不能只看 exit 0
