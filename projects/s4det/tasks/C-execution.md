@@ -60,6 +60,7 @@
 
 - 工具：`c_seedset.py`（锚组配额 + 双重去重）。产物：`/mnt/data/s4det/p3-seedset/batch2/seedset/`（symlink 池 + manifest + stats）
 - 结果：**新增 3,316 帧**（vehicle 1,000 / garbage 1,000 / vendor 666[数据量截断] / phenomenon 400 / 负样本 250）+ 批 1 已入 1,600 = **全局 ~4,916 ≈ 5,000 预算**（用户定的规模）
+- ⚠️ **当日晚校正**：原跑在 manifest 写盘前崩溃（`build_candidates` 帧字典缺 `pool` 键 → KeyError），分池数字来自崩溃前逐池日志、**产物从未落盘**（仅 1 symlink + 4 个去重 npy）——批 2 开工预检时发现，修复后重跑（seed=42 确定性复现，数字与原记录吻合），**磁盘验收通过**（manifest 3,316 行 = images 3,316 文件 = stats 分池，0 断链）。教训：**日志数字≠落盘产物，装配类任务必须清点文件才算完成**；commit 只含工具时尤其要区分「结果已记录」与「结果已落盘」
 - 设计要点：按**锚组（粗类族）**配帧而非细类——弱标签粒度不可细分 ET2 子类，细类归属由批 2 挖掘类专用校验器完成；person 无锚（COCO 预训练 + 全帧标注覆盖）
 - 关键教训：**mobile 巡查编组制**——ET1/2 全部 14,049 事件仅落 143 个（日×机×3h）组，组 cap 必须放宽（=2 时全局容量仅 286 干涸）；组内是沿途不同目标，真重复由语义去重（DINO cos≥0.95）兜底
 - 流程教训（用户指出）：新工具实施前设计须先过目确认（superpowers 流程），不能直接开跑——已固化为执行纪律
@@ -75,6 +76,20 @@
 - **taxonomy v1 冻结**（批准定版）→ 批 2 解锁开工
 - **EXEMPT-S 同意豁免**（EVAL-BENCHMARKS 转确认态；v1 质量口径=中大型目标）
 - **Q1 = 最小先行**：T4-b1 225 帧先行开窗（解锁 v0.1 质量结论）；119 兜底并入批 2 人工窗口
+
+## 批 2 挖掘开工（2026-09-26 凌晨）
+
+- **16 个新类 profile**（cls_id 2–17，语义对齐冻结 taxonomy；8abed90）：vehicle 池→bicycle/car/shared_bike/tricycle；garbage 池→carton/foam_box/garbage_pile/leaves_pile/plastic_loose/tarp_covered；vendor 池→construction_fence/piled_goods/scaffolding/shop_display/stall_cart/vendor_booth；target 弱票=yolo26s.pt（COCO 底座，激进策略），ebike/garbage_bag 复壮链保持 v0mini
+- **c_seedset 修复重跑**：原装配死于 `build_candidates` 缺 `pool` 键（KeyError，manifest 写盘前）——「4,916 帧就绪」曾只存在于日志；修复+seed=42 复现重跑，**磁盘验收通过**（manifest 3,316=images 3,316=stats，0 断链；15347b2）。教训：**日志数字≠落盘产物，装配任务必须清点文件才算完成**
+- **b_multirun 顺序毒修复**（bbd1feb）：assoc 数组任意迭代序 → >2 类合并 --classes 与标签 id 错位风险；改 PAIRS 序 + det_mine --force（编排器拥有 out 子树，链重跑=重做）
+- **挖掘链运行**：18 链 × 666–1,000 帧（`batch2/mining/<cls>/consensus`），后台运行中；person 走全帧标注另线不入类链；phenomenon 池不入本轮挖掘（Q2 VLM 后置）
+
+## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
+
+- **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
+- **工具**：`bin/t4_preannot.py`——run=三模型逐帧逐类 grounding（vlm_pool，每帧只预标被抽样叶类；负样本帧不预标=空卷）→ consensus_boxes 分级（trusted/arbited=共识底稿；强模型单票=候选框带 `?`，glm 0.33 单票不上屏但留台账）→ X-AnyLabeling v4 JSON（schema 抄上游 assets/demo.json）；score=用户编辑后按 per-model+池共识对拍 P/R/F1
+- **防误覆盖**：labels/ 为交互层，`preannot_votes.jsonl` 为机器侧单一数据源；已有 json 的帧跳过渲染（尊重人编辑）
+- 已知局限（如实记录）：①正样本帧内偶见的跨类目标不预标（噪声源），靠用户手动补；②共同盲区目标（三模型全漏）预标注不可见，GT 会继承——互补对拍/纯人工抽检校准待 GT 建成后执行
 
 ### 批 2 前置：agree=false 类别投票（批 1 遗留 #3）✅
 
