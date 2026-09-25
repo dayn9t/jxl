@@ -20,6 +20,7 @@
 | llm_entries 双模型语义（类别标签） | doubao∧qwen 一致率（B① 冒烟打印） | 待 B① 产出 | ⚠️ 代理级 | 待测 | — |
 | VLM 共识仲裁（P3 批 1 review 消解） | s4det 域 T7 重标定（批 1 L0 GT，21 帧/23 框，target=ebike） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report.json` | ⚠️ 代理级 | qwen-flash F1 **0.875** / qwen35b-local 0.76（强票）/ glm-flash 0.33（仲裁票）；刻度 0-1000 实测确认 | 2026-09-25 |
 | agree=false 类别投票（c_vote，批 2 前置） | vlm_pool 三模型菜单投票（qwen-flash/qwen35b-local 强票 + glm 仲裁票） | `/mnt/data/s4det/preannot/votes_agree_false.jsonl` | ⚠️ 代理级 | 872 行：auto 633（trusted 607 / arbited 26）/ split 239 入台账 / abstain 0 | 2026-09-25 |
+| VLM 池换代重标（T7'） | s4det 域 T7 GT，target="electric bike or motorcycle"，4 模型（doubao 2.1 换代接入） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report_20260926.json` | ⚠️ 代理级 | qwen-flash **0.808** / qwen38-local 0.741 / doubao-2.1-pro 0.724（三强票）/ glm-flash 0.482（仲裁）；doubao 2.1 刻度 0-1000 实测确认 | 2026-09-26 |
 | 平台码表（CODEBOOK） | 32,470 事件双路交叉 + 目击裁片 + 批 1 网格人审（码 12 七簇全为路缘/地面区域框） | `data/platform-codes/` | ⚠️ 代理级 | 码 11 确证；码 12 定性=路缘/地面区域框（不作目标框） | 2026-09-25 |
 | 上游对拍标本（s4-event mine） | 平台检测 vs qwen 核实不一致集（2,789 图，94% 负样本） | `/var/howell/s4/v0.4/event/darknet/` | ⚠️ 代理级（难例池，非 GT） | 171 非空 label | 2026-07-27 |
 

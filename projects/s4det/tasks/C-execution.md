@@ -84,6 +84,16 @@
 - **b_multirun 顺序毒修复**（bbd1feb）：assoc 数组任意迭代序 → >2 类合并 --classes 与标签 id 错位风险；改 PAIRS 序 + det_mine --force（编排器拥有 out 子树，链重跑=重做）
 - **挖掘链运行**：18 链 × 666–1,000 帧（`batch2/mining/<cls>/consensus`），后台运行中；person 走全帧标注另线不入类链；phenomenon 池不入本轮挖掘（Q2 VLM 后置）
 
+## 模型池换代 + det_mine target 票重构（2026-09-26，用户新近度准则触发）
+
+- **触发**：用户指出池成员版本古老——KB 0925 校正注（qwen3-vl 系过时）挂了没 acted on，违 0925「模型选型新近度准则」
+- **四网关 /models 实测**：doubao-seed-2-1-pro-260915 **key 下已开通**（恢复触发②就此解除，无需控制台操作）；spark 本地=qwen3.8-flash-next 别名（与 3.5-35b 同权重根）；dashscope 3.8 代仅文本/omni 无 VL（VL 最新仍 3-vl-flash，出 VL 即换）；glm-5.3 当前代
+- **换代**：doubao-vl → `doubao-seed-2-1-pro-260915`（思考模型，`thinking disabled` extra_payload——关思考 6s/图，开思考 >120s 超时；杂键 bbox_2nd 与 bbox_2d 并存，共识聚类无害）；qwen35b-local → **qwen38-local**（全代码引用同步改名）
+- **重标定**（T7 GT；首跑 F1 全零系漏传 --target-text，修正后）：qwen-flash 0.808 / qwen38-local 0.741 / doubao-2.1 0.724（三强票）/ glm 0.482（仲裁）；doubao 2.1 刻度 0-1000 确认（`t7_calib_report_20260926.json`）；**池回四成员**
+- **det_mine target 票重构**（合并近重复 fail-fast 挖出的真毒）：领域约定「L0 GT=target 框」下 ①无在役先验的 16 新类链挂 yolo26s 作 target——其全类检出会串类入 GT（stall_cart 的 COCO car 框=毒）→ `TargetProfile.weights` 改可选，无先验链无 target 票、L1 校验器共识框即标注；②v0mini 复壮链双头串扰（ebike 链 20 行 L0 塞进 garbage 头同物框 → merge fail-fast 拦下）→ 新字段 `target_cls` 类过滤（ebike=0 / garbage_bag=1）
+- **18 链全部重跑**（首跑产物作废）；顺手清偿 vlm_consensus_gt / vlm_grounding_calibrate / vlm_role_vote 存量 lint
+- **T4-b1 预标注以四票新池重跑**（旧三票票档归档 `preannot_votes_pre-upgrade-20260925.jsonl`，留作换代前后对拍）
+
 ## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
 
 - **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
