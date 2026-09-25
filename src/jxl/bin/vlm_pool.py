@@ -7,7 +7,7 @@
 - ~/.claude/kb/30-areas/vlm-vision-grounding/20260913-vlm-service-inventory.md
   （候选池成员与 2026-09-13 标定 F1；key 只走 env，值永不落盘）
 - 同目录 20260710-vlm-grounding-coordinate-protocols.md（协议对照 + 7 步清单）
-- 多 key 轮换 / 429 退避 / 统一网关层见 llmux（~/cc/llmux：crates/llmux-core/src/keypool.rs
+- 多 key 轮换 / 429 退避 / 统一网关层见 llmux（~/cc/next/llmux：crates/llmux-core/src/keypool.rs
   的 KeyPool（Healthy/Unhealthy 冷却 60s/Invalid）+ crates/llmux-openai-base/src/client.rs
   post_stream（429→Retry-After、401→mark_invalid）；KB
   30-areas/llm-application-engineering/20260710-multi-llm-backend-gateway.md 有文档化）——
