@@ -1,0 +1,11 @@
+# s4det 叶类 profile(批 2; taxonomy v1: shared_bike=共享单车, 统一涂装可辨)
+name = "shared_bike"
+yolo_text = "shared bike"
+vlm_prompt = """检测图中所有共享单车的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"shared_bike","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 统一涂装共享单车(美团黄/青桔蓝绿/哈啰蓝白等); 成排停放每辆一框
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无共享车, 泛两轮票)
+output_cls_id = 4

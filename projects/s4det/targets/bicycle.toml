@@ -1,0 +1,12 @@
+# s4det 叶类 profile(批 2; taxonomy v1: bicycle=普通自行车, 挂验证-混淆<15% 否则并 shared_bike)
+name = "bicycle"
+yolo_text = "bicycle"
+# rfdetr_cls_id 省略 → None → 自动剔除 rfdetr(批 2 链: yoloe+gdino)
+vlm_prompt = """检测图中所有普通自行车的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"bicycle","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 普通两轮自行车(非统一涂装共享车、非电动); 成排停放每辆一框
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座, bicycle=1 原生)
+output_cls_id = 2  # 批 2 合并 classes 表位次

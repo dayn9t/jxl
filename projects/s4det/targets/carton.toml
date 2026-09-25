@@ -1,0 +1,11 @@
+# s4det 叶类 profile(批 2; taxonomy v1: carton=纸箱堆/柜台纸箱)
+name = "carton"
+yolo_text = "cardboard boxes"
+vlm_prompt = """检测图中所有纸箱的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"carton","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 纸箱(堆放/丢弃/店门口); 可辨个体箱逐个框, 密集成堆框整体堆
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无纸箱原生)
+output_cls_id = 6

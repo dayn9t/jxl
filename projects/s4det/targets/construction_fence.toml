@@ -1,0 +1,11 @@
+# s4det 叶类 profile(批 2; taxonomy v1: construction_fence=施工围挡)
+name = "construction_fence"
+yolo_text = "construction fence hoarding"
+vlm_prompt = """检测图中所有施工围挡的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"construction_fence","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 施工围挡(蓝/黄色金属围挡, 含「正在施工」标识); 长围挡按可见连续段框
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无围挡原生)
+output_cls_id = 12

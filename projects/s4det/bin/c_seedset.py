@@ -216,6 +216,14 @@ def main(
     (out_dir / "manifest.jsonl").write_bytes(
         b"\n".join(orjson.dumps(m) for m in manifest) + b"\n"
     )
+    # 锚组池视图: pools/<pool>/ 扁平 symlink(det_mine 类链 src; manifest 为单一数据源)
+    pools_root = out_dir / "pools"
+    for m in manifest:
+        pd = pools_root / m["pool"]
+        pd.mkdir(parents=True, exist_ok=True)
+        dst = pd / Path(m["image"]).name
+        if not dst.is_symlink():
+            dst.symlink_to(Path(m["image"]).resolve())
     by_pool = defaultdict(int)
     for m in manifest:
         by_pool[m["pool"]] += 1
