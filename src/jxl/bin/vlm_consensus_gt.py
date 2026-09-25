@@ -31,9 +31,9 @@ import typer
 from jxl.bin.vlm_pool import (
     CANDIDATES,
     build_target_prompt,
+    call_person,
     consensus_boxes,
     image_data_url,
-    call_person,
 )
 
 app = typer.Typer(help="多 VLM 共识 GT 构造（trusted/arbited/low_agreement 分级）")
@@ -41,7 +41,7 @@ app = typer.Typer(help="多 VLM 共识 GT 构造（trusted/arbited/low_agreement
 
 def frames_from_manifest(manifest: Path, date: str, top_minutes: int) -> list[dict]:
     """确定性选窗：该日期按分钟聚合含人帧数，取 top-N 分钟窗的全部含人帧。"""
-    rows = [orjson.loads(l) for l in manifest.open() if l.strip()]
+    rows = [orjson.loads(line) for line in manifest.open() if line.strip()]
     rows = [r for r in rows if r["date"] == date and r.get("n_persons", 0) >= 1]
     per_min: Counter[str] = Counter(r["wallclock"][:5] for r in rows)
     top = {m for m, _ in per_min.most_common(top_minutes)}
@@ -55,7 +55,7 @@ def frames_from_manifest(manifest: Path, date: str, top_minutes: int) -> list[di
 def run(
     frames_jsonl: Path = typer.Argument(..., help="帧清单 jsonl 或 --from-manifest 的 manifest 路径"),
     out_dir: Path = typer.Option(..., "--out-dir", help="输出目录（gt_trusted/low_agreement/report）"),
-    models: str = typer.Option("qwen35b-local,qwen-flash,doubao-vl,glm-flash",
+    models: str = typer.Option("qwen38-local,qwen-flash,doubao-vl,glm-flash",
                                help="投票池别名（默认=2026-09-13 标定池）"),
     concurrency: int = typer.Option(6, help="跨帧并发（帧内四模型并行）"),
     limit: int = typer.Option(0, help=">0 只跑前 N 帧（冒烟）"),
@@ -77,7 +77,7 @@ def run(
         rows = frames_from_manifest(frames_jsonl, date, top_minutes)
         typer.echo(f"manifest 选窗: {date} top{top_minutes}min → {len(rows)} 帧")
     else:
-        rows = [orjson.loads(l) for l in frames_jsonl.open() if l.strip()]
+        rows = [orjson.loads(line) for line in frames_jsonl.open() if line.strip()]
     if limit > 0:
         rows = rows[:limit]
     if not rows:
@@ -115,7 +115,7 @@ def run(
         ok_votes = [v for v in res["votes"] if v["ok"]]
         if len(ok_votes) < 2:
             stats["frames_abstain"] += 1  # 弃权过半，共识不成立 → 人工池
-        statuses = {b["status"] for b in res["boxes"]}
+        {b["status"] for b in res["boxes"]}
         keep: list[dict] = []
         for b in res["boxes"]:
             stats[f"box_{b['status']}"] += 1

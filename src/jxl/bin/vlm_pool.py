@@ -15,7 +15,7 @@
   vlm_consensus_gt.py 仅 Semaphore、vlm_grounding_calibrate.py 均无），跑批限流加剧时参考 llmux KeyPool
 
 标定结论（2026-09-13，20 图 30 框，F1@IoU0.5）：
-  qwen35b-local 0.9355（182 本地；2026-09-14 服务端换 3.5-35b 后重测，关思考口径——
+  qwen38-local 0.9355（182 本地；2026-09-14 服务端换 3.5-35b 后重测，关思考口径——
   思考模型：extra_payload 关闭 enable_thinking，开思考吃光 max_tokens 致 content=null）
   qwen-flash 0.9492 / doubao-vl 0.9355（三强，主力票）
   glm-flash 0.7458（第四意见+分歧仲裁）
@@ -39,7 +39,7 @@ from PIL import Image
 
 MAX_SIDE = 1024
 MATCH_IOU = 0.5
-LOCAL_QWEN35B = "http://192.168.18.182:8000/v1/chat/completions"
+LOCAL_QWEN38 = "http://192.168.18.182:8000/v1/chat/completions"
 
 # 别名 → (端点, env 变量名, 模型名, 协议, 默认除数, 强度)
 # strength: strong=主力票（≥2/3 共识）；arbiter=第四意见（救回弱一致）
@@ -47,22 +47,27 @@ CANDIDATES: dict[str, dict] = {
     "qwen-flash": {
         "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         "key_env": "S4_QWEN_API_KEY", "model": "qwen3-vl-flash-2026-01-22",
+        # 2026-09-26 核对: dashscope 3.8 代仅文本(max/flash)与 omni(语音向), 无 VL——VL 代仍为本型号, 有新即换
         "protocol": "qwen", "divisor": 1000.0, "strength": "strong",
     },
     "doubao-vl": {
         "endpoint": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        "key_env": "S4_DOUBAO_API_KEY", "model": "doubao-seed-1-6-vision-250815",
+        # 2026-09-26 换代: 250815 端点 ClosedEndpoint; seed-2.1 代 0915 构建 key 下已开通(实测 /v3/models)
+        # 2.1 为思考模型: 关思考 6s 出 JSON bbox_2d(0-1000, 与 qwen 同构); 开思考 >120s 超时(实测)
+        "key_env": "S4_DOUBAO_API_KEY", "model": "doubao-seed-2-1-pro-260915",
         "protocol": "doubao", "divisor": 1000.0, "strength": "strong",
+        "extra_payload": {"thinking": {"type": "disabled"}},
     },
     "glm-flash": {
         "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ANTHROPIC_AUTH_TOKEN", "model": "glm-5.3-flash",
         "protocol": "glm", "divisor": 1000.0, "strength": "arbiter",
     },
-    "qwen35b-local": {
-        "endpoint": LOCAL_QWEN35B, "key_env": "", "model": "qwen3.5-35b-a3b-fp8",
+    "qwen38-local": {
+        "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.8-flash-next",
+        # 2026-09-26: 改用 3.8 系别名(spark /v1/models 实测在列, 与 qwen3.5-35b-a3b-fp8 同权重根)
         "protocol": "qwen", "divisor": 1000.0, "strength": "strong",
-        # qwen3.5 思考模型：不关思考时小 max_tokens 被吃光 → content=null
+        # 思考模型：不关思考时小 max_tokens 被吃光 → content=null
         "extra_payload": {"chat_template_kwargs": {"enable_thinking": False}},
     },
 }

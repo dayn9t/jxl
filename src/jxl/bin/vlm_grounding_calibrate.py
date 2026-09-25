@@ -18,41 +18,35 @@
   qwen-flash   qwen3-vl-flash-2026-01-22   dashscope   S4_QWEN_API_KEY   JSON bbox_2d 0-1000
   doubao-vl    doubao-seed-1-6-vision-250815 方舟      S4_DOUBAO_API_KEY <bbox> 标签（官方 0-1000，封装曾实测 0-1 → 自动反推）
   glm-flash    glm-5.3-flash               bigmodel 网关 ANTHROPIC_AUTH_TOKEN vision 可达性待本工具实测
-  qwen35b-local qwen3.5-35b-a3b-fp8        本地 182 vllm  无需 key  同 qwen 协议（2026-09-14 实测服务端模型已由
+  qwen38-local qwen3.5-35b-a3b-fp8        本地 182 vllm  无需 key  同 qwen 协议（2026-09-14 实测服务端模型已由
               qwen3.8-flash-next 换为 3.5-35b——服务端模型漂移，接入前先 /v1/models 核对）
 
 用法：
   uv run --project . python -m jxl.bin.vlm_grounding_calibrate \
-      GT_JSONL --models qwen-flash,doubao-vl,glm-flash,qwen35b-local --out report.json
+      GT_JSONL --models qwen-flash,doubao-vl,glm-flash,qwen38-local --out report.json
 """
 
 from __future__ import annotations
 
 import asyncio
-import base64
-import io
-import json
 import os
-import re
 from pathlib import Path
 
 import httpx
 import orjson
 import typer
-from PIL import Image
 
 app = typer.Typer(help="多 VLM grounding 刻度标定（KB 7 步清单第 3 步的固化实现）")
 
 # 共享协议/解析/匹配/候选层：单一数据源 = vlm_pool.py（勿在此复制）
-from jxl.bin.vlm_pool import (  # noqa: E402
+from jxl.bin.vlm_pool import (
     CANDIDATES,
-    MAX_SIDE,
-    MATCH_IOU as CONF_THRESHOLD,
     greedy_iou_match,
-    image_data_url as _data_url,
     infer_divisor,
-    iou as _iou,
     parse_boxes,
+)
+from jxl.bin.vlm_pool import (
+    image_data_url as _data_url,
 )
 
 PROMPT = (
@@ -87,14 +81,14 @@ async def call_model(client: httpx.AsyncClient, alias: str, spec: dict,
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"], ""
-    except Exception as e:  # noqa: BLE001 - 标定场景逐家记录失败原因
+    except Exception as e:
         return "", f"{type(e).__name__}: {e}"[:200]
 
 
 @app.command()
 def run(
     gt_jsonl: Path = typer.Argument(..., help="标定集 jsonl：{image,width,height,boxes}"),
-    models: str = typer.Option("qwen-flash,doubao-vl,glm-flash,qwen35b-local",
+    models: str = typer.Option("qwen-flash,doubao-vl,glm-flash,qwen38-local",
                                help="逗号分隔候选别名（见模块 docstring）"),
     out: Path = typer.Option(Path("gt_calib_report.json"), help="报告输出路径"),
     limit: int = typer.Option(0, help=">0 只跑前 N 张（冒烟）"),
@@ -102,7 +96,7 @@ def run(
 ) -> None:
     """跑标定：每模型×每图 grounding → 刻度反推 → IoU 匹配 → per-model F1 报告。"""
     prompt = build_prompt(target_text)
-    rows = [orjson.loads(l) for l in gt_jsonl.open() if l.strip()]
+    rows = [orjson.loads(line) for line in gt_jsonl.open() if line.strip()]
     if limit > 0:
         rows = rows[:limit]
     aliases = [m.strip() for m in models.split(",") if m.strip()]
@@ -126,7 +120,7 @@ def run(
                 gt = r["boxes"]
                 res = await asyncio.gather(
                     *[call_model(client, a, CANDIDATES[a], url, prompt) for a in aliases])
-                for a, (text, err) in zip(aliases, res):
+                for a, (text, err) in zip(aliases, res, strict=False):
                     rec: dict = {"image": r["image"], "n_gt": len(gt)}
                     if err:
                         report[a]["errors"].append({"image": r["image"], "err": err})
@@ -136,7 +130,7 @@ def run(
                     div, coord_max = infer_divisor(raw, CANDIDATES[a]["divisor"])
                     scaled = [[v / div * (W if i % 2 == 0 else H) for i, v in enumerate(b)]
                               for b in raw]
-                    tp, np_, ng, ious = greedy_iou_match(scaled, gt)
+                    tp, np_, _ng, ious = greedy_iou_match(scaled, gt)
                     rec |= {"n_pred": np_, "coord_max": round(coord_max, 2),
                             "divisor_used": div, "tp": tp,
                             "mean_iou": round(sum(ious) / len(ious), 4) if ious else 0.0}

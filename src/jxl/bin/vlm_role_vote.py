@@ -23,7 +23,6 @@ import orjson
 import typer
 
 from jxl.bin.vlm_pool import (
-    CANDIDATES,
     call_role_vote,
     image_data_url,
     role_consensus,
@@ -35,7 +34,7 @@ R2 = Path("/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/gen
 
 
 def load_crops(pool: str) -> list[dict]:
-    verd = [orjson.loads(l) for l in (R2 / "seed_verdicts.jsonl").open() if l.strip()]
+    verd = [orjson.loads(line) for line in (R2 / "seed_verdicts.jsonl").open() if line.strip()]
     unc = [v for v in verd if v["verdict"] == "uncertain"]
     if pool == "ub_true":
         unc = [v for v in unc if v.get("upper_body")]
@@ -61,7 +60,7 @@ def load_crops(pool: str) -> list[dict]:
 @app.command()
 def run(
     pool: str = typer.Option("ub_true", help="ub_true=仅上半身疑难层 / head=仅头顶层 / all=全部"),
-    models: str = typer.Option("qwen35b-local,qwen-flash,doubao-vl,glm-flash"),
+    models: str = typer.Option("qwen38-local,qwen-flash,doubao-vl,glm-flash"),
     out: Path = typer.Option(R2 / "role_vote_uncertain.jsonl", "--out"),
     concurrency: int = typer.Option(6),
     limit: int = typer.Option(0, help=">0 冒烟只跑 N 张"),
@@ -91,9 +90,9 @@ def run(
         async with httpx.AsyncClient() as client:
             done: set[str] = set()
             if out.exists():  # 断点重入：已投 uid 跳过（挂死重跑不从头再来）
-                for l in out.open():
-                    if l.strip():
-                        done.add(json.loads(l)["uid"])
+                for line in out.open():
+                    if line.strip():
+                        done.add(json.loads(line)["uid"])
             todo = [r for r in crops if r["uid"] not in done]
             typer.echo(f"todo={len(todo)} done={len(done)}", err=True)
             res = []
