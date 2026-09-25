@@ -76,11 +76,12 @@ def _detect(
     conf: float,
     iou: float,
     device: str,
+    classes: list[int] | None = None,
 ) -> dict[str, list[Box]]:
     """通用 ultralytics 检测 → {stem: [Box]}。用 res.path 反查 stem，杜绝 stream 错位。
 
     损坏图 ultralytics 静默跳过 → 该 stem 不在返回 dict（caller 据 None 判断损坏）。
-    Box 坐标取 boxes.xyxyn（归一化）。
+    Box 坐标取 boxes.xyxyn（归一化）。classes 非空时只收指定类（target 多类模型串扰过滤）。
     """
     kwargs: dict[str, object] = {
         "conf": conf,
@@ -88,6 +89,8 @@ def _detect(
         "verbose": False,
         "stream": True,
     }
+    if classes is not None:
+        kwargs["classes"] = classes
     if device:
         kwargs["device"] = device
     out: dict[str, list[Box]] = {}
@@ -280,6 +283,13 @@ def run(
         Path, typer.Option("--target-model", help="被校验专用 YOLO 权重")
     ] = Path("/opt/howell/iap/current/ias/model/person.pt"),
     cls_id: Annotated[int, typer.Option("--cls-id", help="YOLO 标注类 id")] = 0,
+    target_cls: Annotated[
+        int | None,
+        typer.Option(
+            "--target-cls",
+            help="target 模型自身类表中目标类位次; 设定则只收该类检出(抑制多类模型他类头串扰)",
+        ),
+    ] = None,
     validators: Annotated[
         str, typer.Option("--validators", help="校验器组合(逗号分隔)")
     ] = "yoloe,gdino,rfdetr",
@@ -349,7 +359,10 @@ def run(
     if target or target_profile.name:
         prof = load_target(target, target_profile if target_profile.name else None)
         if ctx.get_parameter_source("target_model") != ParameterSource.COMMANDLINE:
-            target_model = Path(prof.weights)
+            # 2026-09-26: weights 可选——无在役先验的链(新类)无 target 票, L1 共识框即标注
+            target_model = Path(prof.weights) if prof.weights else None
+        if ctx.get_parameter_source("target_cls") != ParameterSource.COMMANDLINE:
+            target_cls = prof.target_cls
         if ctx.get_parameter_source("cls_id") != ParameterSource.COMMANDLINE:
             cls_id = prof.output_cls_id
         if ctx.get_parameter_source("rfdetr_cls_id") != ParameterSource.COMMANDLINE:
@@ -403,7 +416,7 @@ def run(
             err=True,
         )
         raise typer.Exit(1)
-    if not target_model.is_file():
+    if target_model is not None and not target_model.is_file():
         typer.secho(f"target 模型不存在: {target_model}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
     if "la" in vlist and la_dump.name and not (la_dump / "labels").is_dir():
@@ -464,7 +477,13 @@ def run(
         f"det_mine target={target_text} validators={vlist} frames={len(imgs)}",
         fg=typer.colors.CYAN,
     )
-    target_map = _detect(YOLO(str(target_model)), imgs, conf, iou, device)
+    if target_model is None:
+        target_map = {}
+    else:
+        target_map = _detect(
+            YOLO(str(target_model)), imgs, conf, iou, device,
+            classes=None if target_cls is None else [target_cls],
+        )
     vmaps: dict[str, dict[str, list[Box]]] = {}
     if "yoloe" in vlist:
         vmaps["yoloe"] = detect_yoloe(imgs, yoloe_model, conf, iou, device, target_text)
@@ -486,14 +505,21 @@ def run(
     skipped = 0
     for img in imgs:
         stem = img.stem
-        tb = target_map.get(stem)  # None=损坏
         vs_raw = {vn: vmaps[vn].get(stem) for vn in vlist}  # None=损坏
-        broken = [vn for vn in vlist if vs_raw[vn] is None] + (
-            ["target"] if tb is None else []
-        )
+        if target_model is None:
+            # 无 target 票(可选先验): 不参与损坏判定与评分, 共识框即标注
+            tb: list[Box] | None = []
+            broken = [vn for vn in vlist if vs_raw[vn] is None]
+            all_broken = all(vs_raw[vn] is None for vn in vlist)
+        else:
+            tb = target_map.get(stem)  # None=损坏
+            broken = [vn for vn in vlist if vs_raw[vn] is None] + (
+                ["target"] if tb is None else []
+            )
+            all_broken = tb is None and all(vs_raw[vn] is None for vn in vlist)
         if broken:
             # 损坏图: 全损坏→静默 skip; 部分损坏→警告 skip(不静默用错数据)
-            if not (tb is None and all(vs_raw[vn] is None for vn in vlist)):
+            if not all_broken:
                 typer.secho(
                     f"警告: {stem} 部分 backend 损坏 {broken}，跳过",
                     fg=typer.colors.YELLOW,
@@ -504,7 +530,8 @@ def run(
         vs = {vn: vs_raw[vn] or [] for vn in vlist}
         r = score_sample(tb or [], vs, wmap, iou, consensus)
         scored.append(
-            ScoredSample(img, r.score, r.boxes, r.fp_count, r.fn_count, vs, tb or [])
+            ScoredSample(img, r.score, r.boxes, r.fp_count, r.fn_count, vs,
+                         tb or [] if target_model is not None else r.boxes)
         )
 
     # cascade 分流: review_threshold>=0 用绝对阈值，否则 review_top 比例

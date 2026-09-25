@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有店外经营陈列的位置。严格只输出�
 - 店外经营陈列(店铺门面外摆放的货架/商品/桌台); 按陈列区域整体框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 15

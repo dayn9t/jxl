@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有泡沫箱的位置。严格只输出一个 JSO
 - 泡沫箱(白色/蓝色 EPS 泡沫箱, 含堆叠); 可辨个体逐个框, 密集成堆框整体
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无泡沫箱原生)
 output_cls_id = 7

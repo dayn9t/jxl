@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有脚手架的位置。严格只输出一个 JSO
 - 脚手架(金属管架结构, 含防护网/安全网覆盖); 按可见整体框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无脚手架原生)
 output_cls_id = 14

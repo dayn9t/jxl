@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有占道堆放货物的位置。严格只输出�
 - 占道堆货(整齐堆放的商品/货物/货箱, 区别于垃圾混杂堆); 按堆整体框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 13

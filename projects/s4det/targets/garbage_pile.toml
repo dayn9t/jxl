@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有混合垃圾堆的位置。严格只输出一�
 - 混合垃圾堆(袋/箱/家具/杂物不可数混杂堆); 按堆整体框一框, 不逐物拆框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无垃圾堆原生)
 output_cls_id = 8

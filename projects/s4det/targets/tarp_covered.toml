@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有篷布覆盖物的位置。严格只输出一�
 - 篷布/苫布覆盖物(覆盖车辆或堆放物的篷布整体轮廓, 含绿色防尘网)
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 11

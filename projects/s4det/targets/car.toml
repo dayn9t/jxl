@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有汽车的位置。严格只输出一个 JSON �
 - 汽车(含面包车/货车/小货车——均为 car 内形态, 不细分); 只框车体
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座, car=2 原生)
 output_cls_id = 3

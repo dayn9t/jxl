@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有流动摊贩设施的位置。严格只输出�
 - 流动摊(遮阳伞摊/三轮售卖车/地摊布); 含伞+摊位整体一框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 16

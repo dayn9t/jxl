@@ -16,7 +16,10 @@ class TargetProfile(BaseModel):
     yolo_text: str
     rfdetr_cls_id: int | None = None
     vlm_prompt: str
-    weights: str
+    weights: str | None = None
+    """在役模型先验(可选): None=无 target 票(新类链), L1 共识框即标注."""
+    target_cls: int | None = None
+    """target 模型自身类表中目标类位次; 设定则过滤该类检出(抑制多类模型他类头串扰)."""
     output_cls_id: int = 0
 
 

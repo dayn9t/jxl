@@ -7,5 +7,4 @@ vlm_prompt = """检测图中散落塑料废弃物的位置。严格只输出一�
 - 散落塑料/零散废弃物(塑料膜/碎片/散落杂物区, 未成袋未成堆); 按散布区域框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 10

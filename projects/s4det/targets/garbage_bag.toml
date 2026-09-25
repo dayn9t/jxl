@@ -9,4 +9,5 @@ vlm_prompt = """检测图中所有袋装垃圾(塑料袋/编织袋盛装垃圾)�
 - 若无, 输出 []
 仅输出 JSON 数组。"""
 weights = "/mnt/data/s4det/weights/s4det-v0mini.pt"  # s4det 专项(D0 v0-mini, 批 1 种子集训成)
+target_cls = 1  # v0mini 类表 1:garbage_bag——过滤其 ebike 头串扰(2026-09-26 det_mine 新字段)
 output_cls_id = 1  # 多类合并 classes 表位次(garbage_bag=1)

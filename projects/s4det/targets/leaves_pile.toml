@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有落叶堆的位置。严格只输出一个 JSO
 - 落叶堆(扫集/堆积成堆的落叶); 按堆整体框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无落叶堆原生)
 output_cls_id = 9

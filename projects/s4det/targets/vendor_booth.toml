@@ -7,5 +7,4 @@ vlm_prompt = """检测图中所有固定摊位棚的位置。严格只输出一�
 - 固定/半固定摊位棚(棚顶结构/货架摊/报刊亭式售货棚); 按棚整体框
 - 若无, 输出 []
 仅输出 JSON 数组。"""
-weights = "/home/jiang/cc/py/jxl/yolo26s.pt"  # target 弱票替身(COCO 底座无对应原生)
 output_cls_id = 17
