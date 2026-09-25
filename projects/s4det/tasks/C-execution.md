@@ -94,6 +94,14 @@
 - **18 链全部重跑**（首跑产物作废）；顺手清偿 vlm_consensus_gt / vlm_grounding_calibrate / vlm_role_vote 存量 lint
 - **T4-b1 预标注以四票新池重跑**（旧三票票档归档 `preannot_votes_pre-upgrade-20260925.jsonl`，留作换代前后对拍）
 
+### 批 2 挖掘终态 + 首过装配（2026-09-26）
+
+- 挖掘修复史三连：①v0mini 双头串扰（`target_cls` 过滤）②YOLO26 NMS-free 同类双框（det_mine 新增 `_target_nms`，a2565ff）③共享池 stem 冲突（空 target 的 L0 行不入合并）
+- **b_multirun 的 dump 合并弃用**：vlabel 领域约定「dump 无类别 → cls 恒 0」，多类 dump 合并全落 0 类；且 consensus_dataset 要求 stem 级单源，共享池多链必然冲突
+- **新工具 `c_assemble.py`**：按链装配 cls 保真标签（复壮链 L0 dump 行 cls=output_cls_id + 各链 L1 labels 排 review、cls≠位次即炸）→ 单一 --yolo 源过 consensus_dataset（保留其近重复/空源校验）
+- **首过数据集落盘验收**：`batch2/mining/dataset/` **1,067 帧 / 1,876 框 / 0 断链**；逐类 ebike 481 / car 412 / shared_bike 341 / bicycle 217 / tarp_covered 134 / tricycle 61 / garbage_bag 70 / carton 47 / stall_cart 34 / garbage_pile 31 / construction_fence 21 / piled_goods 11 / shop_display 5 / leaves_pile 3 / scaffolding 3 / vendor_booth 3 / foam_box 2 / plastic_loose 0
+- 待办：review 帧（ebike 162 + garbage_bag 49 + 各链零星）VLM 仲裁 → 人工窗口 → 终版合并切分 → M1 v0.1 重训；低产类（foam_box/leaves_pile/scaffolding/vendor_booth/plastic_loose）按 taxonomy 样本硬条件自然挂验证
+
 ## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
 
 - **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
