@@ -33,16 +33,22 @@ for i in "${!PAIRS[@]}"; do
   [[ "$declared" == "$i" ]] || { echo "$c output_cls_id=$declared != classes 表位次 $i" >&2; exit 1; }
   SRC_OF["$c"]="$src"
 done
-CLASSES=("${!SRC_OF[@]}")
+# 迭代一律走 PAIRS 序——assoc 数组 ${!arr[@]} 顺序任意, >2 类时合并 --classes
+# 必须与 output_cls_id 位次严格同序, 任意序 = names 表与标签 id 错位(数据集级毒)
+ORDERED_C=()
+for pair in "${PAIRS[@]}"; do ORDERED_C+=("${pair%%=*}"); done
+CLASSES=("${ORDERED_C[@]}")
 
-for c in "${!SRC_OF[@]}"; do
+for c in "${ORDERED_C[@]}"; do
   out="$OUT_ROOT/$c/consensus"
   echo "=== det_mine [$c] src=${SRC_OF[$c]} -> $out"
+  # --force: 本编排拥有 $OUT_ROOT 子树, 链重跑=整链重做(含清中断残目录)
   uv run --no-sync python "$DET_MINE" "${SRC_OF[$c]}" "$out" \
     --target-profile "$PROFILES_DIR/$c.toml" \
     --validators yoloe,gdino \
     --dump-validators "$out/validators.jsonl" \
-    --device "$DEVICE"
+    --device "$DEVICE" \
+    --force
 done
 
 # 多类合并: 每类一层 dump(L0=全员一致确认样本); images_dir = 原始候选池
@@ -50,7 +56,7 @@ done
 # --classes 是 typer list 选项: 每类一个 --classes(位次 = cls id)
 dump_args=()
 classes_args=()
-for c in "${!SRC_OF[@]}"; do
+for c in "${ORDERED_C[@]}"; do
   dump_args+=(--dump "$OUT_ROOT/$c/consensus/validators.jsonl:${SRC_OF[$c]}")
   classes_args+=(--classes "$c")
 done
