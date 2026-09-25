@@ -55,3 +55,15 @@
 - 规模适配检查（skill ⑨ 双向）：末段 val 仍小幅上升（epoch91 0.269 → best 0.293）+ train/val 无过拟合分叉 → nano 容量当前足够，瓶颈在数据量而非参数规模（无需升级；待数据扩批后复判）
 - 产物换装：`/mnt/data/s4det/weights/s4det-v0mini.pt` → targets/{ebike,garbage_bag}.toml weights ✓（garbage_bag 复壮重挖留批 2）
 - 指标已入 `docs/EVAL-BENCHMARKS.md` §2（❌ 级 + WARNING-1 标注）
+
+## 批 2 种子集装配（2026-09-25，项目暂停前完成）
+
+- 工具：`c_seedset.py`（锚组配额 + 双重去重）。产物：`/mnt/data/s4det/p3-seedset/batch2/seedset/`（symlink 池 + manifest + stats）
+- 结果：**新增 3,316 帧**（vehicle 1,000 / garbage 1,000 / vendor 666[数据量截断] / phenomenon 400 / 负样本 250）+ 批 1 已入 1,600 = **全局 ~4,916 ≈ 5,000 预算**（用户定的规模）
+- 设计要点：按**锚组（粗类族）**配帧而非细类——弱标签粒度不可细分 ET2 子类，细类归属由批 2 挖掘类专用校验器完成；person 无锚（COCO 预训练 + 全帧标注覆盖）
+- 关键教训：**mobile 巡查编组制**——ET1/2 全部 14,049 事件仅落 143 个（日×机×3h）组，组 cap 必须放宽（=2 时全局容量仅 286 干涸）；组内是沿途不同目标，真重复由语义去重（DINO cos≥0.95）兜底
+- 流程教训（用户指出）：新工具实施前设计须先过目确认（superpowers 流程），不能直接开跑——已固化为执行纪律
+
+## 项目暂停状态（2026-09-25 用户指令）
+
+值守循环已停、两会话队列清空待命。恢复触发（任一）：① 人工窗口（119 兜底 + T4-b1）② doubao 控制台开通 ③ taxonomy 终态批准 → 批 2 开工（种子集已就绪）④ EXEMPT-S 确认。
