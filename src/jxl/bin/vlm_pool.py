@@ -96,8 +96,12 @@ uncertain=是人但证据不足无法定类
 仅输出JSON：{"verdict":"...","reason":"15字内"}（verdict 取上述之一）"""
 
 
-def parse_verdict(text: str) -> tuple[str, str]:
-    """role 分类响应解析 → (verdict, reason)；非法 verdict 归 parse_error。"""
+def parse_verdict(text: str,
+                  valid: frozenset[str] = frozenset(ROLE_VALID)) -> tuple[str, str]:
+    """分类响应解析 → (verdict, reason)；非法 verdict 归 parse_error。
+
+    2026-09-25 s4det: valid 集合参数化（role 菜单/类目菜单投票通用），默认 role 行为不变。
+    """
     t = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
     if "</think>" in t:
         t = t.split("</think>", 1)[1]
@@ -109,12 +113,17 @@ def parse_verdict(text: str) -> tuple[str, str]:
     except json.JSONDecodeError:
         return "parse_error", ""
     v = str(d.get("verdict", ""))
-    return (v if v in ROLE_VALID else "parse_error"), str(d.get("reason", ""))[:30]
+    return (v if v in valid else "parse_error"), str(d.get("reason", ""))[:30]
 
 
-async def call_role_vote(client: httpx.AsyncClient, alias: str,
-                         image_url: str) -> tuple[str, str, str]:
-    """返回 (alias, verdict, reason)；调用失败 verdict=api_error（弃权语义）。"""
+async def call_role_vote(client: httpx.AsyncClient, alias: str, image_url: str,
+                         prompt: str = ROLE_PROMPT,
+                         valid: frozenset[str] = frozenset(ROLE_VALID),
+                         ) -> tuple[str, str, str]:
+    """返回 (alias, verdict, reason)；调用失败 verdict=api_error（弃权语义）。
+
+    2026-09-25 s4det: prompt/valid 参数化（分类菜单投票通用），默认 role 行为不变。
+    """
     spec = CANDIDATES[alias]
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
@@ -122,12 +131,12 @@ async def call_role_vote(client: httpx.AsyncClient, alias: str,
                **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
-                   {"type": "text", "text": ROLE_PROMPT}]}]}
+                   {"type": "text", "text": prompt}]}]}
     try:
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()
-        return alias, *parse_verdict(r.json()["choices"][0]["message"]["content"])
-    except Exception as e:  # noqa: BLE001 - 失败=弃权票
+        return alias, *parse_verdict(r.json()["choices"][0]["message"]["content"], valid)
+    except Exception as e:  # 失败=弃权票
         return alias, "api_error", f"{type(e).__name__}"[:60]
 
 
@@ -240,7 +249,7 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str,
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()
         text = r.json()["choices"][0]["message"]["content"]
-    except Exception as e:  # noqa: BLE001 - 调用失败语义统一为弃权
+    except Exception as e:
         return Vote(alias, (), False, f"{type(e).__name__}: {e}"[:200])
     raw = parse_boxes(text, spec["protocol"])
     div, _ = infer_divisor(raw, spec["divisor"])
@@ -296,7 +305,7 @@ def consensus_boxes(votes: list[Vote], strong_k: int = 2,
         s_votes = len({a for a in aliases if a in strong_names})
         a_votes = len({a for a in aliases if a in arbiter_names})
         boxes = [pts[i][1] for i in idx]
-        med = tuple(statistics.median(coords) for coords in zip(*boxes))
+        med = tuple(statistics.median(coords) for coords in zip(*boxes, strict=False))
         status = ("trusted" if s_votes >= strong_k
                   else "arbited" if s_votes == 1 and a_votes >= 1 else "low_agreement")
         out.append(ConsensusBox(med, s_votes, a_votes, len(set(aliases)), status,
