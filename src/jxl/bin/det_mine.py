@@ -27,6 +27,7 @@ import orjson
 import typer
 from click.core import ParameterSource
 from ultralytics import YOLO, YOLOE
+from vlabel.crop import xyxy_iou
 
 from jxl.det.hardmine import (
     Box,
@@ -68,6 +69,19 @@ class ScoredSample:
 def gather_images(src: Path) -> list[Path]:
     """递归收集候选帧图片。"""
     return sorted(p for p in src.rglob("*") if p.suffix.lower() in _IMG_EXTS)
+
+
+def _target_nms(boxes: list[Box], thr: float = 0.6) -> list[Box]:
+    """target 框贪心 NMS(含跨类): GT 写出前去重。
+
+    NMS-free 架构(YOLO26 系)不保证输出唯一框——v0mini 实测同物双框 IoU 0.98(2026-09-26),
+    预测侧 iou 参数对它无效; 近重复对进 dump 即触发合并 fail-fast。
+    """
+    keep: list[Box] = []
+    for b in sorted(boxes, key=lambda x: -x[4]):
+        if all(xyxy_iou(b[:4], k[:4]) < thr for k in keep):
+            keep.append(b)
+    return keep
 
 
 def _detect(
@@ -480,10 +494,13 @@ def run(
     if target_model is None:
         target_map = {}
     else:
-        target_map = _detect(
-            YOLO(str(target_model)), imgs, conf, iou, device,
-            classes=None if target_cls is None else [target_cls],
-        )
+        target_map = {
+            stem: _target_nms(boxes)
+            for stem, boxes in _detect(
+                YOLO(str(target_model)), imgs, conf, iou, device,
+                classes=None if target_cls is None else [target_cls],
+            ).items()
+        }
     vmaps: dict[str, dict[str, list[Box]]] = {}
     if "yoloe" in vlist:
         vmaps["yoloe"] = detect_yoloe(imgs, yoloe_model, conf, iou, device, target_text)
