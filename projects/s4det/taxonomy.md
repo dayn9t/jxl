@@ -42,9 +42,19 @@
 | piled_goods | ET11 | ✅c06 纸箱编织袋堆地 n67 | **保留** | 整齐度区分垃圾（misc.md） |
 | shop_display | ET16（llm 锚"占道经营"） | 未见独立簇（补样 121 散） | 保留（待 P3 验证） | |
 
-## facility（第二批 road 数据，第二轮聚类；本轮无图证）
+## facility（第二批 road 数据；2026-09-25 起引入路径分派——「固定目标哨兵路径」见 design §2b）
 
-trash_can / fire_hydrant / bus_station / phone_booth / barrier_fence / manhole_cover（phenomenon 网格多簇可见井盖，间接佐证高频）/ road_mirror / mailbox / power_station / sculpture / billboard —— 状态：草案（road VLM 打框批启用）。
+**路径分派总则**（用户口述决策，2026-09-25）：动态可移动、形态确定的目标 → 检测器；静止固定位置、形态/边界不确定的目标 → GPS+视频+VLM 哨兵路径（机制：GPS 缩范围 → 附近 ~5s@1fps 短视频 → VLM 定位/筛图/描述存档 → 前后状态对比；详见 research/2026-09-25-固定目标GPS-VLM路径提案.md）。
+
+| 叶类 | 路径归属 | 裁定理由 |
+|---|---|---|
+| billboard | **哨兵路径**（检测器不适用） | 墙上区域、无边界、内容自由——bbox 语义失效；业务价值（褪色/涂鸦/脱落）本质是状态对比 |
+| sculpture | **倾向哨兵路径**，批 2 样本验证检测器胜任性后定 | 题材开放、形态特征弱；按用户要求以观测样本判定（聚类独立簇 + 试标 50 框） |
+| trash_can | 检测器 ✓ | 可移动（移位/失踪是业务事件）、形态确定 |
+| fire_hydrant | 检测器 ✓（两可，默认留） | 形态极清晰；状态监测仍由 road VLM 管线承担 |
+| bus_station / phone_booth / barrier_fence / manhole_cover / road_mirror / mailbox / power_station | **两可 → 默认检测器**，批 2 按样本量与打框质量逐类复核 | 边界清晰检测器可行；业务状态由既有 road 管线/哨兵承担，检测器作定位补充 |
+
+样本预期见盘点 §3.1 road 分布。状态：草案（road 打框批启用）。**v1 入训叶类数修正：33 → 31**（billboard 移出、sculpture 待定；manhole 井盖高频见 phenomenon 网格佐证）。
 
 ## phenomenon（区域类；phenomenon 网格为原图级聚类，按场景组织非目标组织——预期内）
 
