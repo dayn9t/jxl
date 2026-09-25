@@ -62,6 +62,7 @@ def build_candidates(
                     {
                         "img": str(img),
                         "event": ev,
+                        "pool": pool,
                         "date": ev.split("/")[0],
                         "device": str(r.get("device_id", "")),
                         "hour3": int(r.get("hour", 0)) // 3,
