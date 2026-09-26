@@ -34,6 +34,9 @@
 | 2026-09-25 | **任务书 B 执行完成**（jxl，`tasks/B-execution.md`）：B① 弱标签抽取器 56,999 行落 `preannot/`（agree 率 10.9%，与 CODEBOOK 全量交叉吻合）；B② 多类方案裁决 **(a) 类独立链+数据集层合并**（取舍记录+profiles+b_multirun.sh，ebike/garbage_bag 双类端到端冒烟过）；B③ n001 report 断链修复（13,788 图分级冒烟过）；B④ 数据根三区规划 + 台账迁移闭环（579 条已裁决回写） | ✅ 完成 |
 | — | 两级类目表 v1（taxonomy v1-草案已出，**待用户审批冻结**） | ✅ **2026-09-25 用户批准定版（v1 冻结）**——brainstorming 三裁定同日落定：EXEMPT-S 同意豁免、Q1 人工窗口=最小先行（T4-b1 先行，119 兜底并入批 2 人工窗） |
 | 2026-09-25 | **批 2 前置完成**（jxl，`tasks/C-execution.md`）：c_vote 类别投票工具——872 行 agree=false 自动定类 633（72.6%）/ split 239 入隔离台账高优池 / abstain 0；票据 sidecar 供批 2 挖掘回填类别先验 | ✅ |
+| 2026-09-26 | **VLM 池换代**（用户新近度准则触发）：doubao-seed-2-1-pro-260915 接入（key 下已开通，旧端点关闭非阻塞）、qwen38-local 别名统一；T7' 重标定 0.808/0.741/0.724 三强票 + glm 0.482 仲裁；det_mine target 票重构（weights 可选 + target_cls 过滤 + _target_nms）——修复两类 GT 中毒 | ✅ |
+| 2026-09-26 | **批 2 挖掘+仲裁+装配全链完成**（jxl）：18 链挖掘 → c_arbitrate 仲裁（735 帧：GT 677 / 人工池 58）→ c_assemble cls 保真装配 **1,268 帧 / 3,683 框**（磁盘验收 0 断链）；ebike 918/car 965/shared_bike 648/bicycle 447/tarp_covered 211…低产类按硬条件挂验证 | ✅ |
+| 2026-09-26 | **人工窗口 window1 装配**（c_humanpack）：522 帧（仲裁残量 58 + 批 1 兜底 review 464）候选框预放，X-AnyLabeling 工程就绪 `/mnt/data/s4det/human_window/window1/` | 🔄 **待用户编辑**（连同 T4-b1 225 帧，两件编辑落地后自动链：回收→终版切分→M1 v0.1 重训→T4 评估） |
 | — | 标注规范 v1（堆叠/小目标/遮挡细则，含用户拍板项） | ✅ 成文（P1，待用户确认） |
 | — | mobile 弱标签抽取 ✅（B①）+ 共识标注种子集 P3（**等用户批准 taxonomy 冻结后开工**，jxl 会话） | 🔄 第一批执行中 |
 | 2026-09-25 | **P3 第一批执行完成**（jxl，`tasks/C-execution.md`）：ebike+garbage_bag 全链跑通——投影 49,939 行 → 挖掘 1,600 帧 → VLM 仲裁消解 83% review 帧（T7 重标定 qwen-flash F1 0.875）→ 终版 **1,481 帧/1,404 框** → 8:1:1 切分；逐类 gate 达标（1,100/303 框）。双闸审计干净。**等人工兜底 119 帧**（contact sheet 已备）；doubao 端点关闭待控制台开通 | 🔄 待人工兜底 |

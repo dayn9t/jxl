@@ -110,6 +110,13 @@
 - 坑：Vote 字段名 error 非 err（t4_preannot 同埋雷，零失败跑未触发；f14d1b0）；glm 偶发越界坐标（x=1.024，IoU 层自然无害）
 - 待办：人工窗口（仲裁残量 58 + 批 1 兜底 119）→ 终版合并切分（含负样本池）→ M1 v0.1 重训 → T4 评估
 
+## 人工窗口 window1 装配（2026-09-26，47b1e29）
+
+- **`c_humanpack.py`**：两路人工待裁帧统一打包 X-AnyLabeling 工程 → `/mnt/data/s4det/human_window/window1/`（images symlink + labels 候选框 json + manifest + README + labels.txt）
+- **522 帧**：批 2 仲裁残量 58（未支持共识聚类 → `类名?` 候选框）+ 批 1 兜底 review 464（校验器检出框 → `类名?` 候选，来源写 description）——预标注优先准则的人工窗口落地形
+- 防误覆盖：labels 侧已有编辑的帧自动跳过；空候选帧不打包
+- **用户待办两件编辑**（同一 X-AnyLabeling，启动命令见会话/README）：① T4-b1 225 帧（评估 GT，解锁质量结论+能力账）② window1 522 帧（人工窗口，解锁终版数据）→ 之后自动链：回收 → 终版合并切分（含负样本池 250）→ M1 v0.1 重训 → T4 评估
+
 ## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
 
 - **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
