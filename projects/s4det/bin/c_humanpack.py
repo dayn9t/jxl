@@ -3,9 +3,10 @@
 
 打包两路人工待裁帧到统一 X-AnyLabeling 工程:
     A. 批 2 仲裁残量(arbitration_human.jsonl): 未获校验器支持的共识聚类 → 类名? 候选框
-    B. 批 1 兜底 119 帧(batch1 review): 校验器检出框 → 类名? 候选框
-产物: <out>/{images(symlink), labels(X-AnyLabeling v4 json), manifest.jsonl, README.md}
+    B. 批 1 兜底 464 帧(batch1 review): 校验器检出框 → 类名? 候选框
+产物: <out>/{images(symlink), labels(X-AnyLabeling v4 json), labels.txt, manifest.jsonl, README.md}
 人编辑导出后由管线回收（确认=去 ?；删=弃；空标帧=负样本）。
+manifest 为合并快照：重跑并入旧条目，人已编辑帧的记录不丢。
 
 典型用法:
     python c_humanpack.py   # 幂等(已有 json 的帧跳过)
@@ -50,7 +51,9 @@ def run() -> None:
     """装配仲裁残量 + 批 1 兜底 → 统一人工窗口工程."""
     (OUT / "images").mkdir(parents=True, exist_ok=True)
     (OUT / "labels").mkdir(exist_ok=True)
-    manifest: list[dict] = []
+    mp = OUT / "manifest.jsonl"
+    manifest = _load_jsonl(mp)  # 合并快照: 并入旧记录, 重跑不丢已编辑帧的条目
+    seen = {m["stem"] for m in manifest}
 
     # A. 批 2 仲裁残量: 未支持共识聚类 → 类名? 候选
     for r in _load_jsonl(B2 / "arbitration_human.jsonl"):
@@ -59,13 +62,17 @@ def run() -> None:
         if not img.exists():
             logger.warning("缺图跳过: {}", img)
             continue
+        with Image.open(img) as im:
+            w, h = im.size
         shapes = [
-            _shape(f"{chain}?", c["box"], *(lambda i: (i[0], i[1]))(
-                Image.open(img).size), f"{chain} 未支持聚类: {', '.join(c['members'])}")
+            _shape(f"{chain}?", c["box"], w, h,
+                   f"{chain} 未支持聚类: {', '.join(c['members'])}")
             for c in r.get("unsupported", [])
         ]
-        if _emit(img, f"b2_{chain}_{stem}", shapes, OUT):
-            manifest.append({"stem": f"b2_{chain}_{stem}", "src": str(img),
+        key = f"b2_{chain}_{stem}"
+        if _emit(img, key, shapes, OUT) and key not in seen:
+            seen.add(key)
+            manifest.append({"stem": key, "src": str(img),
                              "kind": "arbitration", "chain": chain})
 
     # B. 批 1 兜底: 校验器检出框 → 类名? 候选
@@ -87,12 +94,21 @@ def run() -> None:
             with Image.open(img) as im:
                 w, h = im.size
             shapes = [_shape(f"{chain}?", b, w, h, f"校验器 {src}") for b, src in boxes]
-            if _emit(img, f"b1_{chain}_{stem}", shapes, OUT):
-                manifest.append({"stem": f"b1_{chain}_{stem}", "src": str(img),
+            key = f"b1_{chain}_{stem}"
+            if _emit(img, key, shapes, OUT) and key not in seen:
+                seen.add(key)
+                manifest.append({"stem": key, "src": str(img),
                                  "kind": "batch1_review", "chain": chain})
 
     (OUT / "manifest.jsonl").write_bytes(
         b"\n".join(orjson.dumps(m) for m in manifest) + b"\n")
+    labels: set[str] = set()  # 候选类名全集; 去 ? 的正类形式一并收录(确认=去 ? 的编辑流程)
+    for p in (OUT / "labels").glob("*.json"):
+        for s in json.loads(p.read_text())["shapes"]:
+            labels.add(s["label"])
+            if s["label"].endswith("?"):
+                labels.add(s["label"][:-1])
+    (OUT / "labels.txt").write_text("\n".join(sorted(labels)) + "\n")
     (OUT / "README.md").write_text(
         "# 人工窗口 window1（批 2 仲裁残量 + 批 1 兜底，2026-09-26 装配）\n\n"
         "> 候选框均为「预标注优先」产物：确认→去掉标签里的 ?；否→删框；空标帧=负样本。\n"
