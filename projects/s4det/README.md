@@ -1,6 +1,6 @@
 # s4det — s4 事件域目标检测器
 
-> **▶ 项目恢复（2026-09-25 晚）**——用户三裁定落地（taxonomy v1 冻结 / EXEMPT-S 确认 / Q1=最小先行），批 2 开工。仍待用户：T4-b1 225 帧标注窗口、doubao 控制台开通（非硬阻塞）。
+> **⏸ 状态快照（2026-09-26 上午，上下文压缩前落地）**：批 2 挖掘已收尾（16 类 profiles + c_assemble cls-faithful 首版数据集，`ca7e7b7`）；taxonomy v1 已定版冻结；vlm 池已升级（doubao 2.1+qwen38）并重标定+det_mine 毒修复；T4-b1 已按「预标注优先」改造（三模型预标票 `eval-gt/t4-b1/preannot_votes.jsonl`）。**下一步唯一阻塞=人工窗口**：X-AnyLabeling 编辑 T4-b1 225 帧（预标注基础上改/删/补）+ 119 兜底帧（并入批 2 人工窗）→ 批 2 终版双闸审计合并 → P4 v0 全类训练。M0 烟火线可随时独立启动。**在途未提交**：`bin/c_vote.py`、`bin/t4_preannot.py` 有改动（上次会话在途态，恢复时先核）。执行细则见 TRAINING-LOOP.md；类目权威=taxonomy.md（附录 A）。
 
 为 s4 智慧城管事件域训练统一目标检测器：把 mobile/road/scene 三域全部事件相关目标检测出来，
 供判定层（LLM/judge）消费。数据飞轮复用 jxl+vlabel 共识标注体系（n001/sgcc 沉淀）。
