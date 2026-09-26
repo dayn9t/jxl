@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """T4-b1 预标注装配（用户准则 2026-09-26：人不凭空标——多模型预标 + 人编辑 + 对拍）.
 
-vlm_pool 三模型对 eval-gt/t4-b1 的 225 帧逐类 grounding（每帧×2 类），
+vlm_pool 四票池（MODELS，三强 + glm 仲裁）对 eval-gt/t4-b1 的 225 帧逐类 grounding（每帧×2 类），
 consensus_boxes 合成：
     trusted/arbited → label=类名      （共识底稿，用户复核/删改）
     low_agreement   → label=类名?     （候选框，description=来源票，待用户裁决）
@@ -53,7 +53,7 @@ TARGETS = {
 GT_LABELS = set(TARGETS)  # score 时算真值的真实类（`?` 后缀候选不计）
 IOU_TH = 0.4
 STRONG_MODELS = {a for a, s in CANDIDATES.items() if s["strength"] == "strong"}
-"""候选框上屏门槛：仅强模型单票（glm F1 0.33 单票噪声过大——留台账对拍，不上屏）。"""
+"""候选框上屏门槛：仅强模型单票（glm 旧代 0.33 → 换代后仲裁票 0.482（T7'），单票噪声过大——留台账对拍，不上屏）。"""
 
 
 def render_labels(votes_rows: list[dict]) -> int:
@@ -139,7 +139,7 @@ def run(
     concurrency: int = typer.Option(6),
     limit: int = typer.Option(0, help=">0 冒烟只跑 N 帧"),
 ) -> None:
-    """生成预标注：三模型逐类 grounding → 共识 → labels/*.json + votes 台账."""
+    """生成预标注：四票池逐类 grounding → 共识 → labels/*.json + votes 台账."""
     aliases = [m.strip() for m in models.split(",") if m.strip()]
     frames = read_jsonl(T4 / "manifest.jsonl")
     if limit > 0:
