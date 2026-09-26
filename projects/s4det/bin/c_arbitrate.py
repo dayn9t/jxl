@@ -114,7 +114,7 @@ def run(
                 *[call_person(client, a, url, prompt=build_target_prompt(yolo_text))
                   for a in aliases])
         vd = {v.alias: [list(b) for b in v.boxes] for v in votes if v.ok}
-        errs = [f"{v.alias}:{v.err}" for v in votes if not v.ok]
+        errs = [f"{v.alias}:{v.error}" for v in votes if not v.ok]
         cboxes = consensus_boxes(list(votes))
         gt, unsupported = [], []
         for c in cboxes:

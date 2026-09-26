@@ -45,7 +45,7 @@ app = typer.Typer(add_completion=False, help="T4-b1 预标注（多模型预标 
 T4 = DATA_ROOT / "eval-gt" / "t4-b1"
 LABELS = T4 / "labels"
 VOTES = T4 / "preannot_votes.jsonl"
-MODELS = ["qwen-flash", "qwen35b-local", "glm-flash"]
+MODELS = ["qwen-flash", "doubao-vl", "qwen38-local", "glm-flash"]
 TARGETS = {
     "ebike": "electric bike or motorcycle",  # taxonomy v1: motorbike 并入 ebike
     "garbage_bag": "garbage bag or woven sack",
@@ -167,7 +167,7 @@ def run(
                 *[call_person(client, a, url, prompt=build_target_prompt(TARGETS[cls]))
                   for a in aliases])
         vd = {v.alias: [list(b) for b in v.boxes] for v in votes if v.ok}
-        errs = [f"{v.alias}:{v.err}" for v in votes if not v.ok]
+        errs = [f"{v.alias}:{v.error}" for v in votes if not v.ok]
         cboxes = consensus_boxes(list(votes))
         return {"basename": img.stem, "event": f["event"], "leaf": f.get("leaf", ""),
                 "cls": cls, "votes": vd, "errors": errs,
