@@ -89,7 +89,24 @@ def run(
                     ((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, 1.0), cls))
             images.setdefault(lf.stem, src / f"{lf.stem}.jpg")
             n_l1 += 1
-        logger.info("[{}] L0 帧 {} | L1 帧 {} (排 review {})", c, n_l0, n_l1, len(review_stems))
+        # 仲裁 GT(review 帧 c_arbitrate 产出, 已过 vlm_only 幻觉防线)加回
+        n_arb = 0
+        for lf in (cons / "arbitration_labels").glob("*.txt"):
+            for line in lf.read_text().splitlines():
+                if not line.strip():
+                    continue
+                parts = line.split()
+                cx, cy, w, h = (float(v) for v in parts[1:5])
+                cls = int(parts[0])
+                if cls != prof.output_cls_id:
+                    raise ValueError(
+                        f"{lf}: 仲裁标签 cls {cls} != profile.output_cls_id {prof.output_cls_id}")
+                frames[lf.stem].append(
+                    ((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, 1.0), cls))
+            images.setdefault(lf.stem, src / f"{lf.stem}.jpg")
+            n_arb += 1
+        logger.info("[{}] L0 帧 {} | L1 帧 {} | 仲裁帧 {} (review 待裁 {})",
+                    c, n_l0, n_l1, n_arb, len(review_stems) - n_arb)
 
     work = MINING / "assemble"
     shutil.rmtree(work, ignore_errors=True)
