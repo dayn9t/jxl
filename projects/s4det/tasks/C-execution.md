@@ -102,6 +102,14 @@
 - **首过数据集落盘验收**：`batch2/mining/dataset/` **1,067 帧 / 1,876 框 / 0 断链**；逐类 ebike 481 / car 412 / shared_bike 341 / bicycle 217 / tarp_covered 134 / tricycle 61 / garbage_bag 70 / carton 47 / stall_cart 34 / garbage_pile 31 / construction_fence 21 / piled_goods 11 / shop_display 5 / leaves_pile 3 / scaffolding 3 / vendor_booth 3 / foam_box 2 / plastic_loose 0
 - 待办：review 帧（ebike 162 + garbage_bag 49 + 各链零星）VLM 仲裁 → 人工窗口 → 终版合并切分 → M1 v0.1 重训；低产类（foam_box/leaves_pile/scaffolding/vendor_booth/plastic_loose）按 taxonomy 样本硬条件自然挂验证
 
+### 批 2 review 仲裁 + 二次装配（2026-09-26，46013bb/f14d1b0）
+
+- **`c_arbitrate.py`**：735 review 帧四票 grounding（build_target_prompt(yolo_text)，与 T7 标定同路径）→ trusted/arbited 且 ≥1 校验器位置支持（IoU≥0.4）→ 仲裁 GT；vlm_only/split/弃权 → 人工池（vlm_only 幻觉防线，批 1 语义）
+- 结果：**仲裁 GT 677 帧 / 人工池 58 帧（8%）**；票据台账 `arbitration_votes.jsonl`（断点重入+对拍）
+- **二次装配落盘验收**：`batch2/mining/dataset/` **1,268 帧 / 3,683 框 / 0 断链**（较首过 1,067/1,876 近翻倍）；逐类 ebike 918 / car 965 / shared_bike 648 / bicycle 447 / tarp_covered 211 / garbage_bag 123 / tricycle 77 / carton 146 / stall_cart 47 / garbage_pile 41 / construction_fence 29 / piled_goods 15 / shop_display 5 / leaves_pile 3 / scaffolding 3 / vendor_booth 3 / foam_box 2 / plastic_loose 0
+- 坑：Vote 字段名 error 非 err（t4_preannot 同埋雷，零失败跑未触发；f14d1b0）；glm 偶发越界坐标（x=1.024，IoU 层自然无害）
+- 待办：人工窗口（仲裁残量 58 + 批 1 兜底 119）→ 终版合并切分（含负样本池）→ M1 v0.1 重训 → T4 评估
+
 ## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
 
 - **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
