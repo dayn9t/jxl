@@ -1,6 +1,6 @@
 # s4det — s4 事件域目标检测器
 
-> **⏸ 状态快照（2026-09-26 上午，上下文压缩前落地）**：批 2 挖掘已收尾（16 类 profiles + c_assemble cls-faithful 首版数据集，`ca7e7b7`）；taxonomy v1 已定版冻结；vlm 池已升级（doubao 2.1+qwen38）并重标定+det_mine 毒修复；T4-b1 已按「预标注优先」改造（三模型预标票 `eval-gt/t4-b1/preannot_votes.jsonl`）。**下一步唯一阻塞=人工窗口**：X-AnyLabeling 编辑 T4-b1 225 帧（预标注基础上改/删/补）+ 119 兜底帧（并入批 2 人工窗）→ 批 2 终版双闸审计合并 → P4 v0 全类训练。M0 烟火线可随时独立启动。**在途未提交**：`bin/c_vote.py`、`bin/t4_preannot.py` 有改动（上次会话在途态，恢复时先核）。执行细则见 TRAINING-LOOP.md；类目权威=taxonomy.md（附录 A）。
+> **⏸ 状态快照（2026-09-26）**：批 2 全链完成：18 链挖掘 → c_arbitrate 仲裁 735 帧（GT 677/人工池 58）→ c_assemble cls 保真二次装配 1,268 帧/3,683 框（磁盘验收 0 断链）；VLM 池已换代四票并重标定；taxonomy v1 已冻结；T4-b1 已按预标注优先改造。**下一步唯一阻塞=用户在 X-AnyLabeling 编辑两件**：T4-b1 225 帧 + 人工窗口 window1 522 帧（仲裁残量 58 + 批 1 兜底 review 464）→ 回收 → 终版合并切分 → M1 v0.1 重训 → T4 评估。M0 烟火线可随时独立启动。执行细则见 TRAINING-LOOP.md；类目权威=taxonomy.md（附录 A）。
 
 为 s4 智慧城管事件域训练统一目标检测器：把 mobile/road/scene 三域全部事件相关目标检测出来，
 供判定层（LLM/judge）消费。数据飞轮复用 jxl+vlabel 共识标注体系（n001/sgcc 沉淀）。
@@ -32,14 +32,15 @@
 | 2026-09-25 | P0-1 平台码表逆向完成（CODEBOOK：11=非机动车单辆确证、12 待定三假说、码表按域分表）；P1 标注规范 v1 成文；任务书 A/B 成文 → **任务书 A 已交 jxl 会话执行** | ✅ / 🔄 jxl 执行中 |
 | 2026-09-25 | **任务书 A 执行完成**（jxl）：五粗类 4,508 crop + 聚类（阈值三档存证 + k-means k=16 主档）+ 簇代表网格 6 页落 `/mnt/data/s4det/p0-cluster/`。关键发现：码 12 七簇全为路缘/地面区域框（CODEBOOK 假说③ 压倒性）；平台框噪声簇可观（石球/栅栏入框）；ET15/16/19=llm 类别锚点非 EventType。偏差与参数见 `tasks/A-execution.md`。**s4 已人审：码 12 定性 + taxonomy v1-草案命名（33 入训叶类）** | ✅ 完成 |
 | 2026-09-25 | **任务书 B 执行完成**（jxl，`tasks/B-execution.md`）：B① 弱标签抽取器 56,999 行落 `preannot/`（agree 率 10.9%，与 CODEBOOK 全量交叉吻合）；B② 多类方案裁决 **(a) 类独立链+数据集层合并**（取舍记录+profiles+b_multirun.sh，ebike/garbage_bag 双类端到端冒烟过）；B③ n001 report 断链修复（13,788 图分级冒烟过）；B④ 数据根三区规划 + 台账迁移闭环（579 条已裁决回写） | ✅ 完成 |
-| — | 两级类目表 v1（taxonomy v1-草案已出，**待用户审批冻结**） | ✅ **2026-09-25 用户批准定版（v1 冻结）**——brainstorming 三裁定同日落定：EXEMPT-S 同意豁免、Q1 人工窗口=最小先行（T4-b1 先行，119 兜底并入批 2 人工窗） |
+| — | 两级类目表 v1 | ✅ **2026-09-25 用户批准定版（v1 冻结）**——brainstorming 三裁定同日落定：EXEMPT-S 同意豁免、Q1 人工窗口=最小先行（T4-b1 先行，119 帧兜底并入批 2 人工窗） |
 | 2026-09-25 | **批 2 前置完成**（jxl，`tasks/C-execution.md`）：c_vote 类别投票工具——872 行 agree=false 自动定类 633（72.6%）/ split 239 入隔离台账高优池 / abstain 0；票据 sidecar 供批 2 挖掘回填类别先验 | ✅ |
 | 2026-09-26 | **VLM 池换代**（用户新近度准则触发）：doubao-seed-2-1-pro-260915 接入（key 下已开通，旧端点关闭非阻塞）、qwen38-local 别名统一；T7' 重标定 0.808/0.741/0.724 三强票 + glm 0.482 仲裁；det_mine target 票重构（weights 可选 + target_cls 过滤 + _target_nms）——修复两类 GT 中毒 | ✅ |
 | 2026-09-26 | **批 2 挖掘+仲裁+装配全链完成**（jxl）：18 链挖掘 → c_arbitrate 仲裁（735 帧：GT 677 / 人工池 58）→ c_assemble cls 保真装配 **1,268 帧 / 3,683 框**（磁盘验收 0 断链）；ebike 918/car 965/shared_bike 648/bicycle 447/tarp_covered 211…低产类按硬条件挂验证 | ✅ |
 | 2026-09-26 | **人工窗口 window1 装配**（c_humanpack）：522 帧（仲裁残量 58 + 批 1 兜底 review 464）候选框预放，X-AnyLabeling 工程就绪 `/mnt/data/s4det/human_window/window1/` | 🔄 **待用户编辑**（连同 T4-b1 225 帧，两件编辑落地后自动链：回收→终版切分→M1 v0.1 重训→T4 评估） |
+| 2026-09-26 | **全项目系统审核+修复**（26+11 agent 双工作流）：确认 21 条（2 high=重跑截断缺陷，均已修）/ 驳回 1 条；数据本体全绿。代码 4 文件 + 文档 10 文件 + KB 2 处修复；存量标签补末行换行（双口径清点恢复一致）；vlabel 交接规格落地。详见 `tasks/C-execution.md` 审核节 | ✅ |
 | — | 标注规范 v1（堆叠/小目标/遮挡细则，含用户拍板项） | ✅ 成文（P1，待用户确认） |
 | — | mobile 弱标签抽取 ✅（B①）+ 共识标注种子集 P3（**等用户批准 taxonomy 冻结后开工**，jxl 会话） | 🔄 第一批执行中 |
-| 2026-09-25 | **P3 第一批执行完成**（jxl，`tasks/C-execution.md`）：ebike+garbage_bag 全链跑通——投影 49,939 行 → 挖掘 1,600 帧 → VLM 仲裁消解 83% review 帧（T7 重标定 qwen-flash F1 0.875）→ 终版 **1,481 帧/1,404 框** → 8:1:1 切分；逐类 gate 达标（1,100/303 框）。双闸审计干净。**等人工兜底 119 帧**（contact sheet 已备）；doubao 端点关闭待控制台开通 | 🔄 待人工兜底 |
+| 2026-09-25 | **P3 第一批执行完成**（jxl，`tasks/C-execution.md`）：ebike+garbage_bag 全链跑通——投影 49,939 行 → 挖掘 1,600 帧 → VLM 仲裁消解 83% review 帧（T7 重标定 qwen-flash F1 0.875）→ 终版 **1,481 帧/1,403 框**（近重复清洗后落盘） → 8:1:1 切分；逐类 gate 达标（1,100/303 框）。双闸审计干净。**等人工兜底 119 帧**（contact sheet 已备）；doubao 端点关闭待控制台开通 | 🔄 待人工兜底 |
 | 2026-09-25 | 检测器 v0-mini 训练（D0，弱标签口径）+ EVAL-BENCHMARKS 缺口清单建成（j-eval-benchmarks） | ✅（质量结论等 T4-b1 人审窗口） |
 | — | 飞轮循环（mine → 重标 → 重训）常态化 + 隔离台账 | ⬜ |
 
@@ -50,6 +51,6 @@
 - `research/2026-09-25-目标分类学与数据源盘点.md` — 三路调研汇总 + 用户需求存档 + 外部实践 + 细分权衡 + 候选类目草案
 - `tasks/` — s4→jxl 任务书（A 聚类跑批 ✅ `tasks/A-execution.md` / B 基建 ✅ `tasks/B-execution.md`）
 - `data/platform-codes/` — 平台码表逆向（CODEBOOK.md 结论 + 原始计数，脚本在 s4 仓 py/tools/reveng_platform_codes.py）
-- `taxonomy.md` — 两级类目表（**v0 草案骨架**，未冻结禁作标注依据；等任务书 A 网格回来看图命名→用户审批冻结）
+- `taxonomy.md` — 两级类目表（v1 已冻结 2026-09-25，附录 A 为归属权威；改动走批次间修正）
 - `lexicon.md` — 形态词典 v0（文本源草案：各叶类形态要点/203 词频直证/TEXT 直证；图证待聚类网格回填）
 - `docs/EVAL-BENCHMARKS.md` — 评估参照集盘点（早期骨架：❌ 缺口警告区/逐组件分级/待建 T4-T8；**人工 GT 建成前内部指标不得当质量结论**）

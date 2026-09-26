@@ -85,7 +85,7 @@
 
 | 执行体 | 类目池 | 计数 | 实现状态 |
 |---|---|---|---|
-| **D1 主检测器**（统一动态目标 YOLO） | 已训：ebike/garbage_bag；批 2 直入：shared_bike/tricycle/car/carton/foam_box/garbage_pile/construction_fence/scaffolding/vendor_booth/stall_cart/piled_goods/**person(辅助证据类)**；挂验证 5：bicycle（混淆<15% 否则并 shared_bike）/plastic_loose/shop_display/tarp_covered/leaves_pile；观察候补 3：dead_animal/oil_stain/charging_bike | **22** | 已训 2（v0-mini）；批 2 等终态批准 |
+| **D1 主检测器**（统一动态目标 YOLO） | 已训：ebike/garbage_bag；批 2 直入：shared_bike/tricycle/car/carton/foam_box/garbage_pile/construction_fence/scaffolding/vendor_booth/stall_cart/piled_goods/**person(辅助证据类；另线=全帧标注，任务见 tasks/C-execution.md 待办)**；挂验证 5：bicycle（混淆<15% 否则并 shared_bike）/plastic_loose/shop_display/tarp_covered/leaves_pile；观察候补 3：dead_animal/oil_stain/charging_bike | **22** | 已训 2（v0-mini）；批 2 等终态批准 |
 | **D2 烟火检测器**（独立线+时序投票） | smoke/open_flame | 2 | 预研；公开模型起步可先行，兼野炊证据源；**补 ET10 突发情况能力空档** |
 | **D3 哨兵机制**（GPS+状态对比） | billboard/sculpture（仅哨兵）+ trash_can/fire_hydrant/bus_station/phone_booth/barrier_fence/road_mirror/mailbox/power_station（**与 D1 双重身份**：批 2 后视 D1 定位类 + 哨兵状态监测）+ manhole_cover（两段式：D1/D3 检出 + D4 破损判定） | 11 | 预研；road 第二批启用 |
 | **D4 VLM 服务**（非检测器） | 场景判定（钓鱼/野营/野炊成立性）/无边界目标描述/状态对比/仲裁 | — | 机制已验证（批 1 实用中） |

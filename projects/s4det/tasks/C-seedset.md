@@ -9,7 +9,7 @@
 
 ## 输入（全部就绪）
 
-- `/mnt/data/s4det/preannot/manifest.jsonl`：56,999 object 行（agree=true 6,218 直通候选；conf hi 20,277/mid 15,832/lo 20,890；ambig_g12 23,629 单独标记）
+- `/mnt/data/s4det/preannot/manifest.jsonl`：56,999 object 行（agree=true 6,211 直通候选；conf hi 20,277/mid 15,832/lo 20,890；ambig_g12 23,629 单独标记）
 - 机制件：`targets/*.toml` profiles + `b_multirun.sh`（B② 已冒烟）+ guideline 例图指针
 - 数据根三区（B④）
 

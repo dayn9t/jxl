@@ -6,7 +6,7 @@
 
 - 工具：`projects/s4det/bin/b_preannot.py`（复用 event_index.jsonl 单一数据源；平台重复 Id 去重在索引管线完成：全等丢弃 1,079、冲突 0）
 - 产物：`/mnt/data/s4det/preannot/manifest.jsonl` **56,999 行**（schema 与任务书示例逐字段一致，crop_path=null 惰性）
-- 全量口径：agree 率 10.9%（agree=true 6,218 行=种子直通候选）；conf hi 20,277 / mid 15,832 / lo 20,890（lo 不入种子直通）；code_verif 与 CODEBOOK 全量交叉吻合（water_region 3,248 与码表逆向计数精确一致；ebike_single 12,464；ambig_g12 23,629 单独标记）
+- 全量口径：agree 率 10.9%（agree=true 6,211 行=种子直通候选）；conf hi 20,277 / mid 15,832 / lo 20,890（lo 不入种子直通）；code_verif 与 CODEBOOK 全量交叉吻合（water_region 3,248 与码表逆向计数精确一致；ebike_single 12,464；ambig_g12 23,629 单独标记）
 - **验收冒烟**：20 事件（ET2=6/ET3=6/ET14=5/其他 3），字段缺失 0，event.json 与 img_path 全部可回溯 ✓
 - 叶类投影：按任务书约定未做，等 taxonomy.md 用户审批冻结后另跑投影步
 

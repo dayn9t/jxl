@@ -31,11 +31,11 @@
 ### 步骤 5 双闸审计 ✅（初查 + 终查）
 
 - 闸门（L0 k≥2∧strong≥1）：挡 1/22 框（ebike，已入隔离台账 `gate:` 前缀，priority=high）
-- 位置卫兵：终版 1,404 框 **0 嫌疑簇**（移动目标+车载巡查，位置签名分散；n001 静态物风险在本域天然低）
+- 位置卫兵：终版 1,403 框（合并 1,404、近重复清洗 1）**0 嫌疑簇**（移动目标+车载巡查，位置签名分散；n001 静态物风险在本域天然低）
 
 ### 步骤 6 合并切分 ✅
 
-- 六层互斥合并（L0 dump / L1 / arbitration trusted+arbited）：**1,481 帧 / 1,404 框**，近重复 1 框清洗
+- 六层互斥合并（L0 dump / L1 / arbitration trusted+arbited）：**1,481 帧 / 1,404 框**，近重复 1 框清洗（清洗后落盘 1,403）
 - 坑两枚（已固化进 `c_val_to_yolo.py` / `c_arb_to_yolo.py`）：det_mine labels/ 混含 review 帧（与仲裁层 stem 冲突）；validators 的 target 字段是原始检测不是自动标注（L1 须用 labels/ 或按层精确导出）
 - 切分：train/val/test 有框帧 627/71/77（≈8:1:1，symlink）
 - **逐类 gate**：ebike 1,100 框 ✓ / garbage_bag 303 框 ✓（≥50 达标；garbage_bag 偏弱因替身在役模型无垃圾类，专项权重后复壮）
@@ -45,7 +45,7 @@
 
 1. 人工兜底 119 帧（低共识 contact sheet）——**已裁定（2026-09-25 晚）：并入批 2 人工窗口**
 2. doubao 池成员恢复（控制台开通替代模型）
-3. ~~agree=false 对象级类别投票工具~~ ✅ 已建（`c_vote.py`，见「项目恢复」节）
+3. ~~agree=false 对象级类别投票工具~~ ✅ 已建（`c_vote.py`，见「批 2 前置：agree=false 类别投票」节）
 4. 垃圾族弱（303 框）：批 2 扩池或专项权重后重挖
 
 ## D0 v0-mini 训练（2026-09-25，干线验证 + 专项权重）✅
@@ -76,6 +76,13 @@
 - **taxonomy v1 冻结**（批准定版）→ 批 2 解锁开工
 - **EXEMPT-S 同意豁免**（EVAL-BENCHMARKS 转确认态；v1 质量口径=中大型目标）
 - **Q1 = 最小先行**：T4-b1 225 帧先行开窗（解锁 v0.1 质量结论）；119 兜底并入批 2 人工窗口
+
+## 批 2 前置：agree=false 类别投票（批 1 遗留 #3）✅
+
+- 工具：`bin/c_vote.py`（bbox±10% crop → vlm_pool 菜单分类投票 → role_consensus；split 入隔离台账 priority=high，断点重入按行键）；`vlm_pool.call_role_vote/parse_verdict` 参数化 prompt/valid（role 默认行为不变）；菜单导出件 `projects/s4det/taxonomy_leaves.json`（taxonomy 附录 A 46 类，taxonomy 演进时重导出）
+- 结果（872 行）：**auto 633（trusted 607 / arbited 26）/ split 239 入隔离台账 / abstain 0**；sidecar `preannot/votes_agree_false.jsonl`（不改写 manifest，训练框仍以共识挖掘为准）
+- 分布要点：garbage_bag 196 / tarp_covered 135 / carton 100 / garbage_pile 26 / construction_fence 25 / foam_box 22 / water_puddle 22 / person 19 / piled_goods 15——苫布覆盖硬类大量路由浮现；批 2 挖掘装配按 verdict 回填类别先验
+- 坑：parse_verdict 参数化时**签名加了 valid 参数但函数体仍比较旧常量 ROLE_VALID**（冒烟 6/6 全 abstain 暴露）→ 已修；教训=参数化改造必须 grep 函数体内全部旧引用点，冒烟必须真跑不能只看 exit 0
 
 ## 批 2 挖掘开工（2026-09-26 凌晨）
 
@@ -108,7 +115,8 @@
 - 结果：**仲裁 GT 677 帧 / 人工池 58 帧（8%）**；票据台账 `arbitration_votes.jsonl`（断点重入+对拍）
 - **二次装配落盘验收**：`batch2/mining/dataset/` **1,268 帧 / 3,683 框 / 0 断链**（较首过 1,067/1,876 近翻倍）；逐类 ebike 918 / car 965 / shared_bike 648 / bicycle 447 / tarp_covered 211 / garbage_bag 123 / tricycle 77 / carton 146 / stall_cart 47 / garbage_pile 41 / construction_fence 29 / piled_goods 15 / shop_display 5 / leaves_pile 3 / scaffolding 3 / vendor_booth 3 / foam_box 2 / plastic_loose 0
 - 坑：Vote 字段名 error 非 err（t4_preannot 同埋雷，零失败跑未触发；f14d1b0）；glm 偶发越界坐标（x=1.024，IoU 层自然无害）
-- 待办：人工窗口（仲裁残量 58 + 批 1 兜底 119）→ 终版合并切分（含负样本池）→ M1 v0.1 重训 → T4 评估
+- 待办：人工窗口（仲裁残量 58 + 批 1 兜底 119）→ 终版合并切分（含负样本池）→ M1 v0.1 重训 → T4 评估 → 已由 window1 装配落地（522 = 仲裁残量 58 + 批 1 review 464，见下文 window1 节）
+- person 全帧标注另线（taxonomy 附录 A 批 2 直入 12 之一）：不入 18 类链；触发点=window1/T4-b1 两件编辑完成后启动；裁决点=赶 v0.1 终版合并切分或入 v0.2
 
 ## 人工窗口 window1 装配（2026-09-26，47b1e29）
 
@@ -120,13 +128,16 @@
 ## T4-b1 预标注模式（2026-09-26 用户准则「预标注优先」）
 
 - **准则**：人工标注一律多模型预标 + 人编辑，禁止凭空画框；模型署名保留，编辑结果即真值 + 各模型 IoU/P/R/F1 对拍数据源。正本已入全局 CLAUDE.md（j-cc 509c78a）；T4-eval-gt §3 / TRAINING-LOOP §7 同步修订（原 SAM2「纯人工」铁律被用户裁决替代）
-- **工具**：`bin/t4_preannot.py`——run=三模型逐帧逐类 grounding（vlm_pool，每帧只预标被抽样叶类；负样本帧不预标=空卷）→ consensus_boxes 分级（trusted/arbited=共识底稿；强模型单票=候选框带 `?`，glm 0.33 单票不上屏但留台账）→ X-AnyLabeling v4 JSON（schema 抄上游 assets/demo.json）；score=用户编辑后按 per-model+池共识对拍 P/R/F1
+- **工具**：`bin/t4_preannot.py`——run=四票池逐帧逐类 grounding（vlm_pool，每帧只预标被抽样叶类；负样本帧不预标=空卷）→ consensus_boxes 分级（trusted/arbited=共识底稿；强模型单票=候选框带 `?`，glm 单票不上屏但留台账（旧代 0.33 → T7' 后 0.482））→ X-AnyLabeling v4 JSON（schema 抄上游 assets/demo.json）；score=用户编辑后按 per-model+池共识对拍 P/R/F1
 - **防误覆盖**：labels/ 为交互层，`preannot_votes.jsonl` 为机器侧单一数据源；已有 json 的帧跳过渲染（尊重人编辑）
-- 已知局限（如实记录）：①正样本帧内偶见的跨类目标不预标（噪声源），靠用户手动补；②共同盲区目标（三模型全漏）预标注不可见，GT 会继承——互补对拍/纯人工抽检校准待 GT 建成后执行
+- 已知局限（如实记录）：①正样本帧内偶见的跨类目标不预标（噪声源），靠用户手动补；②共同盲区目标（四票全漏）预标注不可见，GT 会继承——互补对拍/纯人工抽检校准待 GT 建成后执行
 
-### 批 2 前置：agree=false 类别投票（批 1 遗留 #3）✅
+## 系统审核与修复（2026-09-26，用户指令「全面系统审核→修复→全程工作流」）
 
-- 工具：`bin/c_vote.py`（bbox±10% crop → vlm_pool 菜单分类投票 → role_consensus；split 入隔离台账 priority=high，断点重入按行键）；`vlm_pool.call_role_vote/parse_verdict` 参数化 prompt/valid（role 默认行为不变）；菜单导出件 `projects/s4det/taxonomy_leaves.json`（taxonomy 附录 A 46 类，taxonomy 演进时重导出）
-- 结果（872 行）：**auto 633（trusted 607 / arbited 26）/ split 239 入隔离台账 / abstain 0**；sidecar `preannot/votes_agree_false.jsonl`（不改写 manifest，训练框仍以共识挖掘为准）
-- 分布要点：garbage_bag 196 / tarp_covered 135 / carton 100 / garbage_pile 26 / construction_fence 25 / foam_box 22 / water_puddle 22 / person 19 / piled_goods 15——苫布覆盖硬类大量路由浮现；批 2 挖掘装配按 verdict 回填类别先验
-- 坑：parse_verdict 参数化时**签名加了 valid 参数但函数体仍比较旧常量 ROLE_VALID**（冒烟 6/6 全 abstain 暴露）→ 已修；教训=参数化改造必须 grep 函数体内全部旧引用点，冒烟必须真跑不能只看 exit 0
+- **审计**（工作流 26 agent：磁盘产物/文档一致性/代码/契约四维 + 逐条对抗验证）：确认 21 条 / 驳回 1 条（批 1 706 负样本帧有 annotation-guideline §10 成文裁决支撑，非缺陷）。**数据本体全绿**：批 2 装配集逐类与记录精确吻合、0 断链、类目链 id 全链一致、vlm_pool 换代配置与 KB 标定表逐项吻合。
+- **修复**（工作流 11 agent 分组 + 主会话收口）：
+  - 2 个 high 代码缺陷（均「重跑时触发」的静默数据销毁）：`c_arbitrate.py` 人工池清单改从**全量 VOTES 台账**重建（原只过滤本次 results，全量重跑会把 58 帧截空——离线端到端验证零 API 复现修复）；`c_humanpack.py` manifest 改**合并快照**（原全量重写丢已装配帧条目）+ 补 labels.txt 产物生成（此前系 commit 后手工补造、代码不生成）+ Image.open 上下文管理。
+  - `c_vote.py` 默认池回四成员（+doubao-vl）；`vlm_grounding_calibrate` 预设表 / `t4_preannot` 文档串换代同步。
+  - 文档修正 10 文件：README 快照重写（删幽灵「在途未提交」）、taxonomy 冻结态统一、批 1 框数正名 **1,403**（清洗后落盘）、119→464/522 口径回收、T4-b1 200→225、EVAL-BENCHMARKS 假缺口行回填 B① 产出（6,211 盘面真值）、design「31 类」→taxonomy 附录 A 口径指针（s4 侧文件最小修正，待 s4 会话复核）、C-execution 节序归位（c_vote 节上移批 2 挖掘前）+ person 另线任务补记、KB GLM/INDEX 陈旧注退役。
+  - 存量数据：批 1/批 2 dataset 标签末行补换行（774+1,268 文件，内容零变化；根因 vlabel `labeled_to_text` 无尾换行，交接规格已落 vlabel 仓 docs/superpowers/specs/2026-09-26）；window1 labels.txt 由修复后工具再生（24 行=12 候选类+正类形式）、manifest 逐字节不变。
+- **验收**：批 1/批 2 框数 python 与 cat|wc 双口径一致（1,403/3,683）；manifest 522=images 522=labels 522；ruff 全绿 + 导入冒烟过。

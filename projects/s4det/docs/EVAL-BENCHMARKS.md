@@ -17,7 +17,7 @@
 | **v0-mini（ebike/garbage_bag 两类）** | **无人工 GT——val=弱标签共识切分** | `/mnt/data/s4det/weights/s4det-v0mini.pt`（训练 `p3-seedset/batch1/train/v0mini/`） | ❌（WARNING-1） | ⚠️ **内部预演指标，WARNING-1 未解除前不得当质量结论**：val mAP50 0.438 / mAP50-95 0.293（ebike 0.496/0.313，garbage_bag 0.380/0.273） | 2026-09-25 |
 | s4det 检测器（叶类全类） | **无** | — | ❌ | — | — |
 | 平台框弱标签（位置先验） | 7 张裁片人眼目击 + 400 事件框形态统计 | `data/platform-codes/` + s4 仓 tmp probe | ⚠️ 代理级 | 码 11 竖长 0.46/码 12 扁宽 0.82；11⊂12 包含率 0% | 2026-09-25 |
-| llm_entries 双模型语义（类别标签） | doubao∧qwen 一致率（B① 冒烟打印） | 待 B① 产出 | ⚠️ 代理级 | 待测 | — |
+| llm_entries 双模型语义（类别标签） | doubao∧qwen 一致率（b_preannot.py agree 字段） | /mnt/data/s4det/preannot/manifest.jsonl（统计 preannot_stats.json） | ⚠️ 代理级 | agree 率 10.9%（agree=true 6,211/56,999 行=种子直通候选）；conf hi/mid/lo 20,277/15,832/20,890 | 2026-09-25 |
 | VLM 共识仲裁（P3 批 1 review 消解） | s4det 域 T7 重标定（批 1 L0 GT，21 帧/23 框，target=ebike） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report.json` | ⚠️ 代理级 | qwen-flash F1 **0.875** / qwen35b-local 0.76（强票）/ glm-flash 0.33（仲裁票）；刻度 0-1000 实测确认 | 2026-09-25 |
 | agree=false 类别投票（c_vote，批 2 前置） | vlm_pool 三模型菜单投票（qwen-flash/qwen35b-local 强票 + glm 仲裁票） | `/mnt/data/s4det/preannot/votes_agree_false.jsonl` | ⚠️ 代理级 | 872 行：auto 633（trusted 607 / arbited 26）/ split 239 入台账 / abstain 0 | 2026-09-25 |
 | VLM 池换代重标（T7'） | s4det 域 T7 GT，target="electric bike or motorcycle"，4 模型（doubao 2.1 换代接入） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report_20260926.json` | ⚠️ 代理级 | qwen-flash **0.808** / qwen38-local 0.741 / doubao-2.1-pro 0.724（三强票）/ glm-flash 0.482（仲裁）；doubao 2.1 刻度 0-1000 实测确认 | 2026-09-26 |
@@ -51,4 +51,4 @@
 - 审计：rule `j-eval-benchmarks`（每次接手/审视本项目先读本表）。
 
 ---
-更新：2026-09-25 预建骨架。
+更新：2026-09-26（T7' 换代重标 + EXEMPT-S 确认态 + llm_entries 行回填 B① 产出）。
