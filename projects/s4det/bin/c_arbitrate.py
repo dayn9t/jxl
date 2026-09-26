@@ -14,8 +14,8 @@
     arbitration_human.jsonl                 人工池帧清单(含未裁决聚类框)
 
 典型用法:
-    python c_arbitrate.py run --limit 6     # 冒烟
-    python c_arbitrate.py run               # 全量(断点重入)
+    python c_arbitrate.py --limit 6     # 冒烟
+    python c_arbitrate.py               # 全量(断点重入)
 """
 
 import asyncio
@@ -149,8 +149,11 @@ def run(
 
     results = asyncio.run(_all())
     stats: Counter = Counter(r["verdict"] for r in results)
+    # 人工池清单自完整 VOTES 台账重建（与本次结果解耦：全量重跑/续跑不截空已有人工池）
+    votes_rows = ([orjson.loads(line) for line in VOTES.open() if line.strip()]
+                  if VOTES.exists() else [])
     human = [{"chain": r["chain"], "stem": r["stem"], "reason": "无支持共识框/分歧",
-              "unsupported": r["unsupported"]} for r in results if r["verdict"] == "human"]
+              "unsupported": r["unsupported"]} for r in votes_rows if r.get("verdict") == "human"]
     with HUMAN.open("wb") as f:
         f.write(b"\n".join(orjson.dumps(h) for h in human) + b"\n")
     n_labels = sum(1 for c in CHAIN_SRC
