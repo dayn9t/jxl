@@ -84,7 +84,7 @@ def run(
     manifest: Annotated[Path, typer.Option(help="叶类投影 manifest")] = PREANNOT / "manifest_leaf.jsonl",
     out: Annotated[Path, typer.Option(help="投票 sidecar（追加+断点重入）")] = PREANNOT / "votes_agree_false.jsonl",
     crops_dir: Annotated[Path, typer.Option(help="裁片工作目录")] = PREANNOT / "vote_crops",
-    models: Annotated[str, typer.Option(help="池成员逗号分隔（doubao 开通后可加 doubao-vl）")] = "qwen-flash,qwen38-local,glm-flash",
+    models: Annotated[str, typer.Option(help="池成员逗号分隔")] = "qwen-flash,qwen38-local,doubao-vl,glm-flash",
     concurrency: Annotated[int, typer.Option()] = 6,
     limit: Annotated[int, typer.Option(help=">0 冒烟只跑 N 行")] = 0,
 ) -> None:
