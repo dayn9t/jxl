@@ -185,8 +185,12 @@ class Vote:
     error: str = ""
 
 
-def image_data_url(path: Path, max_side: int = MAX_SIDE) -> str:
+def image_data_url(path: Path, max_side: int = MAX_SIDE, downscale: int = 1) -> str:
+    """downscale=分辨率门控(用户裁决 2026-09-27): 宽高各 ÷N 后再送 VLM——归一化 bbox 不受影响,
+    小目标在缩放图上低于感知阈值自然不出框, 杜绝 ~10px 看不清的目标被"放大式幻觉识别"。"""
     im = Image.open(path).convert("RGB")
+    if downscale > 1:
+        im = im.resize((max(1, im.width // downscale), max(1, im.height // downscale)))
     if max(im.size) > max_side:
         s = max_side / max(im.size)
         im = im.resize((round(im.width * s), round(im.height * s)))
@@ -208,9 +212,14 @@ def parse_boxes(text: str, protocol: str) -> list[list[float]]:
     if protocol == "glm":  # <|begin_of_box|>[..]<|end_of_box|> → 剥特殊 token
         t = re.sub(r"<\|begin_of_box\|>|<\|end_of_box\|>", "", t)
     boxes = []
+    seen: set[tuple[float, ...]] = set()
     for m in re.finditer(r"\[[^\[\]]{4,200}\]", t):
         vals = [float(v) for v in _NUM_GROUP.findall(m.group(0))]
-        if len(vals) == 4:
+        if len(vals) != 4:
+            continue
+        key = tuple(round(v, 3) for v in vals)  # 同帧重复框去重(qwen38 曾 38 连发同一退化框)
+        if key not in seen:
+            seen.add(key)
             boxes.append(vals)
     return boxes
 
