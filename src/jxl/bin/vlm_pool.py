@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
+from loguru import logger
 from PIL import Image
 
 MAX_SIDE = 1024
@@ -267,7 +268,12 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str,
     try:
         r = await client.post(spec["endpoint"], json=payload, headers=headers, timeout=90.0)
         r.raise_for_status()
-        text = r.json()["choices"][0]["message"]["content"]
+        choice = r.json()["choices"][0]
+        text = choice["message"]["content"]
+        # 截断监控（官方调研 2026-09-27：qwen cookbook 明示密堆类 >40-50 实例可能长输出——
+        # finish_reason=length 时框被截断, 票不完整; 先可见再决定升 max_tokens）
+        if choice.get("finish_reason") == "length":
+            logger.warning("{} finish_reason=length: max_tokens={} 截断, 票可能不完整", alias, payload["max_tokens"])
     except Exception as e:
         return Vote(alias, (), False, f"{type(e).__name__}: {e}"[:200])
     raw = parse_boxes(text, spec["protocol"])
