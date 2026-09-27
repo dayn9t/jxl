@@ -16,6 +16,7 @@
 |---|---|---|---|---|---|
 | **v0-mini（ebike/garbage_bag 两类）** | **无人工 GT——val=弱标签共识切分** | `/mnt/data/s4det/weights/s4det-v0mini.pt`（训练 `p3-seedset/batch1/train/v0mini/`） | ❌（WARNING-1） | ⚠️ **内部预演指标，WARNING-1 未解除前不得当质量结论**：val mAP50 0.438 / mAP50-95 0.293（ebike 0.496/0.313，garbage_bag 0.380/0.273） | 2026-09-25 |
 | s4det 检测器（叶类全类） | **无** | — | ❌ | — | — |
+| **M0 烟火检测器（smoke/fire）** | **无**（本域弱标签源零命中，2026-09-27 全库扫描实证；评估口径=检出率/误报率，T11 预留） | — | ❌ | — | 2026-09-27 |
 | 平台框弱标签（位置先验） | 7 张裁片人眼目击 + 400 事件框形态统计 | `data/platform-codes/` + s4 仓 tmp probe | ⚠️ 代理级 | 码 11 竖长 0.46/码 12 扁宽 0.82；11⊂12 包含率 0% | 2026-09-25 |
 | llm_entries 双模型语义（类别标签） | doubao∧qwen 一致率（b_preannot.py agree 字段） | /mnt/data/s4det/preannot/manifest.jsonl（统计 preannot_stats.json） | ⚠️ 代理级 | agree 率 10.9%（agree=true 6,211/56,999 行=种子直通候选）；conf hi/mid/lo 20,277/15,832/20,890 | 2026-09-25 |
 | VLM 共识仲裁（P3 批 1 review 消解） | s4det 域 T7 重标定（批 1 L0 GT，21 帧/23 框，target=ebike） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report.json` | ⚠️ 代理级 | qwen-flash F1 **0.875** / qwen35b-local 0.76（强票）/ glm-flash 0.33（仲裁票）；刻度 0-1000 实测确认 | 2026-09-25 |

@@ -1,0 +1,14 @@
+# s4det M0 烟火独立线 profile(D2 独立类命名空间 cls 0/1, 与 D1 的 18 类互不相干)
+# taxonomy 附录 A: D2 烟火检测器 leaf=open_flame; 本 profile 文件名/字段名用 fire(短别名, load_target
+# 按 targets/<name>.toml 查找, name 须与文件名一致)。无在役先验 → 不设 weights/target_cls
+# (None=无 target 票, L1 共识框即标注)。类语义源: taxonomy.md 附录 A + design.md §2c(ET10 空档)。
+name = "fire"
+yolo_text = "open flame"
+vlm_prompt = """检测图中所有明火/火焰的位置。严格只输出一个 JSON 数组,不要任何其他文字、不要 markdown。
+每个目标一个对象: {"label":"fire","bbox":[x1,y1,x2,y2],"conf":0-1}
+- bbox 归一化坐标 [0,1], x1y1=左上, x2y2=右下
+- 明火/火焰本体(火苗/火舌/燃烧点), 按可见火焰整体框
+- 排除: 单独烟雾(归 smoke 类)、灯光/反光、红色物体、晚霞
+- 若无, 输出 []
+仅输出 JSON 数组。"""
+output_cls_id = 1  # M0 独立类表 0:smoke / 1:fire(open_flame)——taxonomy 附录 A 顺序
