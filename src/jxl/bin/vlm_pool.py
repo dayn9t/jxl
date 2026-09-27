@@ -274,6 +274,8 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str,
         # finish_reason=length 时框被截断, 票不完整; 先可见再决定升 max_tokens）
         if choice.get("finish_reason") == "length":
             logger.warning("{} finish_reason=length: max_tokens={} 截断, 票可能不完整", alias, payload["max_tokens"])
+        if text is None:  # 思考模型吃光 max_tokens → content=null(2026-09-27 t4-b2 实炸)
+            return Vote(alias, (), False, "content=null(max_tokens eaten)")
     except Exception as e:
         return Vote(alias, (), False, f"{type(e).__name__}: {e}"[:200])
     raw = parse_boxes(text, spec["protocol"])
