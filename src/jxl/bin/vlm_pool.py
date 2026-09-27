@@ -62,6 +62,10 @@ CANDIDATES: dict[str, dict] = {
         "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         "key_env": "ANTHROPIC_AUTH_TOKEN", "model": "glm-5.3-flash",
         "protocol": "glm", "divisor": 1000.0, "strength": "arbiter",
+        # 恒思考模型(实测 400: 不支持关闭, type=low 同报错); 思考 ~130 tok 后才吐 JSON,
+        # max_tokens=120 被吃光 → content 截断 parse_error(catvote 批 573/872)。
+        # reasoning 走独立 reasoning_content 字段不污染解析; 768 = 难例思考余量。
+        "max_tokens": 768,
     },
     "qwen38-local": {
         "endpoint": LOCAL_QWEN38, "key_env": "", "model": "qwen3.8-flash-next",
@@ -132,7 +136,8 @@ async def call_role_vote(client: httpx.AsyncClient, alias: str, image_url: str,
     spec = CANDIDATES[alias]
     key = os.environ.get(spec["key_env"], "") if spec["key_env"] else ""
     headers = {"Authorization": f"Bearer {key}"} if key else {}
-    payload = {"model": spec["model"], "temperature": 0.0, "max_tokens": 120,
+    payload = {"model": spec["model"], "temperature": 0.0,
+               "max_tokens": spec.get("max_tokens", 120),
                **spec.get("extra_payload", {}),
                "messages": [{"role": "user", "content": [
                    {"type": "image_url", "image_url": {"url": image_url}},
