@@ -15,6 +15,7 @@ taxonomy 演进时同步重导出）。
 典型用法:
     python c_vote.py --limit 6          # 冒烟
     python c_vote.py                    # 全量（断点重入）
+    python c_vote.py --keys-from K --out SIDECAR   # 定向重投（键文件每行一个 event|rid|object_id）
 """
 
 import asyncio
@@ -85,6 +86,10 @@ def run(
     out: Annotated[Path, typer.Option(help="投票 sidecar（追加+断点重入）")] = PREANNOT / "votes_agree_false.jsonl",
     crops_dir: Annotated[Path, typer.Option(help="裁片工作目录")] = PREANNOT / "vote_crops",
     models: Annotated[str, typer.Option(help="池成员逗号分隔")] = "qwen-flash,qwen38-local,doubao-vl,glm-flash",
+    keys_from: Annotated[
+        Path | None,
+        typer.Option(help="只投此文件所列行键(每行一个 event|rid|object_id)"),
+    ] = None,
     concurrency: Annotated[int, typer.Option()] = 6,
     limit: Annotated[int, typer.Option(help=">0 冒烟只跑 N 行")] = 0,
 ) -> None:
@@ -96,6 +101,18 @@ def run(
     menu_text, valid = load_menu(MENU_PATH)
     prompt = MENU_PROMPT.format(menu=menu_text)
     rows = [r for r in read_jsonl(manifest) if r.get("agree") is False]
+    if keys_from is not None:
+        wanted = {
+            ln.strip()
+            for ln in keys_from.read_text(encoding="utf-8").splitlines()
+            if ln.strip()
+        }
+        rows = [r for r in rows if row_key(r) in wanted]
+        missed = wanted - {row_key(r) for r in rows}
+        if missed:
+            raise typer.BadParameter(
+                f"keys-from 含 {len(missed)} 个键不在 agree=false 行中(示例 {sorted(missed)[:3]})"
+            )
     if limit > 0:
         rows = rows[:limit]
     if not rows:
