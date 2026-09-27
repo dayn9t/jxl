@@ -127,6 +127,40 @@ IOU_TH = 0.4
 STRONG_MODELS = {a for a, s in CANDIDATES.items() if s["strength"] == "strong"}
 """候选框上屏门槛：仅强模型单票（glm 旧代 0.33 → 换代后仲裁票 0.482（T7'），单票噪声过大——留台账对拍，不上屏）。"""
 
+CAP_DIR = DATA_ROOT / "vlm-capability"
+"""能力账（用户核心准则 2026-09-27「能力账恒对比」）：池快照 + 对拍台账，永久存档禁丢弃。"""
+
+
+def _write_pool_snapshot(batch: str, aliases: list[str], prompts: dict[str, str],
+                         downscale: int) -> Path:
+    """跑批池快照——模型 ID/参数/prompt 全文固化, 任何历史对拍数字可复现归因（key 只记 env 名不记值）."""
+    from datetime import datetime
+    CAP_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    snap = CAP_DIR / "pool-snapshots" / f"{batch}-run-{stamp}.json"
+    snap.parent.mkdir(parents=True, exist_ok=True)
+    snap.write_text(orjson.dumps({
+        "batch": batch,
+        "time": stamp,
+        "aliases": aliases,
+        "members": {a: {k: CANDIDATES[a].get(k) for k in
+                        ("model", "endpoint", "divisor", "strength", "max_tokens",
+                         "extra_payload", "key_env")} for a in aliases},
+        "temperature": 0.0,
+        "call_max_tokens": 1500,
+        "downscale": downscale,
+        "image_regime": "960x540 detection-native (cap)",
+        "prompts": prompts,
+    }, option=orjson.OPT_INDENT_2).decode())
+    return snap
+
+
+def _latest_snapshot(batch: str) -> str:
+    """该批最近一次池快照文件名（台账 params_ref 指向它; 无快照时标 unknown）。"""
+    d = CAP_DIR / "pool-snapshots"
+    cands = sorted(d.glob(f"{batch}-run-*.json")) if d.exists() else []
+    return cands[-1].name if cands else "unknown"
+
 
 def render_labels(t4: Path, targets: dict[str, str], votes_rows: list[dict]) -> int:
     """votes 台账 → labels/*.json（已有文件跳过=尊重人编辑）。返回新写文件数."""
@@ -224,6 +258,7 @@ def run(
     labels = t4 / "labels"
     votes_path = t4 / "preannot_votes.jsonl"
     aliases = [m.strip() for m in models.split(",") if m.strip()]
+    _write_pool_snapshot(batch, aliases, prompts, downscale)
     frames = read_jsonl(t4 / "manifest.jsonl")
     if limit > 0:
         frames = frames[:limit]
@@ -359,6 +394,24 @@ def score(batch: str = typer.Option("t4-b1", help="批次(t4-b1/t4-b2)")) -> Non
             option=orjson.OPT_INDENT_2,
         ).decode()
     )
+    # 能力账落台账（追加式永不覆写; 准则正本=global CLAUDE.md「能力账恒对比」）
+    from datetime import datetime
+    CAP_DIR.mkdir(parents=True, exist_ok=True)
+    params_ref = _latest_snapshot(batch)
+    with (CAP_DIR / "capability-ledger.jsonl").open("a") as f:
+        for r in rows:
+            model_id = CANDIDATES[r["model"]]["model"] if r["model"] in CANDIDATES else "pool-consensus"
+            f.write(orjson.dumps({
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "eval_set": batch,
+                "model": r["model"],
+                "model_id": model_id,
+                "params_ref": params_ref,
+                "P": r["P"], "R": r["R"], "F1": r["F1"], "iou_mean": r["IoU_mean"],
+                "n_gt": n_gt,
+                "notes": f"iou_th={IOU_TH}",
+            }).decode() + "\n")
+    typer.secho(f"能力账 → {CAP_DIR / 'capability-ledger.jsonl'}", fg=typer.colors.GREEN)
 
 
 if __name__ == "__main__":
