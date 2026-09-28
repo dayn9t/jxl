@@ -17,7 +17,7 @@
 | **v0-mini（ebike/garbage_bag 两类）** | **无人工 GT——val=弱标签共识切分** | `/mnt/data/s4det/weights/s4det-v0mini.pt`（训练 `p3-seedset/batch1/train/v0mini/`） | ❌（WARNING-1） | ⚠️ **内部预演指标，WARNING-1 未解除前不得当质量结论**：val mAP50 0.438 / mAP50-95 0.293（ebike 0.496/0.313，garbage_bag 0.380/0.273） | 2026-09-25 |
 | s4det 检测器（叶类全类） | **无** | — | ❌ | — | — |
 | **M0 烟火检测器（smoke/fire）** | **无**（本域弱标签源零命中，2026-09-27 全库扫描实证；评估口径=检出率/误报率，T11 预留） | — | ❌ | — | 2026-09-27 |
-| 平台框弱标签（位置先验） | 7 张裁片人眼目击 + 400 事件框形态统计 | `data/platform-codes/` + s4 仓 tmp probe | ⚠️ 代理级 | 码 11 竖长 0.46/码 12 扁宽 0.82；11⊂12 包含率 0% | 2026-09-25 |
+| 平台框弱标签（位置先验） | 裁片人眼目击（s4 仓 tmp/platform-code-probe/ 现存 10 张，2026-09-25 生成，可由 py/tools/reveng_platform_codes.py 再生） + 400 事件框形态统计 | `data/platform-codes/` + s4 仓 tmp probe | ⚠️ 代理级 | 码 11 竖长 0.46/码 12 扁宽 0.82；11⊂12 包含率 0% | 2026-09-25 |
 | llm_entries 双模型语义（类别标签） | doubao∧qwen 一致率（b_preannot.py agree 字段） | /mnt/data/s4det/preannot/manifest.jsonl（统计 preannot_stats.json） | ⚠️ 代理级 | agree 率 10.9%（agree=true 6,211/56,999 行=种子直通候选）；conf hi/mid/lo 20,277/15,832/20,890 | 2026-09-25 |
 | VLM 共识仲裁（P3 批 1 review 消解） | s4det 域 T7 重标定（批 1 L0 GT，21 帧/23 框，target=ebike） | `/mnt/data/s4det/p3-seedset/batch1/mining/t7_calib_report.json` | ⚠️ 代理级 | qwen-flash F1 **0.875** / qwen35b-local 0.76（强票）/ glm-flash 0.33（仲裁票）；刻度 0-1000 实测确认 | 2026-09-25 |
 | agree=false 类别投票（c_vote，批 2 前置） | vlm_pool 三模型菜单投票（qwen-flash/qwen35b-local 强票 + glm 仲裁票） | `/mnt/data/s4det/preannot/votes_agree_false.jsonl` | ⚠️ 代理级 | 872 行：auto 633（trusted 607 / arbited 26）/ split 239 入台账 / abstain 0 | 2026-09-25 |
@@ -30,9 +30,9 @@
 | 资产 | 位置 | 产出方 | 评估消费 | 训练消费 | 生产消费 |
 |---|---|---|---|---|---|
 | 事件原图/平台框/llm_entries | `/var/howell/s4/v0.4/event/`（只读） | s4-event 管线（TU+LLM） | 弱标签质检抽检 | P3 种子集源 | 事件判定（现行） |
-| 共识标注种子集 | `{data_root}/s4det/`（待建，任务书 B④） | jxl 会话（P3） | T4 人审 GT 从其分层抽取 | P4 训练 | — |
-| 人审 GT 参照集 | 待建（T4） | s4+jxl 会话（人审） | **检测器唯一质量锚** | 禁止入训练（评测专用） | — |
-| 隔离台账 | `{data_root}/s4det/quarantine/` | 各门弃置样本 | 弃置率统计 | 达规模人工批量处理后回流 | — |
+| 共识标注种子集 | `/mnt/data/s4det/p3-seedset/{batch1,batch2}/`（batch1 1,481帧/1,403框；batch2 1,268帧/3,683框） | jxl 会话（P3） | T4 人审 GT 从其分层抽取 | P4 训练 | — |
+| 人审 GT 参照集 | T4-b1 已装配待编辑 `/mnt/data/s4det/eval-gt/t4-b1/`；T4-b2 已装配 369 帧/400 (帧,类) 对/15 类（wave1） | s4+jxl 会话（人审） | **检测器唯一质量锚** | 禁止入训练（评测专用） | — |
+| 隔离台账 | `/mnt/data/s4det/quarantine/` | 各门弃置样本 | 弃置率统计 | 达规模人工批量处理后回流 | — |
 
 ## 4. 待建缺口（checkbox，与 README 里程碑双向挂链）
 
@@ -40,6 +40,7 @@
 - [ ] **T5（P2）**：推理侧尺寸过滤阈值的联调评估口径（过滤前后判定层可用率对比）
 - [x] **T6（P1）**：~~码 12 定性~~ ✅ 2026-09-25 网格人审定性（CODEBOOK 转正）
 - [x] **T7（P3）**：~~vlm 池 s4det 域刻度重标定~~ ✅ 2026-09-25（qwen-flash F1 0.875 / qwen35b 0.76 / glm 0.33 仲裁票；0-1000 确认）
+- [x] **T7'（P3）**：~~vlm 池换代重标定~~ ✅ 2026-09-26（qwen-flash 0.808 / qwen38-local 0.741 / doubao-2.1-pro 0.724 三强票 + glm 0.482 仲裁；详见 §2 T7' 行）
 - [ ] **T8（P4）**：双口径评估基线（叶类 mAP + 映射粗类 mAP）入本表 §2
 - [ ] **T9（批外预留）**：小目标切片挖掘线（仅当用户否决 EXEMPT-S 或业务新增小目标消费方时启动）
 - [ ] **T10（哨兵路径批）**：固定目标哨兵路径评估口径定义（**非 mAP**：状态对比准确率/描述质量/定位可用率）——billboard/sculpture 等 GPS+VLM 路径目标启用（design §2b）

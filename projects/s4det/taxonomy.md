@@ -2,9 +2,9 @@
 
 > **状态：v1 冻结（终态）**——2026-09-25 用户批准定版（brainstorming 三裁定之一）。批准≠锁死：后续改动走批次间修正（类链机制改动面小，B② 已证），改动须过 s4 会话类目语义 + 用户确认。
 > 流程：任务书 A 聚类网格 → s4 会话看图命名/合并/剪枝（本版）→ 用户审批（暂定冻结下继续有效）→「v1 冻结」。
-> 叶类 = 检测器标签（EN 短名）；粗类 = 事件域消费语义。**映射锚点两族并存**（盘点 §8.2）：① EventType 码；② llm_entries 类别串（ET15/16/19 无事件级存在）。
+> 叶类 = 检测器标签（EN 短名）；粗类 = 事件域消费语义。**映射锚点两族并存**（盘点 §8.3）：① EventType 码；② llm_entries 类别串（ET15/16/19 无事件级存在）。
 > 细分硬条件：视觉可辨 ∧ 样本 ≥50-100；纯语义不可视区分不拆（红线）。
-> **三路径分派**（design §2/2b/2c）：本表登记全部类目池并标注执行体归属（附录 A 总表）——**D1 主检测器类目池 22**（已训 2 / 批 2 直入 12 / 挂验证 5 / 观察候补 3；含 person 辅助证据类，用户 2026-09-25 拍板）+ **D2 烟火 2** + **D3 哨兵 11** + **D4 VLM**（非类目）+ **证据链道具 8**（预研）。中文名权威=本表。
+> **三路径分派**（design §2/2b/2c）：本表登记全部类目池并标注执行体归属（附录 A 总表）——**D1 主检测器类目池 22**（已训 2 / 批 2 直入 12 / 挂验证 5 / 观察候补 3；含 person 辅助证据类，用户 2026-09-25 拍板）+ **D2 烟火 2** + **D3 哨兵 11** + **D4 VLM**（非类目）+ **证据链道具 7（另烟火 2 归 D2）**（预研）+ 区域现象 5（建模待定，不入 v1 入训）。中文名权威=本表。
 > **网格人审总发现**：vehicle 码 11 簇质量高；garbage 码 1/2/4 噪声率高（16 簇中约 9 簇为石球/栅栏/路缘/单车等误框）；码 5 实为「城市杂项」大杂烩（摊位/单车群/行人/工程车混框）——**平台框仅作位置先验、必须共识仲裁**（CODEBOOK 已更新）。
 
 ## vehicle（→ ET1/2、parking 判定）
@@ -28,9 +28,9 @@
 | carton | ET3/ET11 | ✅c02 纸箱堆 n139、c05 柜台纸箱 n116 | **保留** | |
 | foam_box | ET3 | ✅c06/c07 | **保留** | |
 | garbage_pile | ET3/ET11 | ✅c03 混合不可数堆 n131 | **保留** | aggregate 类（规范 §6 口诀） |
-| tarp_covered | 待定 | ⚠️c14 篷布覆盖**车**（TEXT 样本为覆盖**堆放物**） | **观察类→hardcase** | 覆盖物歧义（车 vs 堆），粗类锚不定 → 人工核实后定 |
+| tarp_covered | 待定 | ⚠️c14 篷布覆盖**车**（TEXT 样本为覆盖**堆放物**） | **挂验证（附录 A）**——覆盖车/堆歧义 hardcase 裁决 + 样本 ≥100 后转正 | 覆盖物歧义（车 vs 堆），粗类锚不定 → 人工核实后定 |
 | plastic_loose | ET11 | 203 词频 240 佐证，聚类未见 | 保留（待 P3） | |
-| leaves_pile / dead_animal | ET3 | 未见 | **降为观察类** | 样本不足硬条件；dead_animal 预期极小 |
+| leaves_pile / dead_animal | ET3 | 未见 | leaves_pile **挂验证（附录 A）**；dead_animal 观察候补（附录 A） | 样本不足硬条件；dead_animal 预期极小 |
 | debris_misc | 兜底 | 未见 | 保留兜底 | 聚类后仍散不归者入此 |
 
 ## vendor/occupy（→ ET6/7/12/16、llm"占道经营"）
@@ -77,7 +77,7 @@
 
 ## v1 叶类计数
 
-**2026-09-25 归属总表合并后以附录 A 为准**（含 person 新增、facility 双重身份、区域现象建模待定）。原 v1 计数（33 叶类）已被附录 A 的执行体口径取代：D1 类目池 22 + D2 烟火 2 + D3 哨兵 11 + 证据链道具 8。
+**2026-09-25 归属总表合并后以附录 A 为准**（含 person 新增、facility 双重身份、区域现象建模待定）。原 v1 计数（33 叶类）已被附录 A 的执行体口径取代：D1 类目池 22 + D2 烟火 2 + D3 哨兵 11 + 证据链道具 7（另烟火 2 归 D2）+ 区域现象 5（建模待定，不入 v1 入训）。
 
 ## 附录 A：检测器×类目归属总表（2026-09-25 自 jxl 提案合并，单一数据源迁入）
 
@@ -89,7 +89,7 @@
 | **D2 烟火检测器**（独立线+时序投票） | smoke/open_flame | 2 | 预研；公开模型起步可先行，兼野炊证据源；**补 ET10 突发情况能力空档** |
 | **D3 哨兵机制**（GPS+状态对比） | billboard/sculpture（仅哨兵）+ trash_can/fire_hydrant/bus_station/phone_booth/barrier_fence/road_mirror/mailbox/power_station（**与 D1 双重身份**：批 2 后视 D1 定位类 + 哨兵状态监测）+ manhole_cover（两段式：D1/D3 检出 + D4 破损判定） | 11 | 预研；road 第二批启用 |
 | **D4 VLM 服务**（非检测器） | 场景判定（钓鱼/野营/野炊成立性）/无边界目标描述/状态对比/仲裁 | — | 机制已验证（批 1 实用中） |
-| **证据链道具**（预研，归属已定） | tent/parasol/hammock（D1 全帧）；fishing_rod/folding_chair/fish_basket（D1 区域放大模式）；grill（双模式）；smoke/open_flame（→D2） | 8 | 样本≈0，归属先定，样本到达即启 |
+| **证据链道具**（预研，归属已定） | tent/parasol/hammock（D1 全帧）；fishing_rod/folding_chair/fish_basket（D1 区域放大模式）；grill（双模式）；烟火 2 类（smoke/open_flame）见 D2 行，不计入本行 | 7 | 样本≈0，归属先定，样本到达即启 |
 | **区域现象**（批 2 前定建模方式） | water_puddle（倾向 D4 VLM 后置）/manhole_damage（两段式）/road_damage/scattered_garbage_zone/construction_zone（待定） | 5 | 不入 D1 v1 范围 |
 
 ---
@@ -98,3 +98,4 @@
 - v1-草案（2026-09-25）：任务书 A 六页网格人审后修订——truck→car、motorbike→ebike 合并；tarp_covered/leaves/dead_animal/oil_stain/charging_bike 转观察类；manhole_damage 明确「只标异常井盖」；各叶类补图证簇 id。
 - v1 冻结（2026-09-25 晚）：用户批准定版（brainstorming 三裁定之一）；同日落定 EXEMPT-S 同意豁免、Q1 人工窗口=最小先行。
 - v0（2026-09-25）：桌面草案骨架。
+- v1 附录 A 合并（2026-09-25）：tarp_covered/leaves_pile 由观察类调整入 D1 挂验证 5；证据链道具计数勘误 8→7（smoke/open_flame 归 D2）

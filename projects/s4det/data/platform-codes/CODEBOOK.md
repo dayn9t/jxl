@@ -1,6 +1,6 @@
 # 平台检测码表逆向结论（mobile 域，2026-09-25）
 
-> 证据：全量 32,470 事件双路交叉（platform_codes_raw.json / platform_codes.md，脚本 `s4 仓 py/tools/reveng_platform_codes.py`）+ 400 事件框形态统计 + 7 张高/低置信裁片目击（临时证据图 s4 仓 `tmp/platform-code-probe/`，可再生成）。
+> 证据：全量 32,470 事件双路交叉（platform_codes_raw.json / platform_codes.md，脚本 `s4 仓 py/tools/reveng_platform_codes.py`）+ 400 事件框形态统计 + 高/低置信裁片目击（s4 仓 tmp/platform-code-probe/ 现存 10 张，可由 reveng_platform_codes.py 再生）。
 > **用途边界**：平台码只作**位置先验**（弱标签 proposal），语义标签以 llm_entries 双模型一致类别为准——码表本身语义边界模糊（见下），不直接当类别真值。
 
 ## 确证码（证据充分）

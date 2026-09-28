@@ -31,7 +31,7 @@
 4. 去重：dedup 链先跑（embed_dino → dedup_sem），防止同一目标多帧重复压簇。
 5. 聚类：DINOv3 embedding → Faiss 余弦 ~0.85 档（可试 0.80/0.85/0.90 三档，报告簇数曲线）；每簇保留代表 + 规模。
 6. 网格：review_pack 出每粗类簇代表拼图（簇 id + 张数标注），落数据根。
-7. 弃置样本（无法读图/空框/解析失败）入隔离台账 `data/quarantine-ledger.jsonl`（j-quarantine-ledger）。
+7. 弃置样本（无法读图/空框/解析失败）入隔离台账 `data/quarantine-ledger.jsonl`（后迁 /mnt/data/s4det/quarantine/quarantine-ledger.jsonl 为单一数据源，见 A-execution「异常与弃置」及 B-execution B④）（j-quarantine-ledger）。
 
 ## 产出（全部落数据根 + 本目录）
 
