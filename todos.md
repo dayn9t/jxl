@@ -42,3 +42,16 @@
   规范+函数已固化：skill `bbox-crop-expansion` + `vlabel.crop.expand_xyxy/crop_expanded/save_expanded`（2026-09-21 迁自 jxl.det.box_utils）。
 - [ ] 下批 iap 增量到 → 信号盘点+全模型沉淀（skill data-flywheel 自动触发路径，含第七步台账）
 - [ ] SHTM 下周解冻：r2 审核 1,246 帧（用户人工）→ hardcase → V2.2 重训
+
+## iap 抄送（2026-10-16，裁决归属本仓、iap 侧仅挂链防双头）
+
+ml-vision 迁移对拍（2026-10-07 已执行，结果=等价证伪：G1 FAIL 695/4487 对
+confΔ>1e-4 + G2 FAIL·C1 触发 role 11/34 超 1e-2 + G4 PASS 14/14；报告
+iap `data/mlvision-migration-baseline/parity-report-20261007/`、登记 iap
+docs/TODO.md P2 eval 行）衍生两裁决项：
+
+- [ ] **G2 C1 golden adjudication**：迁移对拍超差（role 11/34 个案超 1e-2）
+  的预处理语义裁决——旧链与 ml-vision 新链预处理语义不一致，谁对齐
+  ultralytics 由 golden adjudication 裁定后收敛。
+- [ ] **G1 GPU 预处理去留**：性能 vs 逐位等价的拍板——超差背景
+  695/4487 对 confΔ>1e-4，GPU 预处理路径保留与否待裁。
