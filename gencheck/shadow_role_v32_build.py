@@ -5,7 +5,7 @@ target detection (tight bbox, edge-padded to square, resized to 224), runs
 role v3.2 inference locally, and packages crops + expected outputs for the
 iapx-side shadow validation.
 
-Contract: ~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md section 2.
+Contract: ~/cc/next/iap/docs/jxl-deliveries/jxl-deliveries-2026-09-15.md section 2.
 Usage: uv run python gencheck/shadow_role_v32_build.py
 """
 
@@ -299,7 +299,7 @@ def write_readme(rows: list[dict], md5_full: str) -> None:
 
 iapx 按自身部署规则对 role v3.2 跑 20-50 帧影子验证时，直接取 `crops/` 下
 crop 图逐帧推理，与 `expected.jsonl` 中 jxl 侧预期输出对照。对接契约见
-通知单 `~/cc/py/iapx/docs/jxl-deliveries-2026-09-15.md` §2（v3.2 输出
+通知单 `~/cc/next/iap/docs/jxl-deliveries/jxl-deliveries-2026-09-15.md` §2（v3.2 输出
 `[1,7]` softmax 全向量，names 字母序，建议消费全向量而非仅 top1）。
 
 ## 权重

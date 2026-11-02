@@ -91,7 +91,8 @@ md5 ``a33775ef``。基座 MSMT17 通用权重定标门七格全败（裁决 B）
 
 ``osnet-x0_75-ft-v21`` = v2.1 追加交付（2026-09-16）：姿态漂移正对 jxl 侧
 自挖重训（伪轨迹关联重连对 + ft_v2 难例带 cos<0.62 + 10-41 段定向收录），
-详见 iapx ``docs/jxl-notice-2026-09-16-osnet-v21-pair-self-mining.md``。"""
+详见 iap ``docs/jxl-deliveries/jxl-notice-2026-09-16-osnet-v21-pair-self-mining.md``
+（iapx 解散后通知单统一落 iap docs）。"""
 
 OSNET_DEFAULT_TAG = "osnet-x1_0"
 """默认变体（Phase 4 质量优先裁决：最强特征 x1_0，全宽 channels 64/256/384/512）。"""
