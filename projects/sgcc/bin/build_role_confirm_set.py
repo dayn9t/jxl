@@ -364,6 +364,7 @@ def apply_flow(
             GROUP_SLUG,
             slug=SET_SLUG,
             kind="verdict",
+            media="image",
             meta=meta,
             upstream=upstream,
         ),
@@ -407,6 +408,7 @@ def dry_run_flow(
         {
             "slug": SET_SLUG,
             "kind": "verdict",
+            "media": "image",
             "meta": meta.model_dump(mode="json", exclude_none=True),
             "upstream": upstream.model_dump(mode="json", exclude_none=True),
         },

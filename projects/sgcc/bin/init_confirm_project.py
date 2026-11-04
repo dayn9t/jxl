@@ -167,6 +167,7 @@ def ensure_set(
             GROUP_SLUG,
             slug=slug,
             kind="verdict",
+            media="image",
             meta=meta,
             upstream=upstream_ref,
         )
