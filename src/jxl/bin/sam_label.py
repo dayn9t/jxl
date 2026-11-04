@@ -5,7 +5,7 @@ import typer
 from jvi.geo.size2d import SIZE_FHD, Size
 from jvi.video.capture import Capture
 from loguru import logger
-from vlabel.dataset import MetaDataset
+from ulabel.dataset import MetaDataset
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.d2d_converters import a2d_image_from_d2d

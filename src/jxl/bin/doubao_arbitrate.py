@@ -33,7 +33,7 @@ from typing import Annotated, NamedTuple
 import httpx
 import orjson
 import typer
-from vlabel.crop import xyxy_iou
+from ulabel.crop import xyxy_iou
 
 from jxl.bin.det_mine import gather_images
 from jxl.bin.doubao_relabel import ground_one

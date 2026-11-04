@@ -9,7 +9,7 @@ from jvi.image.trans import PilImage, bgr_to_pil
 from loguru import logger
 from torch import Tensor
 from torchsummary import summary
-from vlabel.prop import ProbValue
+from ulabel.prop import ProbValue
 
 from jxl.cls.arch.torch_image import load_pth_tar
 from jxl.cls.classifier import ClassifierOpt, IClassifier, ModelFormat

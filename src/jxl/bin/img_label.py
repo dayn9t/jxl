@@ -19,7 +19,7 @@ import typer
 from jcx.sys.fs import find
 from jvi.image.image_nda import ImageNda
 from loguru import logger
-from vlabel.dataset import MetaDataset
+from ulabel.dataset import MetaDataset
 
 from jxl.det.d2d import D2dOpt
 from jxl.det.d2d_converters import a2d_image_from_d2d

@@ -29,8 +29,8 @@ from sgcc_confirm_metas import (
     reid_pair_meta,
     upper_visibility_meta,
 )
-from vlabel.meta import LabelMeta
-from vlabel.service import ConfirmClient, Fingerprint, ServiceError, SetOut, UpstreamRef
+from ulabel.meta import LabelMeta
+from ulabel.service import ConfirmClient, Fingerprint, ServiceError, SetOut, UpstreamRef
 
 PROJECT_SLUG = "sgcc_n001"
 PROJECT_ID = 1

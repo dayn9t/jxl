@@ -15,7 +15,7 @@
 
 from pathlib import Path
 
-from vlabel.meta import (
+from ulabel.meta import (
     CatDef,
     CatProperty,
     LabelMeta,

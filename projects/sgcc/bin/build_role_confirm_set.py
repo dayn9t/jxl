@@ -50,8 +50,8 @@ from pathlib import Path
 
 import httpx
 from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
-from vlabel.meta import LabelMeta
-from vlabel.service import (
+from ulabel.meta import LabelMeta
+from ulabel.service import (
     ConfirmClient,
     Fingerprint,
     ServiceError,
@@ -385,7 +385,7 @@ def dry_run_flow(
     """Print every request that --apply would send; send nothing.
 
     Request lines mirror the ConfirmClient calls apply_flow makes: URL
-    shapes' single source lives in vlabel.service; bodies are the same
+    shapes' single source lives in ulabel.service; bodies are the same
     model dumps the client sends (exclude_none, JSON mode).
     """
     for name in (MODEL_ROLE, MODEL_STEP5):

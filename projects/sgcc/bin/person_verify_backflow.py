@@ -68,7 +68,7 @@ import httpx
 # Upstream path: same registry the set's fingerprint was submitted against
 # (sgcc_confirm_metas is the single source for gencheck confirm-set upstreams).
 from sgcc_confirm_metas import FINGERPRINT_SOURCES
-from vlabel.service import (
+from ulabel.service import (
     AnnotationSampleOut,
     ConfirmClient,
     Fingerprint,

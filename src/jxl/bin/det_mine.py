@@ -27,7 +27,7 @@ import orjson
 import typer
 from click.core import ParameterSource
 from ultralytics import YOLO, YOLOE
-from vlabel.crop import xyxy_iou
+from ulabel.crop import xyxy_iou
 
 from jxl.det.hardmine import (
     Box,
