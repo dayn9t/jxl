@@ -28,7 +28,7 @@ from a_common import (
 )
 from loguru import logger
 from PIL import Image
-from vlabel.crop import be_uniform, crop_expanded
+from ulabel.crop import be_uniform, crop_expanded
 
 app = typer.Typer(add_completion=False, help="任务书 A: manifest → crops.")
 

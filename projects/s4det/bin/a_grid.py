@@ -17,7 +17,7 @@ import typer
 from a_common import GRID_CODE12_BAND
 from loguru import logger
 from PIL import Image
-from vlabel.tools.viz import label_header, scale_to_width
+from ulabel.tools.viz import label_header, scale_to_width
 
 app = typer.Typer(add_completion=False, help="任务书 A: 簇代表网格.")
 
