@@ -39,8 +39,8 @@ from pathlib import Path
 
 import httpx
 import pytest
-from vlabel.service import ConfirmClient
-from vlabel.service.client import DEFAULT_TIMEOUT
+from jxl.label.service import ConfirmClient
+from jxl.label.service.client import DEFAULT_TIMEOUT
 
 BIN_DIR = Path(__file__).resolve().parents[1] / "projects/sgcc/bin"
 SERVICE = "http://confirm.test"
@@ -198,7 +198,7 @@ def group_row() -> dict[str, object]:
 
 
 def set_row() -> dict[str, object]:
-    return {"slug": SET, "name": SET, "samples": 0, "progress": {}}
+    return {"slug": SET, "name": SET, "samples": 0, "progress": {}, "media": "image"}
 
 
 def register_all_present(service: MockConfirmService) -> None:
@@ -467,7 +467,7 @@ def test_backflow_apply_rewrite_oserror_exits_2_and_keeps_target(
     samples_payload: object = [
         {
             "stem": "u001_7",
-            "image_url": "/api/img?p=x",
+            "media": {"kind": "image", "url": "/api/img?p=x"},
             "verdicts": [],
             "truth": {"annotator": "jiang", "value": sgcc_metas.CUSTOMER_ID},
         }

@@ -5,8 +5,8 @@ from jvi.drawing.color import COLORS7
 from jvi.geo.point2d import Points
 from jvi.image.image_nda import ImageNda
 from pydantic import BaseModel
-from ulabel.a2d import A2dImageLabel, A2dObjectLabel
-from ulabel.prop import ProbValue
+from jxl.label.a2d import A2dImageLabel, A2dObjectLabel
+from jxl.label.prop import ProbValue
 
 from jxl.det.d2d import D2dObject, D2dOpt, D2dResult
 from jxl.io.draw import draw_boxf

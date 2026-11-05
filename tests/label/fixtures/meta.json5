@@ -1,0 +1,131 @@
+{
+  id: 201,
+  name: "FDOD",
+  description: "宠物医院前台目标检测，及其属性分类，简单示例",
+  shape: {
+    title_style: 1,
+    thickness: 2,
+    auto_save: true,
+    vertex_radius: 10,
+  },
+  roi: {
+    color: "#800080",
+  },
+  categories: [
+    {
+      id: -1,
+      names: { en: "pending", zh: "种类待定" },
+      description: "种类待定",
+      hotkey: "0",
+      color: "#FFFFFF",
+      properties: [],
+    },
+    {
+      id: 0,
+      names: { en: "person", zh: "人员" },
+      description: "人员",
+      hotkey: "1",
+      color: "#FF0000",
+      properties: [
+        {
+          id: 0,
+          names: { en: "role", zh: "人员角色" },
+          type: "role",
+        },
+        {
+          id: 1,
+          names: { en: "gender", zh: "性别" },
+          type: "gender",
+        },
+      ],
+    },
+    {
+      id: 1,
+      names: { en: "cat", zh: "猫" },
+      description: "猫",
+      hotkey: "2",
+      color: "#FFFF00",
+      properties: [
+        {
+          id: 0,
+          names: { en: "gender", zh: "性别" },
+          type: "gender",
+        },
+      ],
+    },
+  ],
+  property_types: [
+    {
+      id: 1,
+      names: { en: "role", zh: "人员角色" },
+      description: "人员角色",
+      values: [
+        {
+          id: 0,
+          names: { en: "clerk", zh: "职员" },
+          description: "职员",
+          hotkey: "1",
+          color: "BROWN",
+          sign: "CL",
+        },
+        {
+          id: 1,
+          names: { en: "customer", zh: "客户" },
+          description: "客户",
+          hotkey: "2",
+          color: "YELLOW",
+          sign: "CU",
+        },
+      ],
+    },
+    {
+      id: 2,
+      names: { en: "gender", zh: "性别" },
+      description: "性别",
+      values: [
+        {
+          id: 0,
+          names: { en: "male", zh: "雄性" },
+          description: "雄性",
+          hotkey: "1",
+          color: "BROWN",
+          sign: "M",
+        },
+        {
+          id: 1,
+          names: { en: "female", zh: "雌性" },
+          description: "雌性",
+          hotkey: "2",
+          color: "YELLOW",
+          sign: "F",
+        },
+      ],
+    },
+  ],
+  property_special_values: [
+    {
+      id: -3,
+      names: { en: "error", zh: "检测器错误" },
+      description: "检测器错误",
+      hotkey: "r",
+      color: "PINK",
+      sign: "E",
+    },
+    {
+      id: -2,
+      names: { en: "excluded", zh: "排除争议样本" },
+      description: "排除争议样本",
+      hotkey: "e",
+      color: "PURPLE",
+      sign: "X",
+    },
+    {
+      id: -1,
+      names: { en: "pending", zh: "待定" },
+      description: "待定",
+      hotkey: "q",
+      color: "WHITE",
+      sign: "P",
+    },
+  ],
+}

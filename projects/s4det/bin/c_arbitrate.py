@@ -28,7 +28,7 @@ import httpx
 import orjson
 import typer
 from loguru import logger
-from ulabel.crop import xyxy_iou
+from jxl.label.crop import xyxy_iou
 
 from jxl.bin.vlm_pool import (
     build_target_prompt,

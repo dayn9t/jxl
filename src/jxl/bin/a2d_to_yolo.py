@@ -18,8 +18,8 @@ import typer
 from jcx.sys.fs import files_in, make_subdir
 from jcx.text.txt_json import load_json
 from loguru import logger
-from ulabel.a2d import A2dObjectLabel, A2dObjectLabels
-from ulabel.formats.darknet import darknet_export_objects
+from jxl.label.a2d import A2dObjectLabel, A2dObjectLabels
+from jxl.label.formats.darknet import darknet_export_objects
 
 from jxl.det.a2d import A2dObject, A2dResult
 

@@ -10,7 +10,6 @@ requires-python = "~=3.12.0"
 dependencies = [
     "jcx @ file:///home/jiang/cc/py/jcx",
     "jvi @ file:///home/jiang/cc/py/jvi",
-    "ulabel @ file:///home/jiang/cc/next/ulabel/py",
     "rustshed",
     "pydantic",
     "typer",
@@ -50,6 +49,7 @@ dev = [
     "nuitka",
     "pytest",
     "types-pyyaml>=6.0.12.20260906",
+    "json5>=0.15", # tests/label 契约 fixture 解析（2026-11-05 自 ulabel py 层回迁）
 ]
 
 [project.scripts]
@@ -129,11 +129,13 @@ check_untyped_defs = true
 #   但仍被此 blanket exclude 拦截; 待 bin/ 整体迁移完成后按脚本粒度纳入。
 # vendored/: 第三方模型定义原样拷贝（见 ruff.toml extend-exclude 同款注释）——
 # det/locateanything = NVIDIA 官方 worker；vdt = torchreid osnet（MIT，经 iapx
-# 中转移交，2026-09-19 P2-T7）。
+# 中转移交，2026-09-19 P2-T7）；scripts/coldstart = 学术 pose 代码拷贝
+# （gitignored，mypy 全量跑会扫到 untracked 的相对 import 脚本，2026-11-05 排除）。
 exclude = [
     "src/jxl/bin/",
     "src/jxl/det/locateanything/vendored/",
     "src/jxl/vdt/vendored/",
+    "scripts/coldstart/",
     "archive/",
 ]
 

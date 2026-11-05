@@ -50,8 +50,8 @@ from pathlib import Path
 
 import httpx
 from sgcc_confirm_metas import CUSTOMER_ID, ROLE_IDS, role_meta
-from ulabel.meta import LabelMeta
-from ulabel.service import (
+from jxl.label.meta import LabelMeta
+from jxl.label.service import (
     ConfirmClient,
     Fingerprint,
     ServiceError,

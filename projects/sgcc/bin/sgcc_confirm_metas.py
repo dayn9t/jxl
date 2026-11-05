@@ -15,7 +15,7 @@
 
 from pathlib import Path
 
-from ulabel.meta import (
+from jxl.label.meta import (
     CatDef,
     CatProperty,
     LabelMeta,

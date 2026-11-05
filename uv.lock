@@ -753,13 +753,13 @@ dependencies = [
     { name = "torchvision" },
     { name = "transformers" },
     { name = "typer" },
-    { name = "ulabel" },
     { name = "ultralytics" },
     { name = "volcengine-python-sdk" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "json5" },
     { name = "mypy" },
     { name = "nuitka" },
     { name = "pytest" },
@@ -797,13 +797,13 @@ requires-dist = [
     { name = "torchvision" },
     { name = "transformers" },
     { name = "typer" },
-    { name = "ulabel", directory = "/home/jiang/cc/next/ulabel/py" },
     { name = "ultralytics", specifier = ">=8.4.65" },
     { name = "volcengine-python-sdk" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "json5", specifier = ">=0.15" },
     { name = "mypy", specifier = ">=1.10" },
     { name = "nuitka" },
     { name = "pytest" },
@@ -2189,48 +2189,6 @@ source = { registry = "https://pypi.org/simple/" }
 sdist = { url = "https://files.pythonhosted.org/packages/95/32/1a225d6164441be760d75c2c42e2780dc0873fe382da3e98a2e1e48361e5/tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9", size = 196380, upload-time = "2025-03-23T13:54:43.652Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/23/c7abc0ca0a1526a0774eca151daeb8de62ec457e77262b66b359c3c7679e/tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8", size = 347839, upload-time = "2025-03-23T13:54:41.845Z" },
-]
-
-[[package]]
-name = "ulabel"
-version = "0.1.0"
-source = { directory = "/home/jiang/cc/next/ulabel/py" }
-dependencies = [
-    { name = "httpx" },
-    { name = "jcx" },
-    { name = "json5" },
-    { name = "jvi" },
-    { name = "loguru" },
-    { name = "opencv-contrib-python" },
-    { name = "pillow" },
-    { name = "pydantic" },
-    { name = "rustshed" },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "jcx", directory = "/home/jiang/cc/py/jcx" },
-    { name = "json5", specifier = ">=0.9" },
-    { name = "jvi", directory = "/home/jiang/cc/py/jvi" },
-    { name = "loguru", specifier = ">=0.7" },
-    { name = "opencv-contrib-python" },
-    { name = "pillow", specifier = ">=11" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "rustshed", specifier = ">=0.1" },
-    { name = "typer", specifier = ">=0.12" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1" },
-    { name = "orjson", specifier = ">=3" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "ruff", specifier = ">=0.6" },
-    { name = "scikit-learn", specifier = ">=1.6" },
-    { name = "types-pyyaml", specifier = ">=6" },
 ]
 
 [[package]]

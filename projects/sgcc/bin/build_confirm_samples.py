@@ -34,11 +34,11 @@ from pathlib import Path
 import httpx
 from PIL import Image, ImageDraw
 from sgcc_confirm_metas import GENCHECK
-from ulabel.crop import (
+from jxl.label.crop import (
     expand_xyxy,  # base layer 迁移：jxl.det.box_utils → vlabel.crop（38889e6）
 )
-from ulabel.meta import BorderExtend
-from ulabel.service import ConfirmClient, ServiceError, SetRelation
+from jxl.label.meta import BorderExtend
+from jxl.label.service import ConfirmClient, ServiceError, SetRelation
 
 PROJECT, GROUP = "sgcc_n001", "r01"
 BATCH = 12

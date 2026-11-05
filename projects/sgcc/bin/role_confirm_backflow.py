@@ -58,7 +58,7 @@ import httpx
 # same upstream jsonl, so track_id coercion must come from one definition
 # (real rows carry numeric track_id; string-only parsing rejected every row).
 from build_role_confirm_set import scalar_text
-from ulabel.service import (
+from jxl.label.service import (
     AnnotationSampleOut,
     ConfirmClient,
     Fingerprint,

@@ -1,0 +1,78 @@
+"""检测可视化纯函数（缩放/画框/标注头/网格拼装）。
+
+2026-09-21 曾随标注层迁移复制进 ulabel.tools.viz（QA 工具共用），
+2026-11-05 ulabel py 层退役时回迁原位（jxl/det/viz.py）。
+Box 类型单一数据源：本包 ``jxl.det.hardmine.Box``。
+"""
+
+from PIL import Image, ImageDraw, ImageFont
+
+from jxl.det.hardmine import Box
+
+RGB = tuple[int, int, int]
+
+_HEADER_H = 26
+"""标题行高度（像素）。"""
+
+_FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+"""无衬线粗体字体路径（缺失时回退 PIL 默认字体）。"""
+
+
+def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    try:
+        return ImageFont.truetype(_FONT_PATH, size)
+    except OSError:
+        # FALLBACK: 缺 DejaVu 的机器退回 PIL 内置字体（保持请求字号），渲染
+        # 与标准机器存在可见差异——审核材料的显式已知降级，不静默.
+        return ImageFont.load_default(size)
+
+
+def scale_to_width(im: Image.Image, width: int) -> Image.Image:
+    """等比缩放到指定宽."""
+    ratio = width / im.width
+    return im.resize((width, max(1, int(im.height * ratio))))
+
+
+def draw_boxes(
+    im: Image.Image,
+    boxes: list[Box],
+    color: RGB,
+    width_px: int = 3,
+) -> Image.Image:
+    """归一化 xyxy 框画到图上（返回新图, 不改原图）.
+
+    跳过退化框(w/h≤0 或翻转) —— PIL rectangle 对 y2<y1 直接抛错; VLM 偶发
+    越界塌缩/坐标翻转框(2026-09-06 ensemble manifest 实测), 渲染层静默跳过.
+    """
+    out = im.copy()
+    dr = ImageDraw.Draw(out)
+    for b in boxes:
+        if b[2] <= b[0] or b[3] <= b[1]:
+            continue
+        dr.rectangle(
+            (b[0] * im.width, b[1] * im.height, b[2] * im.width, b[3] * im.height),
+            outline=color,
+            width=width_px,
+        )
+    return out
+
+
+def label_header(im: Image.Image, text: str) -> Image.Image:
+    """顶部加黑条白字标题行."""
+    out = Image.new("RGB", (im.width, im.height + _HEADER_H), (0, 0, 0))
+    out.paste(im, (0, _HEADER_H))
+    ImageDraw.Draw(out).text((4, 4), text, font=_font(18), fill=(255, 255, 255))
+    return out
+
+
+def grid(images: list[Image.Image], cols: int, tile_w: int) -> Image.Image:
+    """等宽拼网格（cols 列, 行数自适应; tile 高含 header 取最大）."""
+    if not images:
+        raise ValueError("grid: empty images")
+    tiles = [scale_to_width(im, tile_w) for im in images]
+    th = max(t.height for t in tiles)
+    rows = (len(tiles) + cols - 1) // cols
+    canvas = Image.new("RGB", (tile_w * cols, th * rows), (30, 30, 30))
+    for i, t in enumerate(tiles):
+        canvas.paste(t, ((i % cols) * tile_w, (i // cols) * th))
+    return canvas

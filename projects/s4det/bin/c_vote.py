@@ -30,7 +30,7 @@ import typer
 from a_common import DATA_ROOT, LEDGER, QuarantineEntry, append_quarantine, read_jsonl
 from loguru import logger
 from PIL import Image
-from ulabel.crop import be_uniform, crop_expanded
+from jxl.label.crop import be_uniform, crop_expanded
 
 from jxl.bin.vlm_pool import (
     CANDIDATES,

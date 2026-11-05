@@ -6,7 +6,7 @@
 """
 
 from rustshed import Null
-from ulabel.a2d import A2dImageLabel, A2dObjectLabel
+from jxl.label.a2d import A2dImageLabel, A2dObjectLabel
 
 from jxl.det.d2d import D2dObject, D2dResult
 

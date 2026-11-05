@@ -14,7 +14,7 @@ import cv2
 import httpx
 from jvi.geo.rectangle import Rect
 from jvi.image.image_nda import ImageNda
-from ulabel.crop import xyxy_iou
+from jxl.label.crop import xyxy_iou
 
 from jxl.det.d2d import D2dObject, D2dOpt, D2dResult, Detector2D
 from jxl.det.hardmine import Box
