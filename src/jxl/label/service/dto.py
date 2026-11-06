@@ -23,10 +23,10 @@ class _Wire(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
-SetKind = Literal["verdict", "annotation"]
+SetKind = Literal["verdict", "annotation", "session"]
 
 # 集级媒体声明（set.json5 / 建集请求体必填，无默认——镜像 rs media_kind::SetMedia）
-SetMedia = Literal["image", "audio_clip"]
+SetMedia = Literal["image", "audio_clip", "av_session"]
 
 
 class ProjectInfo(_Wire):

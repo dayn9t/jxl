@@ -96,3 +96,19 @@ def test_clip_seed_roundtrip_shape() -> None:
     assert seed.interval == ClipSpan(start=3000, end=7500)
     # 序列化为 query 值的紧凑 JSON（client.add_sample 以 model_dump_json 携带）
     assert '"window"' in seed.model_dump_json() and '"interval"' in seed.model_dump_json()
+
+
+def test_session_kind_and_av_session_media_are_in_domain() -> None:
+    """av_session 建集 wire（2026-11-06 plan）：SetKind/SetMedia 镜像必须含
+    "session" / "av_session"——一旦服务端存在 session 集，SetOut.media 是
+    pydantic Literal，缺值会让每次 list_sets 解析即 ValidationError。"""
+    import typing
+
+    from jxl.label.service.dto import SetKind, SetMedia
+
+    assert set(typing.get_args(SetKind)) == {"verdict", "annotation", "session"}
+    assert set(typing.get_args(SetMedia)) == {"image", "audio_clip", "av_session"}
+    out = SetOut.model_validate(
+        {"slug": "s", "name": "n", "samples": 3, "progress": {}, "media": "av_session"}
+    )
+    assert out.media == "av_session"
