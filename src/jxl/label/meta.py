@@ -128,6 +128,11 @@ class CatDef(BaseModel):
     properties: list[CatProperty] = Field(default_factory=list)
     """关联的属性列表（rs serde(default)）。"""
 
+    rect_constraint: bool | None = None
+    """矩形约束（台账 #75：矩形=统一多边形之上的类目级约束）。True = 该
+    类目对象以细线多边形存储、UI 叠加渲染外接长方形=最终输出、导出投影外
+    外接框；None/省略 = 无约束（absent-not-null，向后零兼容）。"""
+
 
 type SpecialValue = ValueDef
 """特殊值定义（标注协议历史名称）。
