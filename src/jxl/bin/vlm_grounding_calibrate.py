@@ -15,8 +15,8 @@
 生成方式见 gencheck/gt_calib_set.jsonl（dataset_v4 test 抽样，crop640 域）。
 
 预设候选（--models，用户裁决 2026-09-13：在线商用优先+本地千问3.8增补+今年模型优先）：
-  qwen-flash   qwen3-vl-flash-2026-01-22   dashscope   S4_QWEN_API_KEY   JSON bbox_2d 0-1000
-  doubao-vl    doubao-seed-2-1-pro-260915  方舟       S4_DOUBAO_API_KEY JSON bbox_2d 0-1000（思考模型须关思考，extra_payload thinking disabled）
+  qwen-flash   qwen3-vl-flash-2026-01-22   dashscope   ALI_DASHSCOPE_API_KEY   JSON bbox_2d 0-1000
+  doubao-vl    doubao-seed-2-1-pro-260915  方舟       DOUBAO_VOLCES_API_KEY JSON bbox_2d 0-1000（思考模型须关思考，extra_payload thinking disabled）
   glm-flash    glm-5.3-flash               bigmodel 网关 ANTHROPIC_AUTH_TOKEN vision 已实测（n001 0.7458 / s4det T7' 0.482，0-1000）
   qwen38-local qwen3.8-flash-next 别名     本地 182 vllm  无需 key  同 qwen 协议（与 qwen3.5-35b-a3b-fp8 同权重根，2026-09-26 改回别名调用）
   （成员/型号/协议单一数据源 = vlm_pool.CANDIDATES，本表仅列别名/env/端点）

@@ -47,7 +47,7 @@ LOCAL_QWEN38 = "http://192.168.18.182:8000/v1/chat/completions"
 CANDIDATES: dict[str, dict] = {
     "qwen-flash": {
         "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-        "key_env": "S4_QWEN_API_KEY", "model": "qwen3-vl-flash-2026-01-22",
+        "key_env": "ALI_DASHSCOPE_API_KEY", "model": "qwen3-vl-flash-2026-01-22",
         # 2026-09-26 核对: dashscope 3.8 代仅文本(max/flash)与 omni(语音向), 无 VL——VL 代仍为本型号, 有新即换
         "protocol": "qwen", "divisor": 1000.0, "strength": "strong",
     },
@@ -55,7 +55,7 @@ CANDIDATES: dict[str, dict] = {
         "endpoint": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         # 2026-09-26 换代: 250815 端点 ClosedEndpoint; seed-2.1 代 0915 构建 key 下已开通(实测 /v3/models)
         # 2.1 为思考模型: 关思考 6s 出 JSON bbox_2d(0-1000, 与 qwen 同构); 开思考 >120s 超时(实测)
-        "key_env": "S4_DOUBAO_API_KEY", "model": "doubao-seed-2-1-pro-260915",
+        "key_env": "DOUBAO_VOLCES_API_KEY", "model": "doubao-seed-2-1-pro-260915",
         "protocol": "doubao", "divisor": 1000.0, "strength": "strong",
         "extra_payload": {"thinking": {"type": "disabled"}},
     },

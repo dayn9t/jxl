@@ -214,7 +214,7 @@ async def vlm_call(client: httpx.AsyncClient, sem: asyncio.Semaphore, tag: str,
 
 async def scan(items: list[dict], only: str | None = None) -> None:
     sem_s, sem_d = asyncio.Semaphore(SEM_SPARK), asyncio.Semaphore(SEM_DOUBAO)
-    hdr_d = {"Authorization": f"Bearer {os.environ['S4_DOUBAO_API_KEY']}"}
+    hdr_d = {"Authorization": f"Bearer {os.environ['DOUBAO_VOLCES_API_KEY']}"}
     out_f = CACHE.open("a")
     done = 0
     for s in range(0, len(items), 256):
