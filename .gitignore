@@ -22,3 +22,4 @@ examples/oai/_runs/
 tmp/
 
 .playwright-mcp/
+.claude/
