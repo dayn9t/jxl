@@ -270,7 +270,9 @@ def _crop_row(crop: Crop, split: str, identity: str) -> dict:
     return {"uid": crop.uid, "split": split, "identity": identity, "src": crop.src,
             "mkv": crop.mkv, "stem": crop.stem, "det_index": crop.det_index,
             "frame": str(crop.frame), "box_norm": list(crop.box_norm),
-            "path": str(CROP_DIR / split / identity / f"{crop.uid}.jpg")}
+            # path 相对 WORK（跨机可移植：本机 build → rsync → n902 训练零路径替换；
+            # 首启教训：绝对路径形态随 _ws 漂移，sed 逐形态替换两连错——根治=相对化）
+            "path": (CROP_DIR / split / identity / f"{crop.uid}.jpg").relative_to(WORK).as_posix()}
 
 
 def _write_crop_files(rows: list[dict]) -> int:
@@ -366,7 +368,7 @@ def heldout_gap(model, index_rows: list[dict], device: str) -> dict:
     v2 首三轮的 best 选择/早停均基于反向 gap，其数字与本修复后不可比。
     """
     import torch
-    by_uid = {r["uid"]: Path(r["path"]) for r in index_rows if r["split"] == HELDOUT}
+    by_uid = {r["uid"]: WORK / r["path"] for r in index_rows if r["split"] == HELDOUT}
     uids = sorted(by_uid)
     uids_set = set(uids)
     feats = torch.nn.functional.normalize(embed(model, [by_uid[u] for u in uids], device), dim=1)
@@ -484,7 +486,7 @@ def train(args) -> None:
             files, labels = [], []
             for i in random.sample(ids, p_eff):
                 for r in random.sample(by_id[i], k_eff):
-                    files.append(Path(r["path"]))
+                    files.append(WORK / r["path"])
                     labels.append(label_of[i])
             x = torch.stack([aug(Image.open(str(f)).convert("RGB")) for f in files]).to(device)
             y = torch.tensor(labels, device=device)
@@ -553,17 +555,10 @@ def remote(args, host: str = REMOTE_HOST) -> None:
     run_cmd(["ssh", host, f"mkdir -p {REMOTE_ROOT}/runs {samples_remote}/pairs"])
     run_cmd(["rsync", "-aL", str(local_vendor), f"{host}:{REMOTE_ROOT}/vendor_osnet.py"])
     run_cmd(["rsync", "-aL", str(Path(__file__)), f"{host}:{REMOTE_ROOT}/"])
-    run_cmd(["rsync", "-aL", str(INDEX), f"{host}:{REMOTE_ROOT}/crops.jsonl.tmp"])
+    run_cmd(["rsync", "-aL", str(INDEX), f"{host}:{REMOTE_ROOT}/crops.jsonl"])
     run_cmd(["rsync", "-a", str(CROP_DIR) + "/", f"{host}:{REMOTE_ROOT}/crops/"])
     # pair list 增量重产后远端旧文件会致口径错（v1 实证教训）——PAIRS_EVAL 始终重同步
     run_cmd(["rsync", "-aL", str(PAIRS_EVAL), f"{host}:{samples_remote}/pairs/eval.jsonl"])
-    # 远端路径契约（v1 教训固化）：INDEX 内 path 为本机绝对路径——两种形态都要替换：
-    # /mnt/data/jiang/ws（直写）与 /home/jiang/ws（_ws 首建目录不存在时的替换形态，
-    # 首启实证：WORK 目录首建不存在 → crops.jsonl 全量落 home 形态 → sed 漏替换 → 远端 FileNotFoundError）
-    ssh_run(host, f"sed -e 's|/mnt/data/jiang/ws|~/staging/jxl-reid-osnet|g' "
-                  f"-e 's|/home/jiang/ws|~/staging/jxl-reid-osnet|g' "
-                  f"{REMOTE_ROOT}/crops.jsonl.tmp > {REMOTE_ROOT}/crops.jsonl && "
-                  f"rm {REMOTE_ROOT}/crops.jsonl.tmp")
     log = f"{REMOTE_ROOT}/runs/{args.run_name}.nohup.log"
     env = (f"OSNET_SCRATCH_WORK={REMOTE_ROOT} OSNET_SCRATCH_DATA={samples_remote}")
     inner = (f"{env} {REMOTE_PYTHON} {Path(__file__).name} --stage train --run-name {args.run_name} "
