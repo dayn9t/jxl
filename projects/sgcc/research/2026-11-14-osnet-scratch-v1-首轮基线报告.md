@@ -37,7 +37,25 @@ A. 继续 scratch：加 lr 衰减 + RandomErasing + patience 放宽，再扫 2-3
 B. 承认预训练初始化：回到 MSMT17 基座（v2.1 谱系）做 center3 口径的迭代——「全新训练」令解除的正当理由即本报告
 C. A 先行一轮，仍 FAIL 则转 B（时间盒）
 
+## 附章：B 谱系双微调对照终局（2026-11-14 晚补）
+
+用户裁 B（「尽量从已有的模型迁移训练」，经 iap-24 转达）后补跑两轮微调对照，同尺四线终局：
+
+| 线 | 初始化 | lr | best gap | gate | 备注 |
+|---|---|---|---|---|---|
+| scratch_v1 | 随机 | 1e-3 | +0.0090 | FAIL | 150ep，best@80 |
+| finetune_v1（iap-24 代跑）| MSMT17 | 1e-3（默认）| −0.0100 | 勉强 PASS | 150ep 裸配方 |
+| **ft_ref_v1（jxl）** | MSMT17 | **3e-4（v2.1 配方）** | **−0.0668** | **PASS** | 60ep，best@15 |
+| v2.1 现役（2026-09 在档）| MSMT17 | 3e-4 + EXTRA_PAIRS | −0.1138 | PASS | 生产口径 |
+
+结论修正（较 iap-24 首报「裸配方追不上调优成品」）：**lr 3e-4 即达 −0.0668**（比裸配方 −0.010 提升一个量级），与 v2.1 剩余差距 0.047 的主要嫌疑 = EXTRA_PAIRS 姿态漂移增量对（v2.1 加载、两轮对照未加载）。第二轮正式迁移的配方启示：**3e-4 + EXTRA_PAIRS + center3 现场回流数据**。
+
+## 附章二：数据盘二次故障（2026-11-14 晚实录）
+
+对照收官时 /mnt/data 全树 IO 错误（11-12 SATA 故障复发，osnet_scratch/ 与 gold/n001/gencheck 等全部探测不可读写）。**训练线数据面无恙**：n902 staging 自成一体（1288 帧样本副本 + manifest/pairs/gt + crops 索引 + base_weights.pth + 三 run 全部产物），数据窗等待期训练线不受影响。v2.1 历史 eval 数字已固化本报告（原档暂不可读）。修复决策归用户/运维；修好后产物应从 n902 归位数据盘。
+
 ## 遗留与去向
 
-- best.pth 已取回留档；n902 staging work 区保留（第二轮可直接 --resume 或新 run）
-- gap 逐 epoch 曲线在 train_log.jsonl（能力账纪律：模型 ID scratch_v1 + 全参数快照在 eval_report meta）
+- 三 run 产物在 n902 `~/staging/jxl-reid-osnet/work/runs/{scratch_v1,ft_ref_v1,finetune_v1}`（数据盘故障期间的权威副本）；本机数据盘取回件暂不可读（随盘修复归位）
+- gap 逐 epoch 曲线在 train_log.jsonl（能力账纪律：模型 ID + 全参数快照在 eval_report meta）
+- 第二轮触发 = center3 上线 + 现场回流数据到位（与 iap 数据窗批同窗）

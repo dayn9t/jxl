@@ -25,6 +25,9 @@
 环境变量（n902 上必设；本机缺省指数据盘）：
   OSNET_SCRATCH_WORK  工作区（crops/runs 落位；n902=~/staging/jxl-reid-osnet/work）
   OSNET_SCRATCH_DATA  样本根（samples/{manifest,pairs}；n902=~/staging/jxl-reid-osnet/samples）
+  OSNET_SCRATCH_BASE  MSMT17 基座（--init pretrained 用；n902=work/base_weights.pth）
+  ⚠ --remote 流程外手工直跑 n902 时三 env 必须显式带全（实测缺一即路径错；
+    WORK/DATA 两根独立配置，任一缺省都落到不存在的本机路径形态）
 
 OSNet 定义: ~/cc/py/jxl/src/jxl/vdt/vendored/osnet.py（KaiyangZhou/deep-person-reid, MIT）
 """
