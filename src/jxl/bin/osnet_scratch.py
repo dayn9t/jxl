@@ -310,6 +310,33 @@ def build_model(n_classes: int):
     return load_osnet_module().osnet_x0_75(num_classes=n_classes, pretrained=False, loss="triplet")
 
 
+BASE_WEIGHTS = _ws(os.environ.get(
+    "OSNET_SCRATCH_BASE",
+    "/mnt/data/jiang/ws/sgcc/person/osnet_weights/"
+    "osnet_x0_75_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_"
+    "b64_fb10_softmax_labelsmooth_flip_jitter.pth"))
+
+
+def load_base_weights(model, weights: Path) -> None:
+    """MSMT17 基座载入（--init pretrained；classifier 头剥离重置）。自 58e4897 原版恢复。"""
+    import torch
+    sd = torch.load(weights, map_location="cpu", weights_only=False)
+    if isinstance(sd, dict) and "state_dict" in sd:
+        sd = sd["state_dict"]
+    model_keys, sd_keys = set(model.state_dict()), set(sd)
+    missing = {k for k in model_keys - sd_keys if not k.startswith("classifier.")}
+    unexpected = {k for k in sd_keys - model_keys if not k.startswith("classifier.")}
+    if missing or unexpected:
+        raise RuntimeError(f"基座权重不匹配: missing={sorted(missing)[:5]} unexpected={sorted(unexpected)[:5]}")
+    model_sd = model.state_dict()
+    shape_mismatch = {k for k in sd_keys & model_keys if sd[k].shape != model_sd[k].shape}
+    if shape_mismatch and not all(k.startswith("classifier.") for k in shape_mismatch):
+        raise RuntimeError(f"骨干形状不匹配（疑似错变体/错架构）: {sorted(shape_mismatch)[:5]}")
+    model.load_state_dict({k: v for k, v in sd.items()
+                           if k in model_keys and k not in shape_mismatch}, strict=False)
+    print(f"[weights] {weights.name}: 基座载入（classifier 头重置 {sorted(shape_mismatch)}）")
+
+
 def circle_loss(emb, labels, m: float = 0.25, gamma: int = 256):
     """官方式 CircleLoss（emb L2 归一；mask 零填充 + logsumexp）。"""
     import torch
@@ -439,10 +466,12 @@ def train(args) -> None:
                                f"total={total / 2**30:.1f}GiB，须 ≥80% 空闲且 ≥4GiB）"
                                "——先确认 nvidia-smi 空闲，或评估余量后 --gpu-guard-off")
     model = build_model(n_classes=len(ids)).to(device)
-    # scratch 裁决（2026-11-14）：随机初始化，不加载任何预训练基座——
-    # 预训练优势显著须呈报用户再定，不自行改判
+    if args.init == "pretrained":
+        # B 谱系（用户 2026-11-14 裁「尽量从已有的模型迁移训练」）：MSMT17 基座迁移微调
+        load_base_weights(model, BASE_WEIGHTS)
+    # scratch = 随机初始化（原 A 案裁决形态，首轮基线 scratch_v1 已存档）
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
-    warmup_ep = 5  # scratch 冷启动 warmup：前 N ep 线性升到 args.lr（常数大 lr 直接冲有崩风险）
+    warmup_ep = 5 if args.init == "scratch" else 0  # 仅 scratch 冷启动需 warmup
 
     state = {"epoch": 0, "best_gap": float("inf"), "no_improve": 0}
     if args.resume and (run_dir / "last.pth").exists():
@@ -464,7 +493,7 @@ def train(args) -> None:
         torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "state": state,
                     "meta": {"num_classes": len(ids), "feature_dim": FEAT_DIM,
                              "p": p_eff, "k": k_eff, "loss": args.loss, "lr": args.lr,
-                             "init": "scratch", "gap": gap, "run_name": args.run_name}},
+                             "init": args.init, "gap": gap, "run_name": args.run_name}},
                    run_dir / name)
 
     print("[baseline] 随机初始化 held-out 表现（训练前对照点）")
@@ -597,6 +626,8 @@ def main() -> None:
     ap.add_argument("--k", type=int, default=K_DEFAULT, help="P×K 采样 K（每身份 crop 数）")
     ap.add_argument("--lr", type=float, default=LR_DEFAULT)
     ap.add_argument("--loss", choices=["circle", "triplet"], default="triplet")
+    ap.add_argument("--init", choices=["scratch", "pretrained"], default="scratch",
+                    help="scratch=随机初始化（A 案形态）；pretrained=MSMT17 基座迁移（B 谱系，用户 2026-11-14 裁）")
     ap.add_argument("--patience", type=int, default=20, help="早停：连续 N 次评估 gap 无提升")
     ap.add_argument("--eval-every", type=int, default=5)
     ap.add_argument("--limit-ids", type=int, default=0, help=">0 只取前 N 个身份（CPU 冒烟用）")
