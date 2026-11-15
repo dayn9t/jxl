@@ -21,10 +21,10 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 
-MANIFEST = Path("/mnt/data/jiang/ws/iapx/n001/samples/manifest.jsonl")
-SAMPLES_ROOT = Path("/mnt/data/jiang/ws/iapx/n001")
+MANIFEST = Path("/home/jiang/ws/sgcc-mma/gold/n001/samples/manifest.jsonl")
+SAMPLES_ROOT = Path("/home/jiang/ws/sgcc-mma/gold/n001")
 MODEL_PT = Path("/opt/howell/iap/v0.9/ias/model/2026-09-14_person_role_n_v32.pt")
-OUT_DIR = Path("/mnt/data/jiang/ws/iapx/n001/shadow-role-v32")
+OUT_DIR = Path("/home/jiang/ws/sgcc-mma/gold/n001/shadow-role-v32")
 CROP_SIZE = 224
 JPEG_QUALITY = 95
 BATCH = 16

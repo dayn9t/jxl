@@ -36,7 +36,7 @@ PERSON_CAT_ID = 0
 # removed.jsonl，reid_pair 读 cos.jsonl（与 build_confirm_samples 同源）。
 
 GENCHECK = Path(
-    "/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/gencheck"
+    "/home/jiang/ws/sgcc-mma/training/person/datasets/sgcc-n001/crop640_persons/gencheck"
 )
 FINGERPRINT_SOURCES: dict[str, Path] = {
     "bad_fit_review": GENCHECK / "pospool_20260919/cands_person.jsonl",

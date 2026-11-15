@@ -56,7 +56,7 @@ IMG_EXT = ".jpg"
 INPUT_HW = (256, 128)
 """OSNet Re-ID 输入尺寸(高, 宽)——行人 reid 标准"""
 DEFAULT_WEIGHTS = Path(
-    "/home/jiang/ws/sgcc/person/osnet_weights/"
+    "/home/jiang/ws/sgcc-mma/training/person/osnet_weights/"
     "osnet_x0_75_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_"
     "b64_fb10_softmax_labelsmooth_flip_jitter.pth"
 )

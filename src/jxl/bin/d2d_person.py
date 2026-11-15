@@ -80,6 +80,6 @@ def main(
 
 
 if __name__ == "__main__":
-    f = Path("/home/jiang/ws/sgcc/video/top/09-56-14.mp4")
-    m = Path("/home/jiang/ws/sgcc/person/model_dir/person.pt")
+    f = Path("/home/jiang/ws/sgcc-mma/deploy-aliases/video/top/09-56-14.mp4")
+    m = Path("/home/jiang/ws/sgcc-mma/training/person/model_dir/person.pt")
     main(f, m)

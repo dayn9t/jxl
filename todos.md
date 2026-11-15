@@ -21,7 +21,7 @@
 
 - [x] **osnet vendor 移交（09-19 午后完成）**：jxl.vdt 侧移交已就位（`reid_osnet.py`+`vendored/osnet.py`）；gencheck 侧 `osnet_ft.py` VENDOR_CANDIDATES + 两个 export 脚本 VENDOR 已切 jxl.vdt 路径（原 iapx 路径随解散已删、实际已断）。验证：vendored 加载 v2.1 权重 strict 全匹配 + 前向 PASS（352 类）。
 - [ ] **reid 复测通道将失效**：iapx pipeline+影子测试被删（Rust 已镜像+GT 门绿）——v2.1 正式复测须改走 iap Rust 重放（monitor_replay_corpus），reid-retest skill 的 temp 通道流程届时更新。
-- [ ] **数据资产去向关注**：`/mnt/data/jiang/ws/iapx/n001/`（samples/eval.jsonl held-out 328/benchmark）——export-samples/export-reid-pairs 工具进 iap py/tools 接口不变，但存量数据迁移方案需确认。09-19 午后核实：**数据原地完好未迁**（annotations/benchmark/cache 全在），role 训练链（iapx_role_train_v33）与 osnet eval 数据依赖暂无恙。
+- [ ] **数据资产去向关注**：`/home/jiang/ws/sgcc-mma/gold/n001/`（samples/eval.jsonl held-out 328/benchmark）——export-samples/export-reid-pairs 工具进 iap py/tools 接口不变，但存量数据迁移方案需确认。09-19 午后核实：**数据原地完好未迁**（annotations/benchmark/cache 全在），role 训练链（iapx_role_train_v33）与 osnet eval 数据依赖暂无恙。
 - [x]（无需动）spec 明确「jxl 除 osnet 外零改动」；通知单 4 份归档 iap docs/jxl-deliveries/，在办事项移交 iap TODO。
 
 ## 飞轮例行

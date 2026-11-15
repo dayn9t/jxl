@@ -16,12 +16,12 @@ iap（原型期名 iapx，2026-09-19 解散并入 iap）是 n001 收费窗口的
 | person 检测器 | 现役 `2026-09-09_person_n.pt/.onnx`（**v3**——2026-09-15 生产点火实证 v4 坐姿回归后回退；**v5 已 stage 待切**：`2026-09-15_person_n_v5.*`，验收+跨日期扩展验收双 PASS，见 §8） | crop640 域 person 检测；重复框 1,267→7，消费端 IoU≥0.95 防御仍建议保留 |
 | upper_body 分类器 | `2026-09-10_person_upper_n.pt/.onnx`（主力） | 行走下半身过滤（0.5 阈） |
 
-iapx 产出根：`/mnt/data/jiang/ws/iapx/n001/`；源视频（只读）：
+iapx 产出根：`/home/jiang/ws/sgcc-mma/gold/n001/`；源视频（只读）：
 `/var/howell/iap/v0.9/ias/sh-sgcc/n001/video/{source_id}/0/{date}/*.mkv`。
 
 ## 2. 样本供给（已就绪，2026-09-12）
 
-**位置**：`/mnt/data/jiang/ws/iapx/n001/samples/`
+**位置**：`/home/jiang/ws/sgcc-mma/gold/n001/samples/`
 
 - `samples/{source_id}/{date}/{HH-MM-SS.mmm}.jpg`——**原始 I 帧，1920×1080，不裁切不叠框**；
   文件名 = 帧墙钟时间（与 session 目录时间格式一致，天然唯一）
@@ -79,7 +79,7 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 - **边界**：服务窗**内**的业务员不在 iapx 的 crop/检测范围（crop640 域天然排除），不考虑
 - **用途**：双人帧**主目标选择**——工作人员非关注目标（辅助作用），主目标 = 非引领员
   非保洁者优先；治最大失败族 A（staff 干扰）
-- **素材锚点**（内容观察层有完整描述：`/mnt/data/jiang/ws/iapx/n001/annotations/content.json`）：
+- **素材锚点**（内容观察层有完整描述：`/home/jiang/ws/sgcc-mma/gold/n001/annotations/content.json`）：
   - 保洁员：src2 2026-07-01 10-2x（拖地+擦台面，两段）
   - 引领员：src2 2026-07-01 10-32（指座位引导客户）、15-24（开场即 staff）
   - staff 在座（非办理）：src2 2026-07-01 14-13、15-06
@@ -169,8 +169,8 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
   usls 推理封装后处理。**非样本不足**
 - 请求：排查训练/导出链路，裁决后处理归属（部署图内置去重 or 消费端各自防御）
 - 证据帧（cache JSON，det 双条同 bbox）：
-  - `/mnt/data/jiang/ws/iapx/n001/cache/2/2026-07-02/11-30-02.000.json` 帧 `11-30-40.010`
-  - `/mnt/data/jiang/ws/iapx/n001/cache/1/2026-07-01/08-40-03.000.json` 帧 `08-43-43.079`、`08-45-57.109`
+  - `/home/jiang/ws/sgcc-mma/gold/n001/cache/2/2026-07-02/11-30-02.000.json` 帧 `11-30-40.010`
+  - `/home/jiang/ws/sgcc-mma/gold/n001/cache/1/2026-07-01/08-40-03.000.json` 帧 `08-43-43.079`、`08-45-57.109`
 - iapx 侧已消费端去重防御（IoU≥0.95 保高 conf，commit `12b2b96`）；危害实证：重复框杀
   单人流守卫 → 同人被切两段（已修复）
 
@@ -185,14 +185,14 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 
 > 背景：通用 MSMT17 权重在 n001 窗口域定标门**七格全败**（2 权重 × 3 测量法，最优
 > gap −0.016；same/diff 余弦在 0.54-0.75 带重叠不可逾越）——通用权重判别上限不足，
-> 治本 = 域微调。证据全套：`/mnt/data/jiang/ws/iapx/n001/gt/osnet-calibration*.md`
+> 治本 = 域微调。证据全套：`/home/jiang/ws/sgcc-mma/gold/n001/gt/osnet-calibration*.md`
 > （4 份）+ `osnet-evidence-run{,2}.md`。期间生产/金丝雀继续 handcrafted HSV@0.8 基线
 > （GT F1 0.9677）作过渡。
 
 ### 7.1 基座契约（勿选错变体）
 
 - **基座权重**：`osnet_x0_75_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip_jitter.pth`
-  （`/mnt/data/jiang/ws/sgcc/person/osnet_weights/`）
+  （`/home/jiang/ws/sgcc-mma/training/person/osnet_weights/`）
 - **架构 = BN 版 OSNet x0_75，非 AIN**（实测钦定权重无 InstanceNorm 键，AIN 定义
   strict load 440 missing；BN 定义 0/0 直载）。参考实现：`~/cc/py/iapx/src/iapx/vendor/osnet.py`（MIT vendored BN 定义）
 - 推理契约（微调后不变）：输入 `N×3×256×128`、ImageNet mean/std 归一、无 TTA、
@@ -203,7 +203,7 @@ jq -c 'select(.n_persons >= 2)' manifest.jsonl | wc -l
 
 **crop 来源 = §2 samples/ 全帧 + manifest bbox**（`box_norm` 直接换算），无需另行截图。
 **✅ pair list 已交付（2026-09-13 11:41，iapx `540b26e`；2026-09-15 全量重产覆盖）**：
-`/mnt/data/jiang/ws/iapx/n001/samples/pairs/`（09-15 起为全量版：train 正对 **848** /
+`/home/jiang/ws/sgcc-mma/gold/n001/samples/pairs/`（09-15 起为全量版：train 正对 **848** /
 远距负对 861 / 硬负对 7 + eval held-out **328**（same 289/diff 39），L0 采信 287/326
 session，join 抽验零缺失——见 `research/2026-09-15-生产点火v4坐姿回归证据与pairlist交付.md` §交付物②；本节下述 204/106 为 v2 轮历史口径）
 ——`train.jsonl` 418 对（session-anchor 正对 204 / session-distant 远距负对 207 /
@@ -263,7 +263,7 @@ crops，held-out 328 对
 diff_p5 0.4566 分布分离；基座未微调同口径 +0.1159 FAIL；ep6 翻正、best@ep42、
 早停@ep62）；对照轮 circle（3e-4/3e-5 正确口径 +0.074/+0.083）均 FAIL——**triplet
 显式优化尾部是翻正关键，数据 4.2× 放大其效果**。交付
-`/mnt/data/jiang/ws/sgcc/person/osnet_weights/osnet_x0_75_ft_v2.pth`（md5
+`/home/jiang/ws/sgcc-mma/training/person/osnet_weights/osnet_x0_75_ft_v2.pth`（md5
 `a33775ef`）+ `.onnx`（`e235228a`，剥 fc/动态 batch/opset 17，torch-vs-onnx 一致性
 min cos 0.9999999）；cfg tag 建议 `osnet-x0_75-ft-v2`。**§7.4 定标门（全量基线
 gap −0.084 翻正目标）+ 管道门属 iapx 侧复测待办**（距离/相似度两口径数值不可直接

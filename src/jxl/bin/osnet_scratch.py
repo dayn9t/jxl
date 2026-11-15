@@ -54,7 +54,7 @@ def _ws(p: str) -> Path:
 
 GENCHECK = Path(__file__).resolve().parent
 WORK = _ws(os.environ.get("OSNET_SCRATCH_WORK",
-                          "/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/"
+                          "/home/jiang/ws/sgcc-mma/training/person/datasets/sgcc-n001/"
                           "crop640_persons/gencheck/osnet_scratch"))
 OUT = WORK
 EXTRA_PAIRS = OUT / "drift_pairs.jsonl"  # v2.1 姿态漂移增量（osnet_drift_mine 产，可选存在）
@@ -81,7 +81,7 @@ RUN_NAME = "osnet_x075_scratch_v1"
 P_DEFAULT, K_DEFAULT, LR_DEFAULT = 16, 2, 1e-3
 
 
-DATA_ROOT = _ws(os.environ.get("OSNET_SCRATCH_DATA", "/mnt/data/jiang/ws/iapx/n001/samples"))
+DATA_ROOT = _ws(os.environ.get("OSNET_SCRATCH_DATA", "/home/jiang/ws/sgcc-mma/gold/n001/samples"))
 PAIRS_TRAIN = DATA_ROOT / "pairs" / "train.jsonl"
 PAIRS_EVAL = DATA_ROOT / "pairs" / "eval.jsonl"
 MANIFEST = DATA_ROOT / "manifest.jsonl"
@@ -315,7 +315,7 @@ def build_model(n_classes: int):
 
 BASE_WEIGHTS = _ws(os.environ.get(
     "OSNET_SCRATCH_BASE",
-    "/mnt/data/jiang/ws/sgcc/person/osnet_weights/"
+    "/home/jiang/ws/sgcc-mma/training/person/osnet_weights/"
     "osnet_x0_75_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_"
     "b64_fb10_softmax_labelsmooth_flip_jitter.pth"))
 

@@ -6,7 +6,9 @@ symlink 到 out_dir,链接名 {dataset}_{original}(全局唯一+可追溯)。
 供 jxl_split 划分前组合不同实验的样本集。
 
 用法:
-    link_samples experiments/non-standing-boost.toml experiment/non-standing-boost/
+    link_samples <experiment.toml> <out_dir>（experiment toml 与平铺数据集布局
+    已随 2026-07 三分形重组退役，成品在 dataset/{train,test,val}——本工具待
+    新实验布局启用时更新示例）
 """
 
 import tomllib

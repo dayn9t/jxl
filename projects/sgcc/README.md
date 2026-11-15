@@ -1,6 +1,6 @@
 # SGCC — n001 收费窗口 person 检测与属性分类（与 SHTM 并列项目）
 
-> 数据根：`/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/`（本机数据盘）
+> 数据根：`/home/jiang/ws/sgcc-mma/training/person/datasets/sgcc-n001/crop640_persons/`（本机数据盘）
 > 训练机：**sgcc3**（默认，2026-09-15 起；RTX 5060 Ti 16G，环境就绪 torch cu128/sm_120 实算验证——
 > 赶时间可按用户授权用 sgcc0 或双机并行；对等路径 `~/ws/sgcc/...`，见 memory training-on-sgcc3）
 

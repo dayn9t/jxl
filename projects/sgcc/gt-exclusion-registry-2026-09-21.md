@@ -1,6 +1,6 @@
 # GT 排除登记（detection-v1）——jxl 侧指针页
 
-> 2026-09-21 ｜ 权威登记（单一数据源）：`/mnt/data/jiang/ws/iapx/n001/gt/detection-v1/EXCLUSION-REGISTRY.md`（含帧清单 `frame-freeze-v1.jsonl`，559 行）
+> 2026-09-21 ｜ 权威登记（单一数据源）：`/home/jiang/ws/sgcc-mma/gold/n001/gt/detection-v1/EXCLUSION-REGISTRY.md`（含帧清单 `frame-freeze-v1.jsonl`，559 行）
 > 背景：iap P1-2 检测级 GT（生产域独立评估集）Phase 0，草案 `iap:docs/plans/2026-09-20-p1-2-detection-gt-brainstorm.md` §4.6-1。
 
 ## 排除规则（对本仓数据飞轮生效）

@@ -9,7 +9,7 @@
 
 | 项 | 值 |
 |---|---|
-| 正本 | `/mnt/data/jiang/ws/iap/gold/n001/samples/`（数据盘，71G 工作区） |
+| 正本 | `/home/jiang/ws/sgcc-mma/gold/n001/samples/`（数据盘，71G 工作区） |
 | staging | `sgcc-n902:~/staging/jxl-reid-osnet/`（469M，sha256 终验 1,290/1,290） |
 | 训练对 | `pairs/train.jsonl` 1,716 对（session-anchor 正对/session-distant 远负/person-change 换人硬负；identities 256，正对并查集） |
 | 留出对 | `pairs/eval.jsonl` 328 对（same 289 / diff 39；**held-out 严禁进训练**） |

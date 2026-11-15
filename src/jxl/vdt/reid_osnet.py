@@ -46,7 +46,7 @@ OSNET_DIM = 512
 _MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-WEIGHTS_DIR = Path("/mnt/data/jiang/ws/sgcc/person/osnet_weights")
+WEIGHTS_DIR = Path("/home/jiang/ws/sgcc-mma/training/person/osnet_weights")
 """权重目录（n001 数据盘；jxl/sgcc 项目资产）。"""
 
 

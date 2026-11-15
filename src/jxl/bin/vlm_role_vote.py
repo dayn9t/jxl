@@ -30,7 +30,7 @@ from jxl.bin.vlm_pool import (
 
 app = typer.Typer(help="role 分类多模型投票（uncertain 复审自动化）")
 
-R2 = Path("/mnt/data/jiang/ws/sgcc/person/datasets/sgcc-n001/crop640_persons/gencheck/iapx_round2")
+R2 = Path("/home/jiang/ws/sgcc-mma/training/person/datasets/sgcc-n001/crop640_persons/gencheck/iapx_round2")
 
 
 def load_crops(pool: str) -> list[dict]:
