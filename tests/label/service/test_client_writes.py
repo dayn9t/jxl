@@ -24,7 +24,7 @@ def _client(handler: httpx.MockTransport) -> ConfirmClient:
 
 
 def _label_fixture() -> Label:
-    with open(_FIXTURES / "vlabel_0001.json5") as handle:
+    with open(_FIXTURES / "verdicts_0001.json5") as handle:
         payload: dict[str, Any] = json5.load(handle)
     return Label.model_validate(payload)
 

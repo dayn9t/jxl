@@ -118,7 +118,7 @@ def test_label_parse_assets_fixture() -> None:
 
     import json5
 
-    fixture = Path(__file__).parent / "fixtures" / "vlabel_0001.json5"
+    fixture = Path(__file__).parent / "fixtures" / "verdicts_0001.json5"
     label = Label.model_validate(json5.loads(fixture.read_text()))
     assert label.version == "2.0"
     assert len(label.objects) == 4
