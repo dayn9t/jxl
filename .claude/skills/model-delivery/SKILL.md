@@ -1,6 +1,7 @@
 ---
 name: model-delivery
 description: SGCC n001 模型交付流程（jxl → iapx/iap）。当模型训练完成且验收 PASS、准备交付/部署/staged 新版本权重、导出 ONNX、写交付通知单、或交付后发现问题需勘误时使用——双证据验收→导出 md5→注册→通知单→收尾五步走全，不靠记忆装载。
+scope: jxl→下游（iap/s4）的模型交付流程；纯文档/非模型项目不适用。挂载=repo-only（现位即正）。
 ---
 
 # 模型交付流程（jxl → iapx/iap）

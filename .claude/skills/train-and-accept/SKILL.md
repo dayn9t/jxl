@@ -1,6 +1,7 @@
 ---
 name: train-and-accept
 description: sgcc3/sgcc0 远程训练与检测器验收流程（SGCC/SHTM 通用）。当要发训练（检测器重训/ReID 微调/烤机）、启动看门狗、收割训练结果、执行验收（塌陷段/FP 探针/多 seed/跨日期扩展）、或模型上线双切时使用。命令细节见 memory training-on-sgcc3，本 skill 管步骤序列与验收口径。
+scope: jxl 仓远程训练与检测器验收（n902/历史 sgcc0/sgcc3 线）；仓外训练项目不适用。挂载=repo-only（现位即正）。
 ---
 
 # 远程训练与验收（sgcc3/sgcc0）

@@ -1,6 +1,7 @@
 ---
 name: reid-retest
 description: OSNet/reid 新版本的 §7.4 两段门复测流程（temp 通道）。当交付了新 reid 权重需复测（管道门/定标门）、replay 参数扫描、cos_threshold 定标、benchmark 六合并组或 split_points 对账时使用。含 v0.9→v0.10 视频源迁移、pkill 自噬、uv 孤儿进程等踩坑清单。
+scope: jxl 仓 OSNet/ReID 两段门复测域；其他模型族/项目不适用。挂载=repo-only（现位即正）。
 ---
 
 # OSNet reid 复测流程（§7.4 两段门，temp 通道）

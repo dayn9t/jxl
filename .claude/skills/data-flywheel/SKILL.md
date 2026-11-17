@@ -1,6 +1,7 @@
 ---
 name: data-flywheel
 description: n001 数据飞轮执行入口（SGCC）。当新视频数据拷回/落盘 n001、iap 跑批或 date-scope 增量批完成、用户提到数据飞轮/信号盘点/负样本挖掘/hard-negative、或发现零 session/闭馆日/检测异常形态时使用——执行批后信号盘点五件套与入池门流程。
+scope: jxl 仓 sgcc/n001 域专用（数据面 ~/ws/sgcc-mma/gold/n001 到达触发）；其他项目/数据域不适用。挂载=repo-only（现位即正）。
 ---
 
 # n001 数据飞轮（jxl 执行入口）
