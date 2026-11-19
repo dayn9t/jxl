@@ -537,35 +537,38 @@ def _derive_windows(video_root: Path) -> dict[int, dict]:
                     max_x2 = max(max_x2, x2)
                     max_y2 = max(max_y2, y2)
         x0 = max(0, min(1920 - 640, round((min_x1 + max_x2 - 640.0) / 2)))
-        out[src] = {"x0": x0, "cx": x0 + 320, "min_x1": round(min_x1, 1),
-                    "max_x2": round(max_x2, 1), "max_y2": round(max_y2, 1), "n_boxes": n}
+        out[src] = {"x0": x0, "y0": 0, "w": 640, "h": 640, "cx": x0 + 320,
+                    "min_x1": round(min_x1, 1), "max_x2": round(max_x2, 1),
+                    "max_y2": round(max_y2, 1), "n_boxes": n}
     return out
 
 
 def _box_to_crop(
-    box_norm: Sequence[float], x0: int, ioa_th: float = 0.5
+    box_norm: Sequence[float], win: dict, ioa_th: float = 0.5
 ) -> tuple[float, float, float, float] | None:
-    """全帧 0-1 xyxy → 裁切域像素（640×640）；IoA≥ioa_th 保留并裁边，否则弃。"""
-    x1 = box_norm[0] * 1920 - x0
-    y1 = box_norm[1] * 1080
-    x2 = box_norm[2] * 1920 - x0
-    y2 = box_norm[3] * 1080
-    inter = max(0.0, min(x2, 640.0) - max(x1, 0.0)) * max(0.0, min(y2, 640.0) - max(y1, 0.0))
+    """全帧 0-1 xyxy → 裁切域像素（win={x0,y0,w,h}）；IoA≥ioa_th 保留并裁边，否则弃。"""
+    x1 = box_norm[0] * 1920 - win["x0"]
+    y1 = box_norm[1] * 1080 - win["y0"]
+    x2 = box_norm[2] * 1920 - win["x0"]
+    y2 = box_norm[3] * 1080 - win["y0"]
+    w, h = float(win["w"]), float(win["h"])
+    inter = max(0.0, min(x2, w) - max(x1, 0.0)) * max(0.0, min(y2, h) - max(y1, 0.0))
     area = max(1e-9, (x2 - x1) * (y2 - y1))
     if inter / area < ioa_th:
         return None
-    return max(0.0, x1), max(0.0, y1), min(640.0, x2), min(640.0, y2)
+    return max(0.0, x1), max(0.0, y1), min(w, x2), min(h, y2)
 
 
-async def _extract_crop(stem: str, mkv: Path, pts_us: int, x0: int, out_dir: Path) -> str:
-    """源 MKV 全分辨率重提裁切帧（crop640 TrainDomain：顶部 640 × x0±320）。"""
+async def _extract_crop(stem: str, mkv: Path, pts_us: int, win: dict, out_dir: Path) -> str:
+    """源 MKV 全分辨率重提裁切帧（win={x0,y0,w,h}，TrainDomain 或 ROI 派生窗）。"""
     out = out_dir / f"{stem}.jpg"
     if out.exists() and out.stat().st_size > 4_096:
         return stem
+    vf = f"crop={win['w']}:{win['h']}:{win['x0']}:{win['y0']}"
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg", "-nostdin", "-loglevel", "error", "-y",
         "-ss", f"{pts_us / 1e6:.6f}", "-i", str(mkv),
-        "-frames:v", "1", "-vf", f"crop=640:640:{x0}:0",
+        "-frames:v", "1", "-vf", vf,
         "-q:v", "3", str(out),
         stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
     )
@@ -581,14 +584,27 @@ async def _extract_crop(stem: str, mkv: Path, pts_us: int, x0: int, out_dir: Pat
 def package(
     out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
     video_root: Path = typer.Option(VIDEO_ROOT, "--video-root"),
+    windows_file: Path = typer.Option(None, "--windows-file", help="外部窗表 {src: {x0,y0,w,h}}（用户手画 ROI 派生，b1' 起）；缺省=缓存反推"),
     concurrency: int = typer.Option(8, "--concurrency"),
 ) -> None:
-    """确认子集 → crop640 裁切域 YOLO 训练包（窗反推 provenance → windows.json）。
+    """确认子集 → crop640 裁切域 YOLO 训练包（窗 provenance → windows.json）。
 
     样本形态铁律（j-consensus-labeling ⑭）：入训一律裁切域（与检测 TrainDomain
     同口径），整帧/半幅禁止直接入训；灰化 b2 随正式 ROI 定（n005 无逐源依据不盲灰）。
+    窗来源二选一：--windows-file（用户手画 ROI 派生表，正本）或缓存反推（b1 暂定形）。
+    投票/聚合均为全帧坐标——几何无关，换窗重打包零重跑（b1' 复用原理）。
     """
-    windows = _derive_windows(video_root)
+    if windows_file is not None:
+        raw = orjson.loads(windows_file.read_bytes())
+        windows = {int(k): {"x0": int(v["x0"]), "cx": int(v["x0"]) + int(v.get("w", 640)) // 2,
+                            "y0": int(v.get("y0", 0)), "w": int(v.get("w", 640)),
+                            "h": int(v.get("h", 640)), "source": str(windows_file)}
+                   for k, v in raw.items()}
+        missing = [s for s in SOURCES if s not in windows]
+        if missing:
+            raise typer.BadParameter(f"窗表缺源 {missing}")
+    else:
+        windows = _derive_windows(video_root)
     (out_root / "windows.json").write_bytes(
         orjson.dumps({str(k): v for k, v in windows.items()}, option=orjson.OPT_INDENT_2)
     )
@@ -606,8 +622,8 @@ def package(
 
     async def _one(stem: str) -> str:
         async with sem:
-            x0 = windows[sel[stem]["src"]]["x0"]
-            return await _extract_crop(stem, Path(sel[stem]["mkv"]), sel[stem]["pts_us"], x0, img_dir)
+            win = windows[sel[stem]["src"]]
+            return await _extract_crop(stem, Path(sel[stem]["mkv"]), sel[stem]["pts_us"], win, img_dir)
 
     async def _all() -> list[str]:
         return list(await asyncio.gather(*[_one(s) for s in take]))
@@ -618,22 +634,25 @@ def package(
     for stem in take:
         if stem not in ok_stems:
             continue
+        win = windows[cons[stem]["src"]]
         rec, lines = cons[stem], []
         if rec["decision"] == "confirmed":
             for cl in rec["clusters"]:
                 if len(cl["seats"]) < 2:
                     continue
-                b = _box_to_crop(cl["box"], windows[rec["src"]]["x0"])
+                b = _box_to_crop(cl["box"], win)
                 if b is None:
                     n_drop += 1
                     continue
                 x1, y1, x2, y2 = b
-                lines.append(f"0 {(x1 + x2) / 1280:.6f} {(y1 + y2) / 1280:.6f} "
-                             f"{(x2 - x1) / 640:.6f} {(y2 - y1) / 640:.6f}")
+                fw, fh = float(win["w"]), float(win["h"])
+                lines.append(f"0 {(x1 + x2) / (2 * fw):.6f} {(y1 + y2) / (2 * fh):.6f} "
+                             f"{(x2 - x1) / fw:.6f} {(y2 - y1) / fh:.6f}")
                 n_boxes += 1
         (lbl_dir / f"{stem}.txt").write_text("\n".join(lines) + ("\n" if lines else ""))
         manifest.append({"stem": stem, "src": rec["src"], "decision": rec["decision"],
-                         "x0": windows[rec["src"]]["x0"], "n_label_boxes": len(lines)})
+                         "window": {k: win[k] for k in ("x0", "y0", "w", "h")},
+                         "n_label_boxes": len(lines)})
     _dump(out_root / "confirmed" / "manifest.jsonl", manifest)
     typer.secho(
         f"裁切域训练包：{len(ok_stems)} 帧（框 {n_boxes}，IoA 弃 {n_drop}，提取失败 "
