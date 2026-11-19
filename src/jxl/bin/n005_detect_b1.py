@@ -378,7 +378,7 @@ def _clusters(
     return out
 
 
-ALL_SEATS = (CACHE_SEAT, *SEATS_FREE, "qwen-flash", "doubao-vl")
+ALL_SEATS = (CACHE_SEAT, *SEATS_FREE, "qwen-flash", "doubao-vl", "v6cache_new")
 
 
 def _discover_seats(out_root: Path) -> list[str]:
@@ -386,22 +386,47 @@ def _discover_seats(out_root: Path) -> list[str]:
     return [s for s in ALL_SEATS if (out_root / "prelabels" / s / "labels.jsonl").is_file()]
 
 
+def _load_windows_file(windows_file: Path) -> dict[int, dict]:
+    """外部窗表 {src: {x0,y0,w,h}}（用户手画 ROI 派生正本，b1' 起）。"""
+    raw = orjson.loads(windows_file.read_bytes())
+    wins = {int(k): {"x0": int(v["x0"]), "y0": int(v.get("y0", 0)),
+                     "w": int(v.get("w", 640)), "h": int(v.get("h", 640)),
+                     "source": str(windows_file)}
+            for k, v in raw.items()}
+    missing = [s for s in SOURCES if s not in wins]
+    if missing:
+        raise typer.BadParameter(f"窗表缺源 {missing}")
+    return wins
+
+
+def _in_window(box: Sequence[float], win: dict, ioa_th: float = 0.5) -> bool:
+    """全帧 0-1 框与窗（1920×1080 像素制）IoA≥阈值（b1' 域内判定口径）。"""
+    x1, y1, x2, y2 = box[0] * 1920, box[1] * 1080, box[2] * 1920, box[3] * 1080
+    inter = (max(0.0, min(x2, win["x0"] + win["w"]) - max(x1, win["x0"]))
+             * max(0.0, min(y2, win["y0"] + win["h"]) - max(y1, win["y0"])))
+    area = max(1e-9, (x2 - x1) * (y2 - y1))
+    return inter / area >= ioa_th
+
+
 @app.command()
 def aggregate(
     out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
     iou_th: float = typer.Option(CLUSTER_IOU, "--iou"),
+    windows_file: Path = typer.Option(None, "--windows-file", help="b1'：外部窗表，票框按 IoA≥0.5 域内过滤后再聚类"),
+    cache_seat: str = typer.Option(CACHE_SEAT, "--cache-seat", help="检测器票席位（fp 判定键；b1'=v6cache_new）"),
 ) -> None:
     """多源聚类分拣 → consensus.jsonl（决策审计正本）+ quarantine.tsv + stats。
 
     训练包（裁切域 YOLO 形）由 package 子命令独立产出——投票/审计域=960×540
     全帧（用户裁定：提帧分辨率只服务 VLM 投票），入训形态=crop640 裁切域
     （j-consensus-labeling ⑭ 样本形态，2026-11-20 用户钉死）。
-    空场多数覆写：≥3 票到场且 ≥3 票空、唯缓存独见框 → confirmed_empty+cache_fp
-    （缓存 FP 判定，v8 负样本素材+隔离台账联动，2026-11-20 夜役定规）。
+    空场多数覆写：≥3 票到场且唯检测器独见框 → confirmed_empty+cache_fp
+    （检测器 FP 判定，v8 负样本素材+隔离台账联动，2026-11-20 夜役定规）。
     """
     sel = {r["stem"]: r for r in
            (orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip())}
     seats = _discover_seats(out_root)
+    wins = _load_windows_file(windows_file) if windows_file is not None else None
     votes_by_stem: dict[str, dict[str, list]] = {s: {} for s in sel}
     stale = 0
     for seat in seats:
@@ -413,7 +438,11 @@ def aggregate(
                 stale += 1  # 烟雾/旧配额批遗留票（选帧确定性近乎前缀但非严格子集）
                 continue
             if rec["ok"]:
-                votes_by_stem[rec["stem"]][seat] = rec["boxes"]
+                boxes = rec["boxes"]
+                if wins is not None:
+                    win = wins[sel[rec["stem"]]["src"]]
+                    boxes = [b for b in boxes if _in_window(b, win)]
+                votes_by_stem[rec["stem"]][seat] = boxes
     if stale:
         typer.echo(f"跳过非本批选帧的遗留票 {stale} 条", err=True)
     consensus, quarantined, confirmed, empties, fp_stems = [], [], [], [], []
@@ -424,7 +453,7 @@ def aggregate(
         clusters = _clusters(votes, iou_th)
         contested = [c for c in clusters if len(c["seats"]) < 2]
         keep = [c for c in clusters if len(c["seats"]) >= 2]
-        cache_fp = n_ok >= 3 and n_empty == n_ok - 1 and bool(votes.get(CACHE_SEAT))
+        cache_fp = n_ok >= 3 and n_empty == n_ok - 1 and bool(votes.get(cache_seat))
         decision = ("quarantine" if n_ok < 2 or contested
                     else "confirmed" if keep else "confirmed_empty")
         if cache_fp:
@@ -469,6 +498,77 @@ def aggregate(
 
 
 # ---------------- tiebreak（定向付费补票：在场分歧两类高值帧） ----------------
+
+# ---------------- recrop / revote-v6（b1'：用户新窗几何） ----------------
+
+@app.command()
+def recrop(
+    out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
+    windows_file: Path = typer.Option(..., "--windows-file", help="用户手画 ROI 派生窗表（正本）"),
+    concurrency: int = typer.Option(8, "--concurrency"),
+) -> None:
+    """全部选帧按新窗重提裁切帧（b1' 几何转向；幂等但换窗表须先清目录）。"""
+    wins = _load_windows_file(windows_file)
+    sel = [orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip()]
+    crops = out_root / "crops_b1prime"
+    crops.mkdir(parents=True, exist_ok=True)
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _one(r: dict) -> str:
+        async with sem:
+            return await _extract_crop(r["stem"], Path(r["mkv"]), r["pts_us"], wins[r["src"]], crops)
+
+    async def _all() -> list[str]:
+        return list(await asyncio.gather(*[_one(r) for r in sel]))
+
+    results = asyncio.run(_all())
+    typer.secho(f"重提 {sum(1 for r in results if r)}/{len(sel)} → {crops}", fg=typer.colors.GREEN)
+
+
+@app.command()
+def revote_v6(
+    out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
+    windows_file: Path = typer.Option(..., "--windows-file", help="与 recrop 同窗表（框映射回全帧用）"),
+    weights: Path = typer.Option(
+        Path("~/ws/sgcc-mma/training/person/datasets/sgcc-n001/crop640_persons/runs/"
+             "person_n001_v6_neg0906_s1/weights/best.pt").expanduser(), "--weights"),
+    conf: float = typer.Option(0.5, "--conf", help="生产口径 @0.5"),
+    batch: int = typer.Option(64, "--batch"),
+) -> None:
+    """v6 在新窗裁切帧上重推理（b1' 第三票重组；旧缓存票域内无效仅留档）。
+
+    框=crop 像素 → 全帧 0-1（+(x0,y0) 反变换，crop640.rs 契约同源）；conf 同落。
+    """
+    from ultralytics import YOLO  # 重依赖仅本子命令引入
+
+    wins = _load_windows_file(windows_file)
+    sel = [orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip()]
+    crops = out_root / "crops_b1prime"
+    seat_dir = out_root / "prelabels" / "v6cache_new"
+    seat_dir.mkdir(parents=True, exist_ok=True)
+    model = YOLO(str(weights))
+    rows_out: list[dict] = []
+    n_boxes = 0
+    for i in range(0, len(sel), batch):
+        chunk = sel[i:i + batch]
+        results = model.predict([str(crops / f"{r['stem']}.jpg") for r in chunk],
+                                conf=conf, verbose=False)
+        for r, res in zip(chunk, results):
+            win = wins[r["src"]]
+            boxes, confs = [], []
+            for b in res.boxes:
+                x1, y1, x2, y2 = (float(v) for v in b.xyxy[0])
+                boxes.append([round((x1 + win["x0"]) / 1920, 6), round((y1 + win["y0"]) / 1080, 6),
+                              round((x2 + win["x0"]) / 1920, 6), round((y2 + win["y0"]) / 1080, 6)])
+                confs.append(round(float(b.conf[0]), 6))
+            n_boxes += len(boxes)
+            rows_out.append({"stem": r["stem"], "ok": True, "ms": 0, "boxes": boxes,
+                             "error": "", "raw": "", "confs": confs})
+        typer.echo(f"v6cache_new: {min(i + batch, len(sel))}/{len(sel)}（累计框 {n_boxes}）", err=True)
+    _dump(seat_dir / "labels.jsonl", rows_out)
+    typer.secho(f"v6 新域重推理完成：{len(rows_out)} 帧 / {n_boxes} 框 → {seat_dir}",
+                fg=typer.colors.GREEN)
+
 
 @app.command()
 def tiebreak(
@@ -669,6 +769,7 @@ SET_SLUG = "n005_b1_hard_v1"
 SET_META_ID = 9  # sgcc_av 序列：sessions_v1=7 / detection_gt_min_v1=8
 SEAT_TO_ANNOTATOR = {
     CACHE_SEAT: "yolo26n-v6",  # 缓存即现役 person_n_v6 输出（指纹 2026-09-18_person_n_v6@0.5）
+    "v6cache_new": "yolo26n-v6",  # b1'：v6 新窗域重推理（同模型，同 annotator 层覆写）
     "qwen38-local": "qwen3-8-flash-next-local",
     "glm-flash": "glm-5-3-flash",  # 需 users.json5 注册行（2026-11-20 夜加）+ 服务重启
     "qwen-flash": "qwen3-vl-flash",  # 定向补票席位（2026-11-20 夜加注册）
@@ -685,8 +786,9 @@ class UlabelApiError(Exception):
 class UlabelClient:
     """ulabel-service 薄客户端（形制对齐 ulabel scripts/build_detection_gt.py；httpx 同步）。"""
 
-    def __init__(self, base_url: str) -> None:
+    def __init__(self, base_url: str, set_slug: str) -> None:
         self.base = base_url.rstrip("/")
+        self.set_slug = set_slug
         self.tokens: dict[str, str] = {}
 
     def _send(
@@ -719,7 +821,7 @@ class UlabelClient:
     def ensure_set(self, meta: dict, user: str) -> None:
         r = self._send(
             "POST", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets", user,
-            json_body={"slug": SET_SLUG, "kind": "annotation", "media": "image", "meta": meta},
+            json_body={"slug": self.set_slug, "kind": "annotation", "media": "image", "meta": meta},
         )
         if r.status_code == 201:
             return
@@ -729,7 +831,7 @@ class UlabelClient:
 
     def post_sample(self, filename: str, payload: bytes, user: str) -> None:
         r = self._send(
-            "POST", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{SET_SLUG}/samples",
+            "POST", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{self.set_slug}/samples",
             user, params={"stem": filename}, data=payload,
         )
         if r.status_code not in (201, 409):
@@ -737,7 +839,7 @@ class UlabelClient:
 
     def post_annotation(self, stem: str, label: dict, user: str) -> None:
         r = self._send(
-            "POST", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{SET_SLUG}/verdicts/{stem}",
+            "POST", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{self.set_slug}/verdicts/{stem}",
             user, json_body=label,
         )
         if r.status_code != 200:
@@ -745,21 +847,21 @@ class UlabelClient:
 
     def list_samples(self, user: str) -> list[dict]:
         r = self._send(
-            "GET", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{SET_SLUG}/samples", user
+            "GET", f"/api/projects/{ULABEL_PROJECT}/groups/{ULABEL_GROUP}/sets/{self.set_slug}/samples", user
         )
         if r.status_code != 200:
             raise UlabelApiError(f"list_samples → {r.status_code}: {r.text[:300]}")
         return r.json()
 
 
-def _set_meta() -> dict:
+def _set_meta(meta_id: int, set_slug: str) -> dict:
     """集 meta：克隆 detection_gt_min_v1 形制（person+conf/votes/status 三属性）。"""
     return {
-        "id": SET_META_ID,
-        "name": "n005 批次1 难例裁决（夜役三源自动标注）",
+        "id": meta_id,
+        "name": f"n005 {set_slug} 难例裁决（夜役三源自动标注）",
         "description": (
-            "n005-b1 夜役难例：809 帧三源共识（v6 缓存+qwen38-local+glm-flash）分拣出的分歧帧。"
-            "三层模型票+draft 聚簇层（votes/status 属性）；人只在 draft 上裁决。"
+            f"{set_slug}：809 帧多源共识（v6 新窗域重推理+qwen38-local+glm-flash+定向补票）"
+            "分拣出的分歧帧。模型票层+draft 聚簇层（votes/status 属性）；人只在 draft 上裁决。"
             "制备 jxl.bin.n005_detect_b1 seed-ulabel；清单导航 tsv=工作区 quarantine.tsv"
         ),
         "shape": {"title_style": 0, "thickness": 2, "auto_save": True, "vertex_radius": 10.0},
@@ -817,6 +919,8 @@ def _rect_polygon(box_norm: Sequence[float]) -> list[dict]:
 def seed_ulabel(
     out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
     base_url: str = typer.Option(ULABEL_BASE, "--base-url"),
+    set_slug: str = typer.Option(SET_SLUG, "--set-slug", help="b1' 用新集 slug（旧集留档勿裁）"),
+    meta_id: int = typer.Option(SET_META_ID, "--meta-id", help="集 meta id（sgcc_av 序列递增：7/8/9 已用）"),
     admin: str = typer.Option("jiang", "--admin", help="组织/上传身份"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
@@ -835,14 +939,14 @@ def seed_ulabel(
             rec = orjson.loads(l)
             if rec["stem"] in votes and rec["ok"]:
                 votes[rec["stem"]][seat] = rec
-    typer.echo(f"难例 {len(hard)} 帧；meta id={SET_META_ID}；slug={SET_SLUG}")
+    typer.echo(f"难例 {len(hard)} 帧；meta id={SET_META_ID}；slug={set_slug}")
     if dry_run:
         n_boxes = {a: sum(len(votes[s].get(seat, {}).get("boxes", [])) for s in hard)
                    for seat, a in SEAT_TO_ANNOTATOR.items()}
         n_boxes[DRAFT] = sum(len(cons[s]["clusters"]) for s in hard)
         typer.echo(f"dry-run 层框数: {n_boxes}")
         return
-    client = UlabelClient(base_url)
+    client = UlabelClient(base_url, set_slug)
     client.login(admin)
     registered = {a["name"] for a in client.list_annotators(admin)}
     want = [SEAT_TO_ANNOTATOR[s] for s in _discover_seats(out_root) if s in SEAT_TO_ANNOTATOR] + [DRAFT]
@@ -851,7 +955,7 @@ def seed_ulabel(
         raise typer.BadParameter(
             f"注册缺口 {missing}——/var/ulabel/users.json5 加行+重启服务后重跑（脚本打印见 README）"
         )
-    client.ensure_set(_set_meta(), admin)
+    client.ensure_set(_set_meta(meta_id, set_slug), admin)
     for seat_annotator in want:
         client.login(seat_annotator)  # 种子署名=登录身份
     n_frames = n_layers = 0
@@ -896,7 +1000,7 @@ def seed_ulabel(
     short = [s for s in hard if len(ann.get(s, {})) < 2]
     typer.secho(
         f"播种 {n_frames} 帧 / {n_layers} 层；回读 {len(samples)} 样本，层缺帧 {len(short)} "
-        f"→ /var/ulabel/{ULABEL_PROJECT}/{ULABEL_GROUP}/{SET_SLUG}",
+        f"→ /var/ulabel/{ULABEL_PROJECT}/{ULABEL_GROUP}/{set_slug}",
         fg=typer.colors.GREEN,
     )
 
