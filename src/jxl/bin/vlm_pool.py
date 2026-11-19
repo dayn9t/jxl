@@ -184,6 +184,7 @@ class Vote:
     boxes: tuple[tuple[float, float, float, float], ...]  # () 且 ok=False 表示调用失败=弃权
     ok: bool
     error: str = ""
+    raw: str = ""  # 响应原文逐字（#16 耗时产物必存：缓存值=原始形态；n005-b1 夜役 2026-11-19）
 
 
 def image_data_url(path: Path, max_side: int = MAX_SIDE, downscale: int = 1) -> str:
@@ -281,7 +282,7 @@ async def call_person(client: httpx.AsyncClient, alias: str, image_url: str,
     raw = parse_boxes(text, spec["protocol"])
     div, _ = infer_divisor(raw, spec["divisor"])
     norm = [tuple(v / div for v in b) for b in raw]  # 坐标刻度归一（x,y 同刻度）
-    return Vote(alias, tuple(norm), True)
+    return Vote(alias, tuple(norm), True, raw=text)
 
 
 # ---------------- 共识纯函数（Functional Core，独立可测） ----------------
