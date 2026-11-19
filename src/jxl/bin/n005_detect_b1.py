@@ -17,8 +17,8 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import random
-import shutil
 import statistics
 import time
 from dataclasses import dataclass
@@ -380,7 +380,12 @@ def aggregate(
     out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
     iou_th: float = typer.Option(CLUSTER_IOU, "--iou"),
 ) -> None:
-    """三源聚类分拣 → confirmed/ YOLO 包 + quarantine.tsv + consensus.jsonl + stats。"""
+    """三源聚类分拣 → consensus.jsonl（决策审计正本）+ quarantine.tsv + stats。
+
+    训练包（裁切域 YOLO 形）由 package 子命令独立产出——投票/审计域=960×540
+    全帧（用户裁定：提帧分辨率只服务 VLM 投票），入训形态=crop640 裁切域
+    （j-consensus-labeling ⑭ 样本形态，2026-11-20 用户钉死）。
+    """
     sel = {r["stem"]: r for r in
            (orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip())}
     seats = [CACHE_SEAT, *SEATS_FREE]
@@ -392,35 +397,24 @@ def aggregate(
             rec = orjson.loads(line)
             if rec["ok"]:
                 votes_by_stem[rec["stem"]][seat] = rec["boxes"]
-    conf_dir = out_root / "confirmed"
-    (conf_dir / "images").mkdir(parents=True, exist_ok=True)
-    (conf_dir / "labels").mkdir(parents=True, exist_ok=True)
-    (conf_dir / "classes.txt").write_text("person\n")
     consensus, quarantined, confirmed, empties = [], [], [], []
     for stem, r in sel.items():
         votes = votes_by_stem[stem]
         n_ok = len(votes)
         clusters = _clusters(votes, iou_th)
         contested = [c for c in clusters if len(c["seats"]) < 2]
-        rec = {"stem": stem, "src": r["src"], "wallclock": r["wallclock"],
-               "n_ok_votes": n_ok, "clusters": clusters, "confs": sel[stem]["confs"]}
-        consensus.append(rec)
-        if n_ok < 2 or contested:
-            quarantined.append((stem, len(contested) + (2 - n_ok), votes))
-            continue
         keep = [c for c in clusters if len(c["seats"]) >= 2]
-        if keep:
+        decision = ("quarantine" if n_ok < 2 or contested
+                    else "confirmed" if keep else "confirmed_empty")
+        consensus.append({"stem": stem, "src": r["src"], "wallclock": r["wallclock"],
+                          "decision": decision, "n_ok_votes": n_ok,
+                          "clusters": clusters, "confs": sel[stem]["confs"]})
+        if decision == "quarantine":
+            quarantined.append((stem, len(contested) + (2 - n_ok), votes))
+        elif decision == "confirmed":
             confirmed.append(stem)
         else:
             empties.append(stem)
-        shutil.copy2(out_root / "frames" / f"{stem}.jpg", conf_dir / "images" / f"{stem}.jpg")
-        label_lines = []
-        for c in keep:
-            x1, y1, x2, y2 = c["box"]
-            label_lines.append(
-                f"0 {(x1 + x2) / 2:.6f} {(y1 + y2) / 2:.6f} {x2 - x1:.6f} {y2 - y1:.6f}"
-            )
-        (conf_dir / "labels" / f"{stem}.txt").write_text("\n".join(label_lines) + ("\n" if label_lines else ""))
     _dump(out_root / "consensus.jsonl", consensus)
     quarantined.sort(key=lambda q: (-q[1], q[0]))
     lines = ["stem\tdisagreement\tn_v6cache\tn_qwen38\tn_glm"]
@@ -428,7 +422,8 @@ def aggregate(
               f"{len(v.get('qwen38-local', []))}\t{len(v.get('glm-flash', []))}"
               for s, d, v in quarantined]
     (out_root / "quarantine.tsv").write_text("\n".join(lines) + "\n")
-    n_boxes = sum(len((conf_dir / "labels" / f"{s}.txt").read_text().splitlines()) for s in confirmed)
+    n_boxes = sum(len([c for c in rec["clusters"] if len(c["seats"]) >= 2])
+                  for rec in consensus if rec["decision"] == "confirmed")
     stats = {
         "selected": len(sel), "confirmed_person": len(confirmed), "confirmed_empty": len(empties),
         "quarantine": len(quarantined), "confirmed_boxes": n_boxes,
@@ -441,7 +436,132 @@ def aggregate(
     (out_root / "stats.json").write_bytes(orjson.dumps(stats, option=orjson.OPT_INDENT_2))
     typer.secho(
         f"确认有人 {len(confirmed)}（{n_boxes} 框）/ 确认空帧 {len(empties)} / 难例 {len(quarantined)}"
-        f" → {conf_dir} + quarantine.tsv",
+        f" → consensus.jsonl + quarantine.tsv（训练包另走 package）",
+        fg=typer.colors.GREEN,
+    )
+
+
+# ---------------- package（裁切域训练包；⑭ 样本形态 2026-11-20 用户钉死） ----------------
+
+def _derive_windows(video_root: Path) -> dict[int, dict]:
+    """缓存框全量反推各源 TrainDomain 检测窗（硬约束：全框⊆窗+(x0,y0)）。
+
+    x0 = (x1_min + x2_max − 640)/2——缓存 bbox 带 ~10-19px 系统性外溢
+    （y2_max 640.6-660.4、跨度 640.7-658.6，2026-11-20 六源实测一致），
+    两端逼近取中点，不确定度 ±9px。供 iap-4c VLM 中心对拍 + 晨门人裁。
+    """
+    out: dict[int, dict] = {}
+    for src in SOURCES:
+        min_x1, max_x2, max_y2, n = math.inf, -math.inf, -math.inf, 0
+        for jf in (video_root / str(src) / "0").glob("*/*.json"):
+            d = orjson.loads(jf.read_bytes())
+            for fr in d["frames"]:
+                for b in fr["detections"]:
+                    x1, _, x2, y2 = b["bbox"]
+                    n += 1
+                    min_x1 = min(min_x1, x1)
+                    max_x2 = max(max_x2, x2)
+                    max_y2 = max(max_y2, y2)
+        x0 = max(0, min(1920 - 640, round((min_x1 + max_x2 - 640.0) / 2)))
+        out[src] = {"x0": x0, "cx": x0 + 320, "min_x1": round(min_x1, 1),
+                    "max_x2": round(max_x2, 1), "max_y2": round(max_y2, 1), "n_boxes": n}
+    return out
+
+
+def _box_to_crop(
+    box_norm: Sequence[float], x0: int, ioa_th: float = 0.5
+) -> tuple[float, float, float, float] | None:
+    """全帧 0-1 xyxy → 裁切域像素（640×640）；IoA≥ioa_th 保留并裁边，否则弃。"""
+    x1 = box_norm[0] * 1920 - x0
+    y1 = box_norm[1] * 1080
+    x2 = box_norm[2] * 1920 - x0
+    y2 = box_norm[3] * 1080
+    inter = max(0.0, min(x2, 640.0) - max(x1, 0.0)) * max(0.0, min(y2, 640.0) - max(y1, 0.0))
+    area = max(1e-9, (x2 - x1) * (y2 - y1))
+    if inter / area < ioa_th:
+        return None
+    return max(0.0, x1), max(0.0, y1), min(640.0, x2), min(640.0, y2)
+
+
+async def _extract_crop(stem: str, mkv: Path, pts_us: int, x0: int, out_dir: Path) -> str:
+    """源 MKV 全分辨率重提裁切帧（crop640 TrainDomain：顶部 640 × x0±320）。"""
+    out = out_dir / f"{stem}.jpg"
+    if out.exists() and out.stat().st_size > 4_096:
+        return stem
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-nostdin", "-loglevel", "error", "-y",
+        "-ss", f"{pts_us / 1e6:.6f}", "-i", str(mkv),
+        "-frames:v", "1", "-vf", f"crop=640:640:{x0}:0",
+        "-q:v", "3", str(out),
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+    )
+    _, err = await proc.communicate()
+    if proc.returncode != 0 or not out.exists() or out.stat().st_size <= 4_096:
+        out.unlink(missing_ok=True)
+        typer.secho(f"crop extract fail {stem}: {err.decode()[:120]}", fg=typer.colors.YELLOW, err=True)
+        return ""
+    return stem
+
+
+@app.command()
+def package(
+    out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
+    video_root: Path = typer.Option(VIDEO_ROOT, "--video-root"),
+    concurrency: int = typer.Option(8, "--concurrency"),
+) -> None:
+    """确认子集 → crop640 裁切域 YOLO 训练包（窗反推 provenance → windows.json）。
+
+    样本形态铁律（j-consensus-labeling ⑭）：入训一律裁切域（与检测 TrainDomain
+    同口径），整帧/半幅禁止直接入训；灰化 b2 随正式 ROI 定（n005 无逐源依据不盲灰）。
+    """
+    windows = _derive_windows(video_root)
+    (out_root / "windows.json").write_bytes(orjson.dumps(windows, option=orjson.OPT_INDENT_2))
+    cons = {r["stem"]: r for r in (orjson.loads(line) for line in
+           (out_root / "consensus.jsonl").read_text().splitlines() if line.strip())}
+    sel = {r["stem"]: r for r in (orjson.loads(line) for line in
+           (out_root / "selection.jsonl").read_text().splitlines() if line.strip())}
+    take = [s for s, r in cons.items() if r["decision"] in ("confirmed", "confirmed_empty")]
+    img_dir = out_root / "confirmed" / "images"
+    lbl_dir = out_root / "confirmed" / "labels"
+    img_dir.mkdir(parents=True, exist_ok=True)
+    lbl_dir.mkdir(parents=True, exist_ok=True)
+    (out_root / "confirmed" / "classes.txt").write_text("person\n")
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _one(stem: str) -> str:
+        async with sem:
+            x0 = windows[sel[stem]["src"]]["x0"]
+            return await _extract_crop(stem, Path(sel[stem]["mkv"]), sel[stem]["pts_us"], x0, img_dir)
+
+    async def _all() -> list[str]:
+        return list(await asyncio.gather(*[_one(s) for s in take]))
+
+    results = asyncio.run(_all())
+    ok_stems = {s for s, r in zip(take, results) if r}
+    manifest, n_boxes, n_drop = [], 0, 0
+    for stem in take:
+        if stem not in ok_stems:
+            continue
+        rec, lines = cons[stem], []
+        if rec["decision"] == "confirmed":
+            for cl in rec["clusters"]:
+                if len(cl["seats"]) < 2:
+                    continue
+                b = _box_to_crop(cl["box"], windows[rec["src"]]["x0"])
+                if b is None:
+                    n_drop += 1
+                    continue
+                x1, y1, x2, y2 = b
+                lines.append(f"0 {(x1 + x2) / 1280:.6f} {(y1 + y2) / 1280:.6f} "
+                             f"{(x2 - x1) / 640:.6f} {(y2 - y1) / 640:.6f}")
+                n_boxes += 1
+        (lbl_dir / f"{stem}.txt").write_text("\n".join(lines) + ("\n" if lines else ""))
+        manifest.append({"stem": stem, "src": rec["src"], "decision": rec["decision"],
+                         "x0": windows[rec["src"]]["x0"], "n_label_boxes": len(lines)})
+    _dump(out_root / "confirmed" / "manifest.jsonl", manifest)
+    typer.secho(
+        f"裁切域训练包：{len(ok_stems)} 帧（框 {n_boxes}，IoA 弃 {n_drop}，提取失败 "
+        f"{len(take) - len(ok_stems)}）→ {out_root / 'confirmed'}",
         fg=typer.colors.GREEN,
     )
 
