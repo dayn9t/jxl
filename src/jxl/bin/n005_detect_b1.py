@@ -262,7 +262,10 @@ def _vote_seat(
     path = pre / "labels.jsonl"
     done: set[str] = set()
     if path.exists():
-        done = {orjson.loads(line)["stem"] for line in path.read_text().splitlines() if line.strip()}
+        # 续跑只认 ok 票：弃权/失败记录重跑时重试（不留永久弃权死角）
+        done = {r["stem"] for r in
+                (orjson.loads(line) for line in path.read_text().splitlines() if line.strip())
+                if r["ok"]}
     todo = [r for r in rows if r["stem"] not in done]
     fh = path.open("a")
     ok = err = 0
@@ -375,58 +378,81 @@ def _clusters(
     return out
 
 
+ALL_SEATS = (CACHE_SEAT, *SEATS_FREE, "qwen-flash", "doubao-vl")
+
+
+def _discover_seats(out_root: Path) -> list[str]:
+    """在场席位=prelabels 下有 labels.jsonl 的已知席位（补票席位按需加入聚类）。"""
+    return [s for s in ALL_SEATS if (out_root / "prelabels" / s / "labels.jsonl").is_file()]
+
+
 @app.command()
 def aggregate(
     out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
     iou_th: float = typer.Option(CLUSTER_IOU, "--iou"),
 ) -> None:
-    """三源聚类分拣 → consensus.jsonl（决策审计正本）+ quarantine.tsv + stats。
+    """多源聚类分拣 → consensus.jsonl（决策审计正本）+ quarantine.tsv + stats。
 
     训练包（裁切域 YOLO 形）由 package 子命令独立产出——投票/审计域=960×540
     全帧（用户裁定：提帧分辨率只服务 VLM 投票），入训形态=crop640 裁切域
     （j-consensus-labeling ⑭ 样本形态，2026-11-20 用户钉死）。
+    空场多数覆写：≥3 票到场且 ≥3 票空、唯缓存独见框 → confirmed_empty+cache_fp
+    （缓存 FP 判定，v8 负样本素材+隔离台账联动，2026-11-20 夜役定规）。
     """
     sel = {r["stem"]: r for r in
            (orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip())}
-    seats = [CACHE_SEAT, *SEATS_FREE]
+    seats = _discover_seats(out_root)
     votes_by_stem: dict[str, dict[str, list]] = {s: {} for s in sel}
+    stale = 0
     for seat in seats:
         for line in (out_root / "prelabels" / seat / "labels.jsonl").read_text().splitlines():
             if not line.strip():
                 continue
             rec = orjson.loads(line)
+            if rec["stem"] not in sel:
+                stale += 1  # 烟雾/旧配额批遗留票（选帧确定性近乎前缀但非严格子集）
+                continue
             if rec["ok"]:
                 votes_by_stem[rec["stem"]][seat] = rec["boxes"]
-    consensus, quarantined, confirmed, empties = [], [], [], []
+    if stale:
+        typer.echo(f"跳过非本批选帧的遗留票 {stale} 条", err=True)
+    consensus, quarantined, confirmed, empties, fp_stems = [], [], [], [], []
     for stem, r in sel.items():
         votes = votes_by_stem[stem]
         n_ok = len(votes)
+        n_empty = sum(1 for b in votes.values() if not b)
         clusters = _clusters(votes, iou_th)
         contested = [c for c in clusters if len(c["seats"]) < 2]
         keep = [c for c in clusters if len(c["seats"]) >= 2]
+        cache_fp = n_ok >= 3 and n_empty == n_ok - 1 and bool(votes.get(CACHE_SEAT))
         decision = ("quarantine" if n_ok < 2 or contested
                     else "confirmed" if keep else "confirmed_empty")
+        if cache_fp:
+            decision, keep = "confirmed_empty", []  # 空场多数：缓存独见=FP
+            fp_stems.append(stem)
         consensus.append({"stem": stem, "src": r["src"], "wallclock": r["wallclock"],
-                          "decision": decision, "n_ok_votes": n_ok,
+                          "decision": decision, "cache_fp": cache_fp, "n_ok_votes": n_ok,
+                          "n_empty_votes": n_empty, "seats": seats,
                           "clusters": clusters, "confs": sel[stem]["confs"]})
         if decision == "quarantine":
-            quarantined.append((stem, len(contested) + (2 - n_ok), votes))
+            quarantined.append((stem, len(contested) + (max(0, 2 - n_ok)), votes))
         elif decision == "confirmed":
             confirmed.append(stem)
         else:
             empties.append(stem)
     _dump(out_root / "consensus.jsonl", consensus)
     quarantined.sort(key=lambda q: (-q[1], q[0]))
-    lines = ["stem\tdisagreement\tn_v6cache\tn_qwen38\tn_glm"]
-    lines += [f"{s}\t{d}\t{len(v.get(CACHE_SEAT, []))}\t"
-              f"{len(v.get('qwen38-local', []))}\t{len(v.get('glm-flash', []))}"
+    lines = ["stem\tdisagreement\t" + "\t".join(f"n_{s}" for s in seats)]
+    lines += [f"{s}\t{d}\t" + "\t".join(str(len(v.get(x, []))) for x in seats)
               for s, d, v in quarantined]
     (out_root / "quarantine.tsv").write_text("\n".join(lines) + "\n")
     n_boxes = sum(len([c for c in rec["clusters"] if len(c["seats"]) >= 2])
                   for rec in consensus if rec["decision"] == "confirmed")
     stats = {
-        "selected": len(sel), "confirmed_person": len(confirmed), "confirmed_empty": len(empties),
-        "quarantine": len(quarantined), "confirmed_boxes": n_boxes,
+        "selected": len(sel), "seats": seats,
+        "confirmed_person": len(confirmed), "confirmed_empty": len(empties),
+        "cache_fp_empty": len(fp_stems), "quarantine": len(quarantined),
+        "confirmed_boxes": n_boxes,
         "by_src": {str(src): {
             "confirmed": sum(1 for s in confirmed if sel[s]["src"] == src),
             "empty": sum(1 for s in empties if sel[s]["src"] == src),
@@ -435,10 +461,58 @@ def aggregate(
     }
     (out_root / "stats.json").write_bytes(orjson.dumps(stats, option=orjson.OPT_INDENT_2))
     typer.secho(
-        f"确认有人 {len(confirmed)}（{n_boxes} 框）/ 确认空帧 {len(empties)} / 难例 {len(quarantined)}"
+        f"确认有人 {len(confirmed)}（{n_boxes} 框）/ 确认空帧 {len(empties)}"
+        f"（其中缓存 FP {len(fp_stems)}）/ 难例 {len(quarantined)}；席位 {seats}"
         f" → consensus.jsonl + quarantine.tsv（训练包另走 package）",
         fg=typer.colors.GREEN,
     )
+
+
+# ---------------- tiebreak（定向付费补票：在场分歧两类高值帧） ----------------
+
+@app.command()
+def tiebreak(
+    out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
+    seat: str = typer.Option("qwen-flash", "--seat", help="补票席位（默认按量 qwen VL）"),
+    model: str = typer.Option("", "--model", help="覆写席位模型 id（如 qwen3-vl-plus；dated 快照退役时用）"),
+    concurrency: int = typer.Option(4, "--concurrency"),
+    limit: int = typer.Option(0, "--limit", help=">0 只投前 N 帧（冒烟）"),
+) -> None:
+    """定向补票：A 类（缓存空+双 VLM 见人=v6 盲区）/ B 类（缓存独见+双 VLM 空=FP 嫌疑）。
+
+    结构混战类（三源框碎片互不匹配）不补——付费票同样碎片化，人裁是正解。
+    席位按量计费：token-plan key 在 compatible-mode 拒收（2026-11-20 实测 invalid_api_key，
+    KB 记载形态）→ 按用户偏好序落 ALI_DASHSCOPE_API_KEY；dated 模型快照退役 → --model 覆写。
+    """
+    if model:
+        CANDIDATES[seat]["model"] = model  # 运行时覆写，正典 vlm_pool 不动；provenance 落 MODEL.txt
+        (out_root / "prelabels" / seat).mkdir(parents=True, exist_ok=True)
+        (out_root / "prelabels" / seat / "MODEL.txt").write_text(
+            f"{model}\n# 2026-11-20 夜役覆写：原 {seat} 席 dated 快照 404 退役\n")
+    cons = [orjson.loads(l) for l in (out_root / "consensus.jsonl").read_text().splitlines() if l.strip()]
+    votes: dict[str, dict[str, list]] = {r["stem"]: {} for r in cons}
+    for s in _discover_seats(out_root):
+        for line in (out_root / "prelabels" / s / "labels.jsonl").read_text().splitlines():
+            if line.strip():
+                rec = orjson.loads(line)
+                if rec["ok"] and rec["stem"] in votes:
+                    votes[rec["stem"]][s] = rec["boxes"]
+    targets = []
+    for r in cons:
+        if r["decision"] != "quarantine":
+            continue
+        v = votes.get(r["stem"], {})
+        cache_n = len(v.get(CACHE_SEAT, []))
+        q_n = len(v.get("qwen38-local", []))
+        g_n = len(v.get("glm-flash", []))
+        if (cache_n == 0 and q_n > 0 and g_n > 0) or (cache_n > 0 and q_n == 0 and g_n == 0):
+            targets.append(r["stem"])
+    if limit:
+        targets = targets[:limit]
+    rows = [{"stem": s} for s in targets]
+    typer.echo(f"补票目标 {len(targets)} 帧（A 缓存盲区 + B 缓存 FP 嫌疑）→ 席位 {seat}")
+    ok, err = _vote_seat(seat, rows, out_root, concurrency)
+    typer.echo(f"{seat}: ok {ok} 弃权 {err}")
 
 
 # ---------------- package（裁切域训练包；⑭ 样本形态 2026-11-20 用户钉死） ----------------
@@ -515,7 +589,9 @@ def package(
     同口径），整帧/半幅禁止直接入训；灰化 b2 随正式 ROI 定（n005 无逐源依据不盲灰）。
     """
     windows = _derive_windows(video_root)
-    (out_root / "windows.json").write_bytes(orjson.dumps(windows, option=orjson.OPT_INDENT_2))
+    (out_root / "windows.json").write_bytes(
+        orjson.dumps({str(k): v for k, v in windows.items()}, option=orjson.OPT_INDENT_2)
+    )
     cons = {r["stem"]: r for r in (orjson.loads(line) for line in
            (out_root / "consensus.jsonl").read_text().splitlines() if line.strip())}
     sel = {r["stem"]: r for r in (orjson.loads(line) for line in
@@ -576,6 +652,7 @@ SEAT_TO_ANNOTATOR = {
     CACHE_SEAT: "yolo26n-v6",  # 缓存即现役 person_n_v6 输出（指纹 2026-09-18_person_n_v6@0.5）
     "qwen38-local": "qwen3-8-flash-next-local",
     "glm-flash": "glm-5-3-flash",  # 需 users.json5 注册行（2026-11-20 夜加）+ 服务重启
+    "qwen-flash": "qwen3-vl-flash",  # 定向补票席位（2026-11-20 夜加注册）
 }
 DRAFT = "draft"
 PERSON_CAT, PROP_CONF, PROP_VOTES, PROP_STATUS, RAW_VALUE = 1, 1, 2, 3, 1
@@ -703,10 +780,16 @@ def _label_doc(objects: list[dict]) -> dict:
 
 
 def _rect_polygon(box_norm: Sequence[float]) -> list[dict]:
-    """0-1 归一 xyxy → 归一四点多边形（六位小数，顺时针；经 960×540 像素制）。"""
+    """0-1 归一 xyxy → 归一四点多边形（六位小数，顺时针；经 960×540 像素制）。
+
+    钳制到 [0,1]：VLM 0-1000 刻度偶发越值（>1000）归一后 >1，服务端校验拒绝
+    coordinate_out_of_range（2026-11-20 夜役实测）；退化框（x2<=x1 等）压零面积。
+    """
     x1, y1, x2, y2 = [v * FRAME_W if i % 2 == 0 else v * FRAME_H for i, v in enumerate(box_norm)]
+    x1, x2 = sorted((min(max(x1 / FRAME_W, 0.0), 1.0), min(max(x2 / FRAME_W, 0.0), 1.0)))
+    y1, y2 = sorted((min(max(y1 / FRAME_H, 0.0), 1.0), min(max(y2 / FRAME_H, 0.0), 1.0)))
     return [
-        {"x": round(x / FRAME_W, 6), "y": round(y / FRAME_H, 6)}
+        {"x": round(x, 6), "y": round(y, 6)}
         for x, y in ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
     ]
 
@@ -726,7 +809,7 @@ def seed_ulabel(
     tsv = (out_root / "quarantine.tsv").read_text().splitlines()[1:]
     hard = [line.split("\t")[0] for line in tsv if line.strip()]
     votes: dict[str, dict[str, dict]] = {s: {} for s in hard}
-    for seat in (CACHE_SEAT, *SEATS_FREE):
+    for seat in _discover_seats(out_root):
         for l in (out_root / "prelabels" / seat / "labels.jsonl").read_text().splitlines():
             if not l.strip():
                 continue
@@ -743,7 +826,7 @@ def seed_ulabel(
     client = UlabelClient(base_url)
     client.login(admin)
     registered = {a["name"] for a in client.list_annotators(admin)}
-    want = [SEAT_TO_ANNOTATOR[s] for s in (CACHE_SEAT, *SEATS_FREE)] + [DRAFT]
+    want = [SEAT_TO_ANNOTATOR[s] for s in _discover_seats(out_root) if s in SEAT_TO_ANNOTATOR] + [DRAFT]
     missing = [a for a in want if a not in registered]
     if missing:
         raise typer.BadParameter(
