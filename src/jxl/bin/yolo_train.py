@@ -21,6 +21,7 @@ project 默认绝对化(基于 cwd), 避免相对路径被 ultralytics 拼到 SE
 from pathlib import Path
 from typing import Annotated
 
+import orjson
 import typer
 from loguru import logger
 from ultralytics import YOLO
@@ -28,6 +29,33 @@ from ultralytics import YOLO
 # typer CLI 惯用模式: bool Option 默认值与参数校验异常消息豁免噪声规则
 
 app = typer.Typer(help="YOLO 目标检测训练(ultralytics, 含 YOLO26)")
+
+
+def _make_dynamics_cb(model_obj: "YOLO", images_dir: Path, out_path: Path):
+    """逐 epoch 逐样本预测记录（j-consensus-labeling ⑭ 升级路径①：遗忘事件信号源）。
+
+    on_fit_epoch_end（val 之后）用当前权重对全训练集 predict，追写 dynamics.jsonl；
+    callback 级成本（760 图 ≈ 数秒/epoch GPU）。n005-b1' 首役 2026-11-20。
+    注意闭包持 YOLO 实例而非 YOLO(trainer.model)——8.4 后者把 nn.Module 的 repr 当
+    文件名（FileNotFoundError 实证 2026-11-20）；trainer 原地训练同一权重对象。
+    """
+
+    def _cb(trainer) -> None:  # noqa: ANN001 ultralytics 回调签名（trainer 为内部类型）
+        device = trainer.device if isinstance(trainer.device, (str, int)) else 0
+        imgs = sorted(images_dir.glob("*.jpg"))
+        results = model_obj.predict([str(p) for p in imgs], conf=0.25, verbose=False,
+                                    device=device)
+        epoch = int(trainer.epoch)
+        with out_path.open("ab") as fh:
+            for p, res in zip(imgs, results):
+                boxes = [[round(float(v), 4) for v in b] for b in res.boxes.xyxy.cpu().tolist()]
+                confs = [round(float(c), 4) for c in res.boxes.conf.cpu().tolist()]
+                fh.write(orjson.dumps(
+                    {"epoch": epoch, "stem": p.stem, "boxes": boxes, "confs": confs}
+                ) + b"\n")
+        trainer.model.train()  # predict 切 eval，回训练态
+
+    return _cb
 
 
 @app.command()
@@ -55,6 +83,9 @@ def main(
     exist_ok: Annotated[
         bool, typer.Option("--exist-ok", help="允许覆盖同名实验目录")
     ] = False,
+    dynamics_images: Annotated[
+        Path, typer.Option(help="训练动力学逐样本预测的图目录（开启 ⑭① 遗忘事件信号）")
+    ] = Path(""),
 ) -> None:
     """用 ultralytics 训练 YOLO 目标检测模型."""
     if not data.is_file():
@@ -77,6 +108,15 @@ def main(
     )
 
     model_obj = YOLO(model)
+    if str(dynamics_images):
+        if not dynamics_images.is_dir():
+            raise typer.BadParameter(f"dynamics 图目录不存在: {dynamics_images}")
+        dynamics_path = Path(project_abs) / name / "dynamics.jsonl"
+        dynamics_path.parent.mkdir(parents=True, exist_ok=True)
+        model_obj.add_callback(
+            "on_fit_epoch_end", _make_dynamics_cb(model_obj, dynamics_images, dynamics_path)
+        )
+        logger.info("训练动力学逐样本记录: {} 图 → {}", dynamics_images, dynamics_path)
     model_obj.train(
         data=str(data),
         epochs=epochs,
