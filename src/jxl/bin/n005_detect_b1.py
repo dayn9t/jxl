@@ -233,7 +233,7 @@ def select_extract(
     results = asyncio.run(_all())
     ok = [r for r, s in zip(rows, results) if s]
     fail = [r.stem for r, s in zip(rows, results) if not s]
-    _dump(out_root / "selection.jsonl", [
+    dump(out_root / "selection.jsonl", [
         {"stem": r.stem, "src": r.src, "date": r.date, "mkv": str(r.mkv),
          "pts_us": r.pts_us, "wallclock": r.wallclock,
          "boxes_norm": [list(b) for b in r.boxes_norm], "confs": list(r.confs),
@@ -250,11 +250,11 @@ def select_extract(
 
 # ---------------- vote ----------------
 
-def _dump(path: Path, rows: Sequence[dict]) -> None:
+def dump(path: Path, rows: Sequence[dict]) -> None:
     path.write_text("".join(orjson.dumps(r).decode() + "\n" for r in rows))
 
 
-def _vote_seat(
+def vote_seat(
     seat: str, rows: Sequence[dict], out_root: Path, concurrency: int
 ) -> tuple[int, int]:
     """单席位逐帧投票（断点续跑：已有 stem 跳过）；原始响应逐字落盘（#16）。"""
@@ -329,7 +329,7 @@ def vote(
     # 缓存票：确定性、免调用
     cache_dir = out_root / "prelabels" / CACHE_SEAT
     cache_dir.mkdir(parents=True, exist_ok=True)
-    _dump(cache_dir / "labels.jsonl", [
+    dump(cache_dir / "labels.jsonl", [
         {"stem": r["stem"], "ok": True, "ms": 0, "boxes": r["boxes_norm"],
          "error": "", "raw": "", "confs": r["confs"]} for r in rows
     ])
@@ -337,7 +337,7 @@ def vote(
     if unknown:
         raise typer.BadParameter(f"未知席位: {unknown}")
     for seat in seats.split(","):
-        ok, err = _vote_seat(seat, rows, out_root, concurrency)
+        ok, err = vote_seat(seat, rows, out_root, concurrency)
         rate = ok / max(1, ok + err)
         typer.echo(f"{seat}: 新投 {ok + err}，ok率 {rate:.1%}（累计含续跑 {len(rows)}）")
         if rate < 0.8 and ok + err > 5:
@@ -347,7 +347,7 @@ def vote(
 
 # ---------------- aggregate ----------------
 
-def _clusters(
+def clusters(
     votes: dict[str, list[tuple[float, float, float, float]]], iou_th: float
 ) -> list[dict]:
     """跨源框聚类（IoU≥th 传递闭包）→ [{box(median), seats, members}]。"""
@@ -387,7 +387,7 @@ def _discover_seats(out_root: Path) -> list[str]:
     return [s for s in ALL_SEATS if (out_root / "prelabels" / s / "labels.jsonl").is_file()]
 
 
-def _load_windows_file(windows_file: Path) -> dict[int, dict]:
+def load_windows_file(windows_file: Path) -> dict[int, dict]:
     """外部窗表 {src: {x0,y0,w,h}}（用户手画 ROI 派生正本，b1' 起）。"""
     raw = orjson.loads(windows_file.read_bytes())
     wins = {int(k): {"x0": int(v["x0"]), "y0": int(v.get("y0", 0)),
@@ -400,7 +400,7 @@ def _load_windows_file(windows_file: Path) -> dict[int, dict]:
     return wins
 
 
-def _in_window(box: Sequence[float], win: dict, ioa_th: float = 0.5) -> bool:
+def in_window(box: Sequence[float], win: dict, ioa_th: float = 0.5) -> bool:
     """全帧 0-1 框与窗（1920×1080 像素制）IoA≥阈值（b1' 域内判定口径）。"""
     x1, y1, x2, y2 = box[0] * 1920, box[1] * 1080, box[2] * 1920, box[3] * 1080
     inter = (max(0.0, min(x2, win["x0"] + win["w"]) - max(x1, win["x0"]))
@@ -427,7 +427,7 @@ def aggregate(
     sel = {r["stem"]: r for r in
            (orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip())}
     seats = _discover_seats(out_root)
-    wins = _load_windows_file(windows_file) if windows_file is not None else None
+    wins = load_windows_file(windows_file) if windows_file is not None else None
     votes_by_stem: dict[str, dict[str, list]] = {s: {} for s in sel}
     stale = 0
     for seat in seats:
@@ -442,7 +442,7 @@ def aggregate(
                 boxes = rec["boxes"]
                 if wins is not None:
                     win = wins[sel[rec["stem"]]["src"]]
-                    boxes = [b for b in boxes if _in_window(b, win)]
+                    boxes = [b for b in boxes if in_window(b, win)]
                 votes_by_stem[rec["stem"]][seat] = boxes
     if stale:
         typer.echo(f"跳过非本批选帧的遗留票 {stale} 条", err=True)
@@ -451,7 +451,7 @@ def aggregate(
         votes = votes_by_stem[stem]
         n_ok = len(votes)
         n_empty = sum(1 for b in votes.values() if not b)
-        clusters = _clusters(votes, iou_th)
+        clusters = clusters(votes, iou_th)
         contested = [c for c in clusters if len(c["seats"]) < 2]
         keep = [c for c in clusters if len(c["seats"]) >= 2]
         cache_fp = n_ok >= 3 and n_empty == n_ok - 1 and bool(votes.get(cache_seat))
@@ -470,7 +470,7 @@ def aggregate(
             confirmed.append(stem)
         else:
             empties.append(stem)
-    _dump(out_root / "consensus.jsonl", consensus)
+    dump(out_root / "consensus.jsonl", consensus)
     quarantined.sort(key=lambda q: (-q[1], q[0]))
     lines = ["stem\tdisagreement\t" + "\t".join(f"n_{s}" for s in seats)]
     lines += [f"{s}\t{d}\t" + "\t".join(str(len(v.get(x, []))) for x in seats)
@@ -509,7 +509,7 @@ def recrop(
     concurrency: int = typer.Option(8, "--concurrency"),
 ) -> None:
     """全部选帧按新窗重提裁切帧（b1' 几何转向；幂等但换窗表须先清目录）。"""
-    wins = _load_windows_file(windows_file)
+    wins = load_windows_file(windows_file)
     sel = [orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip()]
     crops = out_root / "crops_b1prime"
     crops.mkdir(parents=True, exist_ok=True)
@@ -517,7 +517,7 @@ def recrop(
 
     async def _one(r: dict) -> str:
         async with sem:
-            return await _extract_crop(r["stem"], Path(r["mkv"]), r["pts_us"], wins[r["src"]], crops)
+            return await extract_crop(r["stem"], Path(r["mkv"]), r["pts_us"], wins[r["src"]], crops)
 
     async def _all() -> list[str]:
         return list(await asyncio.gather(*[_one(r) for r in sel]))
@@ -542,7 +542,7 @@ def revote_v6(
     """
     from ultralytics import YOLO  # 重依赖仅本子命令引入
 
-    wins = _load_windows_file(windows_file)
+    wins = load_windows_file(windows_file)
     sel = [orjson.loads(line) for line in (out_root / "selection.jsonl").read_text().splitlines() if line.strip()]
     crops = out_root / "crops_b1prime"
     seat_dir = out_root / "prelabels" / "v6cache_new"
@@ -566,7 +566,7 @@ def revote_v6(
             rows_out.append({"stem": r["stem"], "ok": True, "ms": 0, "boxes": boxes,
                              "error": "", "raw": "", "confs": confs})
         typer.echo(f"v6cache_new: {min(i + batch, len(sel))}/{len(sel)}（累计框 {n_boxes}）", err=True)
-    _dump(seat_dir / "labels.jsonl", rows_out)
+    dump(seat_dir / "labels.jsonl", rows_out)
     typer.secho(f"v6 新域重推理完成：{len(rows_out)} 帧 / {n_boxes} 框 → {seat_dir}",
                 fg=typer.colors.GREEN)
 
@@ -612,13 +612,13 @@ def tiebreak(
         targets = targets[:limit]
     rows = [{"stem": s} for s in targets]
     typer.echo(f"补票目标 {len(targets)} 帧（A 缓存盲区 + B 缓存 FP 嫌疑）→ 席位 {seat}")
-    ok, err = _vote_seat(seat, rows, out_root, concurrency)
+    ok, err = vote_seat(seat, rows, out_root, concurrency)
     typer.echo(f"{seat}: ok {ok} 弃权 {err}")
 
 
 # ---------------- package（裁切域训练包；⑭ 样本形态 2026-11-20 用户钉死） ----------------
 
-def _derive_windows(video_root: Path) -> dict[int, dict]:
+def derive_windows(video_root: Path) -> dict[int, dict]:
     """缓存框全量反推各源 TrainDomain 检测窗（硬约束：全框⊆窗+(x0,y0)）。
 
     x0 = (x1_min + x2_max − 640)/2——缓存 bbox 带 ~10-19px 系统性外溢
@@ -644,7 +644,7 @@ def _derive_windows(video_root: Path) -> dict[int, dict]:
     return out
 
 
-def _box_to_crop(
+def box_to_crop(
     box_norm: Sequence[float], win: dict, ioa_th: float = 0.5
 ) -> tuple[float, float, float, float] | None:
     """全帧 0-1 xyxy → 裁切域像素（win={x0,y0,w,h}）；IoA≥ioa_th 保留并裁边，否则弃。"""
@@ -660,7 +660,7 @@ def _box_to_crop(
     return max(0.0, x1), max(0.0, y1), min(w, x2), min(h, y2)
 
 
-async def _extract_crop(stem: str, mkv: Path, pts_us: int, win: dict, out_dir: Path) -> str:
+async def extract_crop(stem: str, mkv: Path, pts_us: int, win: dict, out_dir: Path) -> str:
     """源 MKV 全分辨率重提裁切帧（win={x0,y0,w,h}，TrainDomain 或 ROI 派生窗）。"""
     out = out_dir / f"{stem}.jpg"
     if out.exists() and out.stat().st_size > 4_096:
@@ -705,7 +705,7 @@ def package(
         if missing:
             raise typer.BadParameter(f"窗表缺源 {missing}")
     else:
-        windows = _derive_windows(video_root)
+        windows = derive_windows(video_root)
     (out_root / "windows.json").write_bytes(
         orjson.dumps({str(k): v for k, v in windows.items()}, option=orjson.OPT_INDENT_2)
     )
@@ -724,7 +724,7 @@ def package(
     async def _one(stem: str) -> str:
         async with sem:
             win = windows[sel[stem]["src"]]
-            return await _extract_crop(stem, Path(sel[stem]["mkv"]), sel[stem]["pts_us"], win, img_dir)
+            return await extract_crop(stem, Path(sel[stem]["mkv"]), sel[stem]["pts_us"], win, img_dir)
 
     async def _all() -> list[str]:
         return list(await asyncio.gather(*[_one(s) for s in take]))
@@ -741,7 +741,7 @@ def package(
             for cl in rec["clusters"]:
                 if len(cl["seats"]) < 2:
                     continue
-                b = _box_to_crop(cl["box"], win)
+                b = box_to_crop(cl["box"], win)
                 if b is None:
                     n_drop += 1
                     continue
@@ -754,7 +754,7 @@ def package(
         manifest.append({"stem": stem, "src": rec["src"], "decision": rec["decision"],
                          "window": {k: win[k] for k in ("x0", "y0", "w", "h")},
                          "n_label_boxes": len(lines)})
-    _dump(out_root / "confirmed" / "manifest.jsonl", manifest)
+    dump(out_root / "confirmed" / "manifest.jsonl", manifest)
     typer.secho(
         f"裁切域训练包：{len(ok_stems)} 帧（框 {n_boxes}，IoA 弃 {n_drop}，提取失败 "
         f"{len(take) - len(ok_stems)}）→ {out_root / 'confirmed'}",
@@ -919,7 +919,7 @@ class UlabelClient:
         return r.json()
 
 
-def _set_meta(meta_id: int, set_slug: str) -> dict:
+def set_meta(meta_id: int, set_slug: str) -> dict:
     """集 meta：克隆 detection_gt_min_v1 形制（person+conf/votes/status 三属性）。"""
     return {
         "id": meta_id,
@@ -959,13 +959,13 @@ def _set_meta(meta_id: int, set_slug: str) -> dict:
     }
 
 
-def _label_doc(objects: list[dict]) -> dict:
+def label_doc(objects: list[dict]) -> dict:
     now = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     return {"version": LABEL_VERSION, "user_agent": "n005_detect_b1",
             "created_at": now, "last_modified": now, "objects": objects}
 
 
-def _rect_polygon(box_norm: Sequence[float]) -> list[dict]:
+def rect_polygon(box_norm: Sequence[float]) -> list[dict]:
     """0-1 归一 xyxy → 归一四点多边形（六位小数，顺时针；经 960×540 像素制）。
 
     钳制到 [0,1]：VLM 0-1000 刻度偶发越值（>1000）归一后 >1，服务端校验拒绝
@@ -1020,7 +1020,7 @@ def seed_ulabel(
         raise typer.BadParameter(
             f"注册缺口 {missing}——/var/ulabel/users.json5 加行+重启服务后重跑（脚本打印见 README）"
         )
-    client.ensure_set(_set_meta(meta_id, set_slug), admin)
+    client.ensure_set(set_meta(meta_id, set_slug), admin)
     for seat_annotator in want:
         client.login(seat_annotator)  # 种子署名=登录身份
     n_frames = n_layers = 0
@@ -1034,12 +1034,12 @@ def seed_ulabel(
             objects = []
             for i, b in enumerate(rec["boxes"], 1):
                 obj = {"id": i, "category": PERSON_CAT, "confidence": 1.0,
-                       "polygon": _rect_polygon(b), "properties": []}
+                       "polygon": rect_polygon(b), "properties": []}
                 if confs is not None and i <= len(confs):
                     obj["properties"] = [{"id": PROP_CONF, "value": RAW_VALUE,
                                           "confidence": float(confs[i - 1]), "note": str(confs[i - 1])}]
                 objects.append(obj)
-            client.post_annotation(stem, _label_doc(objects), annotator)
+            client.post_annotation(stem, label_doc(objects), annotator)
             n_layers += 1
         draft_objects = []
         for i, cl in enumerate(cons[stem]["clusters"], 1):
@@ -1048,14 +1048,14 @@ def seed_ulabel(
                       f"pair:{seats}" if len(cl["seats"]) == 2 else f"solo:{seats}")
             draft_objects.append({
                 "id": i, "category": PERSON_CAT, "confidence": 1.0,
-                "polygon": _rect_polygon(cl["box"]),
+                "polygon": rect_polygon(cl["box"]),
                 "properties": [
                     {"id": PROP_VOTES, "value": RAW_VALUE, "confidence": float(len(cl["seats"])),
                      "note": str(len(cl["seats"]))},
                     {"id": PROP_STATUS, "value": RAW_VALUE, "confidence": 1.0, "note": status},
                 ],
             })
-        client.post_annotation(stem, _label_doc(draft_objects), DRAFT)
+        client.post_annotation(stem, label_doc(draft_objects), DRAFT)
         n_layers += 1
         n_frames += 1
         if n_frames % 20 == 0:

@@ -26,7 +26,7 @@ import orjson
 import typer
 from PIL import Image
 
-from jxl.bin.n005_detect_b1 import _clusters, _dump  # 同源聚类纯函数（原则 8）
+from jxl.bin.n005_detect_b1 import clusters, dump  # 同源聚类纯函数（原则 8）
 from jxl.bin.vlm_pool import build_target_prompt, call_person, image_data_url
 
 app = typer.Typer(add_completion=False, help="n005 b2 裁切域共识标注流水线。")
@@ -77,7 +77,7 @@ def v6(
             rows.append({"stem": stem, "ok": True, "ms": 0, "boxes": boxes,
                          "error": "", "raw": "", "confs": confs})
         typer.echo(f"v6crop: {min(i + batch, len(frames))}/{len(frames)}", err=True)
-    _dump(seat_dir / "labels.jsonl", rows)
+    dump(seat_dir / "labels.jsonl", rows)
     typer.secho(f"v6 crop 域票：{len(rows)} 帧 / {sum(len(r['boxes']) for r in rows)} 框 → {seat_dir}",
                 fg=typer.colors.GREEN)
 
@@ -91,7 +91,7 @@ def vote(
     limit: int = typer.Option(0, "--limit"),
 ) -> None:
     """VLM 直喂 crop 图投票（断点续跑只认 ok 票；原始响应逐字落盘 #16）。"""
-    from jxl.bin.n005_detect_b1 import _vote_seat  # 夜役护栏版（wait_for 180s+flush）
+    from jxl.bin.n005_detect_b1 import vote_seat  # 夜役护栏版（wait_for 180s+flush）
 
     frames = _iter_frames(pkg)
     rows = [{"stem": s} for s, _ in frames]
@@ -111,7 +111,7 @@ def vote(
 
 def _vote_seat_frames(seat: str, rows: Sequence[dict], path_by_stem: dict[str, Path],
                       out_root: Path, concurrency: int) -> tuple[int, int]:
-    """夜役 _vote_seat 的 b2 变体：图路径来自 stem2img 映射而非 frames/ 约定目录。"""
+    """夜役 vote_seat 的 b2 变体：图路径来自 stem2img 映射而非 frames/ 约定目录。"""
     pre = out_root / "prelabels" / seat
     pre.mkdir(parents=True, exist_ok=True)
     path = pre / "labels.jsonl"
@@ -197,7 +197,7 @@ def aggregate(
     consensus, quar, confirmed, empties, drift_rows = [], [], [], [], []
     for stem in frames:
         v = votes[stem]
-        n_ok, clusters = len(v), _clusters(v, iou_th)
+        n_ok, clusters = len(v), clusters(v, iou_th)
         contested = [c for c in clusters if len(c["seats"]) < 2]
         keep = [c for c in clusters if len(c["seats"]) >= 2]
         decision = "quarantine" if n_ok < 2 or contested else ("confirmed" if keep else "confirmed_empty")
@@ -232,9 +232,9 @@ def aggregate(
             lines.append(f"0 {(x1 + x2) / 2:.6f} {(y1 + y2) / 2:.6f} {x2 - x1:.6f} {y2 - y1:.6f}")
         (conf_dir / "labels" / f"{stem.replace('/', '__')}.txt").write_text(
             "\n".join(lines) + ("\n" if lines else ""))
-    _dump(out_root / "consensus.jsonl", consensus)
+    dump(out_root / "consensus.jsonl", consensus)
     (out_root / "quarantine.txt").write_text("".join(s + "\n" for s in quar))
-    _dump(out_root / "drift_review.jsonl", drift_rows)
+    dump(out_root / "drift_review.jsonl", drift_rows)
     # 确认图软链清单（img 相对包根路径双下划线名，训练时 rsync -L 物化）
     manifest = []
     for stem in confirmed + empties:
@@ -244,7 +244,7 @@ def aggregate(
             link.unlink()
         link.symlink_to(frames[stem].resolve())
         manifest.append({"stem": stem, "src_rel": stem})
-    _dump(conf_dir / "manifest.jsonl", manifest)
+    dump(conf_dir / "manifest.jsonl", manifest)
     n_boxes = sum(len([c for c in r["clusters"] if len(c["seats"]) >= 2])
                   for r in consensus if r["decision"] == "confirmed")
     typer.secho(
@@ -257,6 +257,88 @@ def aggregate(
 def iou_fn(a: Sequence[float], b: Sequence[float]) -> float:
     from jxl.label.crop import xyxy_iou
     return xyxy_iou(tuple(a), tuple(b))  # type: ignore[arg-type]
+
+
+@app.command()
+def seed(
+    pkg: Path = typer.Option(..., "--pkg"),
+    out_root: Path = typer.Option(..., "--out-root"),
+    set_slug: str = typer.Option(..., "--set-slug", help="如 n005_b2_base_hard_v1"),
+    meta_id: int = typer.Option(..., "--meta-id", help="sgcc_av 集 id 序列递增（7/8/9/10 已用）"),
+    base_url: str = typer.Option("http://127.0.0.1:8791", "--base-url"),
+    admin: str = typer.Option("jiang", "--admin"),
+) -> None:
+    """难例堆播种 ulabel（模型三层+draft 聚簇；crop 域零变换；名 '/'→'__'）。
+
+    annotator 复用 b1 注册席位（yolo26n-v6 承载 v6crop 新域票——同模型不同域，
+    集不同不混）；votes/status 属性形制同 n005_detect_b1（P1-4 票数可视化兼容）。
+    """
+    import sys
+
+    from jxl.bin.n005_detect_b1 import DRAFT, UlabelClient, label_doc, rect_polygon, set_meta
+
+    hard = (out_root / "quarantine.txt").read_text().split()
+    if not hard:
+        raise typer.BadParameter("难例堆为空——先跑 aggregate")
+    stem2img = {k: Path(v) for k, v in orjson.loads((out_root / "stem2img.json").read_bytes()).items()}
+    votes: dict[str, dict[str, dict]] = {s: {} for s in hard}
+    cons = {r["stem"]: r for r in (orjson.loads(line) for line in
+           (out_root / "consensus.jsonl").read_text().splitlines() if line.strip())}
+    seat_map = {"v6crop": "yolo26n-v6", "qwen38-local": "qwen3-8-flash-next-local",
+                "glm-flash": "glm-5-3-flash"}
+    all_seats = {**{s: {} for s in votes}}
+    for seat in seat_map:
+        for line in (out_root / "prelabels" / seat / "labels.jsonl").read_text().splitlines():
+            if line.strip():
+                rec = orjson.loads(line)
+                if rec["stem"] in votes and rec["ok"]:
+                    all_seats[rec["stem"]][seat] = rec
+    client = UlabelClient(base_url, set_slug)
+    client.login(admin)
+    registered = {a["name"] for a in client.list_annotators(admin)}
+    want = [*seat_map.values(), DRAFT]
+    missing = [a for a in want if a not in registered]
+    if missing:
+        raise typer.BadParameter(f"注册缺口 {missing}（users.json5+重启后重跑）")
+    client.ensure_set(set_meta(meta_id, set_slug), admin)
+    for annotator in want:
+        client.login(annotator)
+    n_layers = 0
+    for stem in hard:
+        flat = stem.replace("/", "__")
+        client.post_sample(f"{flat}.jpg", stem2img[stem].read_bytes(), admin)
+        for seat, annotator in seat_map.items():
+            rec = all_seats[stem].get(seat)
+            if rec is None:
+                continue
+            objects = []
+            for i, b in enumerate(rec["boxes"], 1):
+                obj = {"id": i, "category": 1, "confidence": 1.0,
+                       "polygon": rect_polygon(b), "properties": []}
+                if seat == "v6crop" and i <= len(rec.get("confs", [])):
+                    cf = rec["confs"][i - 1]
+                    obj["properties"] = [{"id": 1, "value": 1, "confidence": float(cf), "note": str(cf)}]
+                objects.append(obj)
+            client.post_annotation(flat, label_doc(objects), annotator)
+            n_layers += 1
+        draft_objects = []
+        for i, cl in enumerate(cons[stem]["clusters"], 1):
+            seats_ = "+".join(cl["seats"])
+            status = ("triple" if len(cl["seats"]) == 3 else
+                      f"pair:{seats_}" if len(cl["seats"]) == 2 else f"solo:{seats_}")
+            draft_objects.append({
+                "id": i, "category": 1, "confidence": 1.0, "polygon": rect_polygon(cl["box"]),
+                "properties": [
+                    {"id": 2, "value": 1, "confidence": float(len(cl["seats"])), "note": str(len(cl["seats"]))},
+                    {"id": 3, "value": 1, "confidence": 1.0, "note": status},
+                ]})
+        client.post_annotation(flat, label_doc(draft_objects), DRAFT)
+        n_layers += 1
+    typer.secho(f"b2 难例播种 {len(hard)} 帧 / {n_layers} 层 → /var/ulabel/sgcc_av/detection/{set_slug}",
+                fg=typer.colors.GREEN)
+    print("tsv 清单（P1-5 导入，帧名=扁平形）:")
+    print("\n".join(s.replace("/", "__") for s in hard[:5]) + "\n…")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
