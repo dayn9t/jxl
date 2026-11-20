@@ -41,19 +41,28 @@ def _make_dynamics_cb(model_obj: "YOLO", images_dir: Path, out_path: Path):
     """
 
     def _cb(trainer) -> None:  # noqa: ANN001 ultralytics 回调签名（trainer 为内部类型）
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # 回调前清保留池，防与训练张量叠峰 OOM（4060Ti 实证）
         device = trainer.device if isinstance(trainer.device, (str, int)) else 0
         imgs = sorted(images_dir.glob("*.jpg"))
-        results = model_obj.predict([str(p) for p in imgs], conf=0.25, verbose=False,
-                                    device=device)
         epoch = int(trainer.epoch)
         with out_path.open("ab") as fh:
-            for p, res in zip(imgs, results):
-                boxes = [[round(float(v), 4) for v in b] for b in res.boxes.xyxy.cpu().tolist()]
-                confs = [round(float(c), 4) for c in res.boxes.conf.cpu().tolist()]
-                fh.write(orjson.dumps(
-                    {"epoch": epoch, "stem": p.stem, "boxes": boxes, "confs": confs}
-                ) + b"\n")
+            for i in range(0, len(imgs), 64):  # 分块 predict：单块 ≤64 图
+                chunk = imgs[i:i + 64]
+                results = model_obj.predict([str(p) for p in chunk], conf=0.25, verbose=False,
+                                            device=device)
+                for p, res in zip(chunk, results):
+                    boxes = [[round(float(v), 4) for v in b]
+                             for b in res.boxes.xyxy.cpu().tolist()]
+                    confs = [round(float(c), 4) for c in res.boxes.conf.cpu().tolist()]
+                    fh.write(orjson.dumps(
+                        {"epoch": epoch, "stem": p.stem, "boxes": boxes, "confs": confs}
+                    ) + b"\n")
         trainer.model.train()  # predict 切 eval，回训练态
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     return _cb
 
