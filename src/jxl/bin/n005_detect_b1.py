@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import math
 import random
+import shutil
 import statistics
 import time
 from dataclasses import dataclass
@@ -759,6 +760,70 @@ def package(
         f"{len(take) - len(ok_stems)}）→ {out_root / 'confirmed'}",
         fg=typer.colors.GREEN,
     )
+
+
+# ---------------- export-verdicts（M1：晨裁回流并入训练包） ----------------
+
+@app.command()
+def export_verdicts(
+    out_root: Path = typer.Option(OUT_ROOT, "--out-root"),
+    set_slug: str = typer.Option("n005_b1prime_hard_v1", "--set-slug"),
+    user: str = typer.Option("jiang", "--user", help="人裁 annotator 名"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """ulabel 人裁层（Label 文档）→ YOLO 标签并入 b1' 训练包 train 域（v8 计划 M1）。
+
+    读 /var/ulabel 磁盘正本（只读；服务是唯一写入者）；polygon=窗域归一四点
+    （播种与人工编辑同在裁切域图上）→ bbox 外接→xywh 直转，零窗映射。
+    图源=crops_b1prime（已按 v4 窗提好）拷入 dataset/train；已裁决帧从确认包
+    train 侧移除（决策升级：模型票→人裁真值）。空 Label=有效负样本。
+    """
+    vdir = Path("/var/ulabel/sgcc_av/detection") / set_slug / "verdicts" / user
+    if not vdir.is_dir():
+        raise typer.BadParameter(f"人裁目录不存在（尚未开裁？）: {vdir}")
+    files = sorted(vdir.glob("*.json"))
+    if not files:
+        raise typer.BadParameter("人裁层为空——等用户裁决后再跑")
+    ds = out_root / "dataset"
+    n_box = n_empty = 0
+    plan: list[tuple[str, list[str]]] = []
+    for f in files:
+        stem = f.stem
+        doc = orjson.loads(f.read_bytes())
+        lines = []
+        for obj in doc.get("objects", []):
+            if int(obj.get("category", 1)) != 1:
+                raise typer.BadParameter(f"{stem}: 非 person 类目 {obj['category']}（本批应单类）")
+            xs = [p["x"] for p in obj["polygon"]]
+            ys = [p["y"] for p in obj["polygon"]]
+            x1, x2, y1, y2 = min(xs), max(xs), min(ys), max(ys)
+            lines.append(f"0 {(x1 + x2) / 2:.6f} {(y1 + y2) / 2:.6f} {x2 - x1:.6f} {y2 - y1:.6f}")
+        if lines:
+            n_box += 1
+        else:
+            n_empty += 1
+        plan.append((stem, lines))
+    typer.echo(f"人裁 {len(plan)} 帧：有框 {n_box} / 空标（负样本）{n_empty}，"
+               f"框数 {sum(len(l) for _, l in plan)}")
+    if dry_run:
+        return
+    for stem, lines in plan:
+        src_crop = out_root / "crops_b1prime" / f"{stem}.jpg"
+        if not src_crop.is_file():
+            raise typer.BadParameter(f"裁切帧缺失: {src_crop}（先跑 recrop）")
+        shutil.copy2(src_crop, ds / "train" / "images" / f"{stem}.jpg")
+        (ds / "train" / "labels" / f"{stem}.txt").write_text("\n".join(lines) + ("\n" if lines else ""))
+        # 确认包旧副本让位（若该帧曾以自动票入 train——人裁为真值正本）
+        for split in ("train", "val"):
+            for ext_dir, ext in ((ds / split / "images", ".jpg"), (ds / split / "labels", ".txt")):
+                old = ext_dir / f"{stem}{ext}"
+                if old.exists():
+                    old.unlink()
+    (out_root / f"verdicts_export_{set_slug}.json").write_bytes(orjson.dumps(
+        {"user": user, "frames": len(plan), "with_box": n_box, "empty": n_empty},
+        option=orjson.OPT_INDENT_2))
+    typer.secho(f"回流完成 → {ds}/train（原自动票副本已让位；val 侧同步剔除防泄漏）",
+                fg=typer.colors.GREEN)
 
 
 # ---------------- seed-ulabel（难例集播种；API 形制对齐 ulabel build_detection_gt.py） ----------------
