@@ -95,6 +95,7 @@ def main(
     dynamics_images: Annotated[
         Path, typer.Option(help="训练动力学逐样本预测的图目录（开启 ⑭① 遗忘事件信号）")
     ] = Path(""),
+    seed: Annotated[int, typer.Option(help="随机种子（多 seed 刻度用；ultralytics 默认 0=deterministic）")] = 0,
 ) -> None:
     """用 ultralytics 训练 YOLO 目标检测模型."""
     if not data.is_file():
@@ -142,6 +143,7 @@ def main(
         project=project_abs,
         name=name,
         patience=patience,
+        seed=seed,
         resume=resume,
         exist_ok=exist_ok,
     )
