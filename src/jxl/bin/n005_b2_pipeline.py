@@ -197,13 +197,12 @@ def aggregate(
     consensus, quar, confirmed, empties, drift_rows = [], [], [], [], []
     for stem in frames:
         v = votes[stem]
-        n_ok, clusters = len(v), clusters(v, iou_th)
-        contested = [c for c in clusters if len(c["seats"]) < 2]
-        keep = [c for c in clusters if len(c["seats"]) >= 2]
+        n_ok, cls_list = len(v), clusters(v, iou_th)
+        contested = [c for c in cls_list if len(c["seats"]) < 2]
+        keep = [c for c in cls_list if len(c["seats"]) >= 2]
         decision = "quarantine" if n_ok < 2 or contested else ("confirmed" if keep else "confirmed_empty")
         # IoU 一致门：确认簇内 v6 框 vs 簇心
         if decision == "confirmed":
-            cs = clusters
             cf = confs_by_stem.get(stem, [])
             new_keep = []
             for c in keep:
@@ -217,8 +216,8 @@ def aggregate(
                 new_keep.append(c)
             keep = new_keep
             if not keep:
-                decision = "confirmed_empty" if not clusters else "quarantine"
-        consensus.append({"stem": stem, "decision": decision, "n_ok_votes": n_ok, "clusters": clusters})
+                decision = "confirmed_empty" if not cls_list else "quarantine"
+        consensus.append({"stem": stem, "decision": decision, "n_ok_votes": n_ok, "clusters": cls_list})
         if decision == "quarantine":
             quar.append(stem)
             continue

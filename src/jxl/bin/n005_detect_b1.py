@@ -451,9 +451,9 @@ def aggregate(
         votes = votes_by_stem[stem]
         n_ok = len(votes)
         n_empty = sum(1 for b in votes.values() if not b)
-        clusters = clusters(votes, iou_th)
-        contested = [c for c in clusters if len(c["seats"]) < 2]
-        keep = [c for c in clusters if len(c["seats"]) >= 2]
+        cls_list = clusters(votes, iou_th)
+        contested = [c for c in cls_list if len(c["seats"]) < 2]
+        keep = [c for c in cls_list if len(c["seats"]) >= 2]
         cache_fp = n_ok >= 3 and n_empty == n_ok - 1 and bool(votes.get(cache_seat))
         decision = ("quarantine" if n_ok < 2 or contested
                     else "confirmed" if keep else "confirmed_empty")
@@ -463,7 +463,7 @@ def aggregate(
         consensus.append({"stem": stem, "src": r["src"], "wallclock": r["wallclock"],
                           "decision": decision, "cache_fp": cache_fp, "n_ok_votes": n_ok,
                           "n_empty_votes": n_empty, "seats": seats,
-                          "clusters": clusters, "confs": sel[stem]["confs"]})
+                          "clusters": cls_list, "confs": sel[stem]["confs"]})
         if decision == "quarantine":
             quarantined.append((stem, len(contested) + (max(0, 2 - n_ok)), votes))
         elif decision == "confirmed":
