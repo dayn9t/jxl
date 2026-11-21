@@ -125,6 +125,12 @@ def main(
     crop: Annotated[
         str | None, typer.Option(help="classify crop spec, e.g. head:0.35")
     ] = None,
+    end2end: Annotated[
+        bool,
+        typer.Option("--end2end", help="YOLO26 e2e 形导出（翻转 checkpoint 头 end2end=True→输出 [1,300,6]，"
+        "one2one 分支；生产栈 usls apply_nms(false) 依赖该形态——raw 形 fail-loud panic 不可用）。"
+        "参数快照入契约 meta.ultralytics_end2end。2026-11-21 v8 切割前件。"),
+    ] = False,
 ) -> None:
     """导出 ONNX 并嵌入 ModelContract（detect 或 classify）。"""
     if task not in {"detect", "classify"}:
@@ -140,6 +146,11 @@ def main(
     from ultralytics import YOLO
 
     model = YOLO(str(pt))
+    if end2end:
+        # YOLO26 checkpoint 头 end2end 默认 False（one2one 分支经双赋值训练已可用）；
+        # 生产形= e2e [1,300,6]（探针实证 2026-11-21：翻转后 ultralytics 导出即该形态，
+        # 与 v6 生产同构）。raw 形在生产栈 fail-loud panic。
+        model.model.end2end = True
     # ultralytics 导出到 .pt 同目录的 <stem>.onnx；export 返回该路径。
     exported = model.export(format="onnx", imgsz=imgsz, dynamic=False, simplify=True)
     exported_path = Path(str(exported))
@@ -156,8 +167,11 @@ def main(
 
     names = model.names  # {0: "person", ...}
     contract = build_detect_contract(names, imgsz, conf)
+    if end2end:
+        contract["meta"]["ultralytics_end2end"] = True  # 参数快照（schema meta 允许额外字段）
     embed_contract(onnx, contract)
-    typer.echo(f"embedded ModelContract into {onnx} ({len(names)} classes)")
+    typer.echo(f"embedded ModelContract into {onnx} ({len(names)} classes"
+               f"{', end2end=True' if end2end else ''})")
 
 
 if __name__ == "__main__":
